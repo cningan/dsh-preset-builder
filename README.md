@@ -32,7 +32,7 @@ Specification: [SPEC.md](SPEC.md). Chinese README: [README.zh.md](README.zh.md).
 
 ## Status
 
-v0.1 installable. Verified: Host endpoints, managed-block write/hot-apply/delete, built-in preset source parsing, pure-function unit checks. Pending: the sidebar entry and workbench rendering in the desktop window after a page refresh (the automated browser cannot pass this machine's Web authentication).
+v0.1 installable. Verified: Host endpoints, managed-block write/hot-apply/delete, built-in preset source parsing, pre-save mount validation (rejects host-service conflicts, accepts the official Standard composition), and pure-function unit checks. The sidebar entry, three-column layout, and the create/collect/save path were confirmed in the desktop window.
 
 ## Verification
 

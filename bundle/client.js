@@ -31,6 +31,7 @@ window.__ModuleLoader__.load({
       yaml: 'YAML',
       packages: '包',
       searchPackages: '搜索包名或行 id',
+      saveCheckHint: '保存前会实际挂载校验；服务类行需放进带 isolate 的组。',
       emptyPackages: '没有匹配的包。',
       rows: '行',
       noRows: '这个预设还没有任何行。从右侧包抽屉收录开始。',
@@ -38,6 +39,7 @@ window.__ModuleLoader__.load({
       official: '官方',
       thirdParty: '第三方',
       broken: '加载失败',
+      brokenHint: '这个预设无法激活。按提示移除或修改对应行后重新保存；也可以直接删除预设。',
       newPreset: '新建预设',
       blank: '空白预设',
       blankName: '新预设',
@@ -115,6 +117,7 @@ window.__ModuleLoader__.load({
       yaml: 'YAML',
       packages: 'Packages',
       searchPackages: 'Search package or row id',
+      saveCheckHint: 'Every save mounts each preset once; rows that provide services need an isolate group.',
       emptyPackages: 'No matching package.',
       rows: 'rows',
       noRows: 'This preset has no row yet. Start by collecting a package.',
@@ -122,6 +125,7 @@ window.__ModuleLoader__.load({
       official: 'official',
       thirdParty: 'community',
       broken: 'failed to load',
+      brokenHint: 'This preset cannot activate. Remove or fix the row named above and save again, or delete the preset.',
       newPreset: 'New preset',
       blank: 'Blank preset',
       blankName: 'New preset',
@@ -356,6 +360,7 @@ window.__ModuleLoader__.load({
         h('div', { style: styles.sectionTitle }, title),
         presets.map((preset) => {
           const active = preset.id === selectedId
+          const broken = api.brokenOf(preset.id)
           return h('button', {
             key: preset.id,
             type: 'button',
@@ -367,6 +372,7 @@ window.__ModuleLoader__.load({
               preset.kind === 'builtin' || preset.kind === 'external'
                 ? h('span', { style: styles.badge }, t('readonly'))
                 : null,
+              broken ? h('span', { style: styles.badgeWarn }, t('broken')) : null,
               active && dirty ? h('span', { style: styles.badgeWarn }, '●') : null),
             h('span', { style: styles.presetMeta },
               h('code', { style: styles.code }, preset.id),
@@ -645,6 +651,7 @@ window.__ModuleLoader__.load({
       }, [packages, query])
       return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 8, minHeight: 0 } },
         h('input', { style: styles.search, value: query, placeholder: t('searchPackages'), onChange: (event) => setQuery(event.target.value) }),
+        h('div', { style: { ...styles.muted, lineHeight: 1.4 } }, t('saveCheckHint')),
         filtered.length === 0
           ? h('div', { style: styles.empty }, t('emptyPackages'))
           : filtered.map((pkg) => h(PackageCard, { key: pkg.name, api, pkg })))
@@ -686,6 +693,7 @@ window.__ModuleLoader__.load({
       const preset = api.selected
       if (preset === null) return h('div', { style: styles.empty }, t('emptyComposition'))
       const managed = preset.kind === 'managed'
+      const broken = api.brokenOf(preset.id)
       return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 12 } },
         h('div', { style: styles.card },
           h('div', { style: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' } },
@@ -702,6 +710,11 @@ window.__ModuleLoader__.load({
             ? h('textarea', { style: { ...styles.input, minHeight: 38, resize: 'vertical' }, value: preset.description ?? '', placeholder: t('description'), onChange: (event) => api.updatePreset(preset.id, { description: event.target.value }) })
             : h('div', { style: styles.muted }, t('builtinHint'))),
         managed ? h(SaveBar, { api }) : null,
+        broken
+          ? h('div', { style: styles.errorBox },
+              h('div', { style: { fontWeight: 600, marginBottom: 4 } }, t('broken') + ': ' + broken),
+              h('div', { style: styles.muted }, t('brokenHint')))
+          : null,
         api.notice !== null ? h('div', { style: styles.errorBox }, api.notice) : null,
         h('div', { style: styles.toolbar },
           h('button', { type: 'button', style: api.tab === 'compose' ? styles.buttonPrimary : styles.button, onClick: () => api.setTab('compose') }, t('composition')),
@@ -973,6 +986,8 @@ window.__ModuleLoader__.load({
         const installed = new Set((state?.packages ?? []).map((pkg) => pkg.name))
         for (const preset of draft) {
           if (typeof preset.name !== 'string' || preset.name.trim().length === 0) issues.push(preset.id + ': ' + t('name') + ' —')
+          const broken = (state?.presets ?? []).find((saved) => saved.id === preset.id)?.broken
+          if (typeof broken === 'string' && broken.length > 0) issues.push(preset.id + ': ' + broken)
           const seen = new Set()
           walkRows(preset.plugins, (row) => {
             if (seen.has(row.id)) issues.push(preset.id + ': ' + t('duplicateRow') + ' ' + row.id)
@@ -990,6 +1005,7 @@ window.__ModuleLoader__.load({
         view, tab, menuOpen, collapsed, configEditorId, isolateEditorId, selectedGroupId, warnings, baseRevision,
         setMenuOpen, setView, setTab, setNotice,
         load, selectPreset: (id) => setSelectedId(id),
+        brokenOf: (id) => (state?.presets ?? []).find((preset) => preset.id === id)?.broken,
         createBlank: () => createPreset(undefined), copyPreset, deletePreset,
         updatePreset, save, discard,
         toggleRow, removeRow, moveRow, applyRowConfig, resetRowConfig,

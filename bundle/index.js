@@ -75,6 +75,14 @@ async function dispatch(ctx, config, server, req, res) {
       const id = url.searchParams.get('id') ?? ''
       return sendJson(res, await presetYaml(ctx, id))
     }
+    if (req.method === 'POST' && route === '/verify') {
+      if (!sameOrigin(server, req)) return sendJson(res, 403, { ok: false, error: 'cross-origin request rejected' })
+      const body = await readJsonBody(req)
+      const presets = body?.presets
+      const invalid = validatePresets(presets)
+      const problems = invalid.length > 0 ? invalid : await probePresets(ctx, presets)
+      return sendJson(res, { ok: problems.length === 0, problems })
+    }
     if (req.method === 'POST' && route === '/save') {
       if (!sameOrigin(server, req)) return sendJson(res, { ok: false, error: 'cross-origin request rejected' }, 403)
       const body = await readJsonBody(req)
@@ -210,6 +218,53 @@ async function listRegistryPresets(ctx) {
   }
 }
 
+/**
+ * Mount every candidate preset under a throwaway id to prove it can activate.
+ *
+ * The registry activates a definition eagerly and keeps its diagnostic, so a
+ * failed probe is exactly the failure a session would meet. The probe is
+ * disposed before returning; a registry without `register`/`resolve` skips.
+ */
+async function probePresets(ctx, presets) {
+  const registry = ctx.get('agentPresets')
+  if (registry === undefined || typeof registry.register !== 'function' || typeof registry.resolve !== 'function') {
+    return []
+  }
+  const problems = []
+  for (const preset of presets) {
+    const probeId = `preset-studio-probe-${Date.now().toString(36)}`
+    const registration = registry.register({ id: probeId, plugins: preset.plugins })
+    const guarded = registration.then((dispose) => ({ dispose }), (error) => ({ error }))
+    const outcome = await Promise.race([
+      guarded,
+      new Promise((resolve) => { setTimeout(() => resolve(null), 8000) }),
+    ])
+    if (outcome === null) {
+      // The mount is still busy; dispose it whenever it settles.
+      void registration.then((dispose) => { void Promise.resolve().then(dispose).catch(() => {}) }, () => {})
+      problems.push(`${preset.id}: activation did not finish within 8s`)
+      continue
+    }
+    if (outcome.error !== undefined) {
+      problems.push(`${preset.id}: ${messageOf(outcome.error)}`)
+      continue
+    }
+    try {
+      const info = await registry.resolve(probeId)
+      if (typeof info?.broken === 'string' && info.broken.length > 0) {
+        problems.push(`${preset.id}: ${info.broken}`)
+      }
+    } finally {
+      try {
+        await outcome.dispose()
+      } catch {
+        // disposal failure must not mask the composition result
+      }
+    }
+  }
+  return problems
+}
+
 async function buildState(ctx, config) {
   const path = ctx.get('profileContext')?.patchPath
   const text = typeof path === 'string' && path.length > 0 ? await readPatch(path) : '[]\n'
@@ -322,6 +377,10 @@ async function savePresets(ctx, config, body) {
   const presets = body?.presets
   const problems = validatePresets(presets)
   if (problems.length > 0) return { ok: false, error: 'invalid preset payload', problems }
+  const probeProblems = await probePresets(ctx, presets)
+  if (probeProblems.length > 0) {
+    return { ok: false, error: 'preset composition cannot activate', problems: probeProblems }
+  }
   const path = patchPathOf(ctx)
   const previous = await readPatch(path)
   try {
