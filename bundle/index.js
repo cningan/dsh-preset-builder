@@ -109,21 +109,26 @@ function sendText(res, text, status = 200) {
   res.end(text)
 }
 
+function loopbackName(name) {
+  return name === 'localhost' || name === '127.0.0.1' || name === '[::1]' || name === '::1'
+}
+
 function sameOrigin(server, req) {
-  let expected
-  try {
-    expected = server.getOrigin()
-  } catch {
-    expected = undefined
-  }
+  if (req.headers?.['sec-fetch-site'] === 'cross-site') return false
   const origin = req.headers?.origin
   if (typeof origin === 'string' && origin.length > 0) {
-    return expected !== undefined ? origin === expected : false
+    // The Electron window loads over its own scheme and bridges fetch.
+    if (origin.startsWith('dsh-app://')) return true
+    try {
+      return loopbackName(new URL(origin).hostname)
+    } catch {
+      return false
+    }
   }
   const host = req.headers?.host
-  if (typeof expected === 'string' && typeof host === 'string') {
+  if (typeof host === 'string' && host.length > 0) {
     try {
-      return new URL(expected).host === host
+      return loopbackName(new URL('http://' + host).hostname)
     } catch {
       return false
     }

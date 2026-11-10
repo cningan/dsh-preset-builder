@@ -40,6 +40,7 @@ window.__ModuleLoader__.load({
       broken: '加载失败',
       newPreset: '新建预设',
       blank: '空白预设',
+      blankName: '新预设',
       copyBuiltin: '复制内置预设',
       copyCustom: '复制自定义预设',
       copySuffix: '副本',
@@ -123,6 +124,7 @@ window.__ModuleLoader__.load({
       broken: 'failed to load',
       newPreset: 'New preset',
       blank: 'Blank preset',
+      blankName: 'New preset',
       copyBuiltin: 'Copy a built-in preset',
       copyCustom: 'Copy a custom preset',
       copySuffix: 'copy',
@@ -809,7 +811,7 @@ window.__ModuleLoader__.load({
         const id = uniqueName(slugify((source?.id ?? 'preset') + (source === undefined ? '' : '-copy')), used)
         const preset = {
           id,
-          name: source === undefined ? '新预设' : (source.name || source.id) + ' ' + t('copySuffix'),
+          name: source === undefined ? t('blankName') : (source.name || source.id) + ' ' + t('copySuffix'),
           description: source?.description ?? '',
           order: nextOrder(),
           plugins: source?.plugins ? clone(source.plugins) : [],
