@@ -17,7 +17,7 @@ import {
   buildBlock,
   cleanValue,
   extractBlock,
-  readBlock,
+  parseBlock,
   replaceBlock,
   validatePresets,
 } from './lib/patch.mjs'
@@ -35,6 +35,8 @@ export const Config = Schema.object({
 
 const PREFIX = '/plugins/preset-studio'
 const BODY_LIMIT = 1024 * 1024
+/** The four shipped presets; everything else is a custom preset. */
+const OFFICIAL_PRESETS = new Set(['minimal', 'standard', 'ptc', 'cordis'])
 
 export function apply(ctx, config) {
   ctx.inject(['webServer'], (scope) => {
@@ -82,6 +84,18 @@ async function dispatch(ctx, config, server, req, res) {
       const invalid = validatePresets(presets)
       const problems = invalid.length > 0 ? invalid : await probePresets(ctx, presets)
       return sendJson(res, { ok: problems.length === 0, problems })
+    }
+    if (req.method === 'POST' && route === '/presets/delete') {
+      if (!sameOrigin(server, req)) return sendJson(res, { ok: false, error: 'cross-origin request rejected' }, 403)
+      return sendJson(res, await deletePreset(ctx, await readJsonBody(req)))
+    }
+    if (req.method === 'POST' && route === '/presets/adopt') {
+      if (!sameOrigin(server, req)) return sendJson(res, { ok: false, error: 'cross-origin request rejected' }, 403)
+      return sendJson(res, await adoptPreset(ctx, await readJsonBody(req)))
+    }
+    if (req.method === 'POST' && route === '/presets/lock') {
+      if (!sameOrigin(server, req)) return sendJson(res, { ok: false, error: 'cross-origin request rejected' }, 403)
+      return sendJson(res, await lockPreset(ctx, await readJsonBody(req)))
     }
     if (req.method === 'POST' && route === '/save') {
       if (!sameOrigin(server, req)) return sendJson(res, { ok: false, error: 'cross-origin request rejected' }, 403)
@@ -265,35 +279,120 @@ async function probePresets(ctx, presets) {
   return problems
 }
 
+/**
+ * Loader rows that declare an Agent preset, keyed by preset id. The declaration
+ * row id is what an adopted preset must override.
+ */
+function presetDeclarations(ctx) {
+  const found = new Map()
+  let entries = []
+  try {
+    entries = [...ctx.loader.entries()]
+  } catch {
+    return found
+  }
+  for (const entry of entries) {
+    const options = entry?.options ?? {}
+    if (options.group === true) continue
+    if (options.name !== AGENT_PRESET) continue
+    const config = options.config
+    if (config === null || typeof config !== 'object' || typeof config.id !== 'string') continue
+    if (found.has(config.id)) continue
+    const rowId = typeof options.id === 'string' && options.id.length > 0
+      ? options.id
+      : (typeof entry.id === 'string' ? entry.id : '')
+    found.set(config.id, { rowId, config: cleanValue(config) })
+  }
+  return found
+}
+
+/** Loader row ids that currently declare an Agent preset (tombstones included). */
+function presetRowIds(ctx) {
+  const ids = new Set()
+  try {
+    for (const entry of ctx.loader.entries()) {
+      const options = entry?.options ?? {}
+      if (options.name !== AGENT_PRESET) continue
+      if (typeof options.id === 'string' && options.id.length > 0) ids.add(options.id)
+    }
+  } catch {
+    return ids
+  }
+  return ids
+}
+
+/**
+ * Drop tombstones whose declaration row no longer exists (the owning bundle was
+ * removed); a stale override would otherwise warn on every start.
+ */
+function liveTombstones(ctx, model) {
+  const ids = presetRowIds(ctx)
+  return model.tombstones.filter((rowId) => ids.has(rowId))
+}
+
 async function buildState(ctx, config) {
   const path = ctx.get('profileContext')?.patchPath
   const text = typeof path === 'string' && path.length > 0 ? await readPatch(path) : '[]\n'
-  const block = extractBlock(text)
-  const managed = block === null ? [] : readBlock(block)
+  const model = parseBlock(extractBlock(text))
   const registry = await listRegistryPresets(ctx)
-  const managedById = new Map(managed.map((preset) => [preset.id, preset]))
+  const declarations = presetDeclarations(ctx)
+  const managedById = new Map(model.presets.map((preset) => [preset.id, preset]))
   const presets = []
   for (const row of registry) {
     const own = managedById.get(row.id)
     if (own !== undefined) {
       managedById.delete(row.id)
-      presets.push({ ...row, ...own, plugins: cleanValue(own.plugins) })
-    } else {
-      presets.push({ ...row, kind: row.name === undefined ? 'builtin' : 'external' })
+      presets.push({
+        ...row,
+        id: own.id,
+        name: own.name ?? row.name ?? '',
+        description: own.description ?? row.description,
+        order: own.order ?? row.order,
+        plugins: cleanValue(own.plugins),
+        kind: 'managed',
+        adopted: own.adopted === true,
+        rowId: own.rowId,
+        locked: model.locks.includes(own.id),
+        official: false,
+      })
+      continue
     }
+    const official = OFFICIAL_PRESETS.has(row.id)
+    const declaration = declarations.get(row.id)
+    presets.push({
+      ...row,
+      kind: official ? 'official' : 'foreign',
+      official,
+      adopted: false,
+      rowId: declaration?.rowId,
+      canAdopt: !official && declaration !== undefined,
+      locked: model.locks.includes(row.id),
+    })
   }
   for (const own of managedById.values()) {
-    presets.push({ ...own, plugins: cleanValue(own.plugins), pending: true })
+    presets.push({
+      ...own,
+      plugins: cleanValue(own.plugins),
+      kind: 'managed',
+      official: false,
+      pending: true,
+      locked: model.locks.includes(own.id),
+    })
   }
-  presets.sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity) || a.id.localeCompare(b.id))
+  presets.sort((a, b) => {
+    if (a.official !== b.official) return a.official ? -1 : 1
+    return (a.order ?? Infinity) - (b.order ?? Infinity) || a.id.localeCompare(b.id)
+  })
   const inventory = buildInventory(ctx)
   return {
     ok: true,
     profile: profileFacts(ctx),
     config: { sidebarEntry: config?.sidebarEntry !== false },
-    revision: blockRevision(block ?? ''),
+    revision: blockRevision(extractBlock(text) ?? ''),
     hmr: Boolean(ctx.get('hmr')?.reconcileProfile),
     presets,
+    locks: model.locks,
+    tombstones: model.tombstones,
     packages: inventory.packages,
     rowCount: inventory.rows,
   }
@@ -334,12 +433,11 @@ async function presetYaml(ctx, id) {
   if (typeof id !== 'string' || id.length === 0) throw new Error('id is required')
   const path = patchPathOf(ctx)
   const text = await readPatch(path)
-  const block = extractBlock(text)
-  const managed = block === null ? [] : readBlock(block)
-  const own = managed.find((preset) => preset.id === id)
+  const model = parseBlock(extractBlock(text))
+  const own = model.presets.find((preset) => preset.id === id)
   if (own !== undefined) {
     const row = {
-      id: own.rowId ?? `${ROW_PREFIX}${own.id}`,
+      id: own.adopted === true && typeof own.rowId === 'string' ? own.rowId : `${ROW_PREFIX}${own.id}`,
       name: AGENT_PRESET,
       config: {
         id: own.id,
@@ -373,42 +471,27 @@ async function presetYaml(ctx, id) {
   return { ok: false, error: `preset not found: ${id}` }
 }
 
-async function savePresets(ctx, config, body) {
-  const presets = body?.presets
-  const problems = validatePresets(presets)
-  if (problems.length > 0) return { ok: false, error: 'invalid preset payload', problems }
-  const probeProblems = await probePresets(ctx, presets)
-  if (probeProblems.length > 0) {
-    return { ok: false, error: 'preset composition cannot activate', problems: probeProblems }
+function conflictOf(body, blockText) {
+  if (typeof body?.revision !== 'string') return null
+  const current = blockRevision(blockText)
+  if (body.revision === current) return null
+  return {
+    ok: false,
+    conflict: true,
+    error: 'the managed block changed since this page read it; reload before saving',
+    revision: current,
   }
-  const path = patchPathOf(ctx)
-  const previous = await readPatch(path)
-  try {
-    const parsed = parseYaml(previous)
-    if (parsed !== null && !Array.isArray(parsed)) {
-      return { ok: false, error: 'profile patch is not a top-level YAML array; refusing to write' }
-    }
-  } catch (error) {
-    return { ok: false, error: `profile patch is not valid YAML: ${messageOf(error)}` }
-  }
-  const previousBlock = extractBlock(previous) ?? ''
-  if (typeof body?.revision === 'string' && body.revision !== blockRevision(previousBlock)) {
-    return {
-      ok: false,
-      conflict: true,
-      error: 'the managed block changed since this page read it; reload before saving',
-      revision: blockRevision(previousBlock),
-    }
-  }
-  const nextBlock = buildBlock(presets)
-  const next = replaceBlock(previous, nextBlock)
-  await writePatch(path, next)
+}
 
+/** Write a new block, reconcile the profile, and roll back on failure. */
+async function applyAndReconcile(ctx, path, previous, nextBlock) {
+  await writePatch(path, replaceBlock(previous, nextBlock))
   const hmr = ctx.get('hmr')
   if (hmr === undefined || typeof hmr.reconcileProfile !== 'function' || typeof hmr.runExclusive !== 'function') {
     return {
       ok: true,
       applied: false,
+      appliedNow: false,
       needsRestart: true,
       revision: blockRevision(nextBlock),
       message: 'saved; HMR is unavailable, restart the application to apply',
@@ -419,6 +502,7 @@ async function savePresets(ctx, config, body) {
     return {
       ok: true,
       applied: true,
+      appliedNow: true,
       needsRestart: result?.restartReason !== undefined,
       restartReason: result?.restartReason ?? null,
       warnings: Array.isArray(result?.warnings) ? result.warnings : [],
@@ -437,7 +521,142 @@ async function savePresets(ctx, config, body) {
       ok: false,
       rolledBack,
       error: `applying the preset failed: ${messageOf(error)}`,
-      revision: blockRevision(previousBlock),
+      revision: blockRevision(extractBlock(previous) ?? ''),
     }
   }
+}
+
+async function savePresets(ctx, config, body) {
+  const presets = body?.presets
+  const problems = validatePresets(presets)
+  if (problems.length > 0) return { ok: false, error: 'invalid preset payload', problems }
+  const path = patchPathOf(ctx)
+  const previous = await readPatch(path)
+  try {
+    const parsed = parseYaml(previous)
+    if (parsed !== null && !Array.isArray(parsed)) {
+      return { ok: false, error: 'profile patch is not a top-level YAML array; refusing to write' }
+    }
+  } catch (error) {
+    return { ok: false, error: `profile patch is not valid YAML: ${messageOf(error)}` }
+  }
+  const previousBlock = extractBlock(previous) ?? ''
+  const conflict = conflictOf(body, previousBlock)
+  if (conflict !== null) return conflict
+  const current = parseBlock(previousBlock)
+  current.tombstones = liveTombstones(ctx, current)
+  const locked = new Set(current.locks)
+  const adoptedRows = new Map(current.presets.filter((preset) => preset.adopted === true).map((preset) => [preset.id, preset.rowId]))
+  const tombstones = [...current.tombstones]
+  const removed = []
+  const merged = []
+  for (const preset of presets) {
+    if (locked.has(preset.id)) {
+      const own = current.presets.find((candidate) => candidate.id === preset.id)
+      if (own !== undefined) {
+        merged.push(own)
+        continue
+      }
+    }
+    const rowId = adoptedRows.get(preset.id)
+    if (rowId !== undefined) merged.push({ ...preset, adopted: true, rowId })
+    else merged.push({ ...preset, adopted: false })
+  }
+  for (const own of current.presets) {
+    if (presets.some((preset) => preset.id === own.id)) continue
+    removed.push(own.id)
+    if (own.adopted === true && typeof own.rowId === 'string' && !tombstones.includes(own.rowId)) {
+      tombstones.push(own.rowId)
+    }
+  }
+  const locks = current.locks.filter((id) => !removed.includes(id))
+  const probeProblems = await probePresets(ctx, merged)
+  if (probeProblems.length > 0) {
+    return { ok: false, error: 'preset composition cannot activate', problems: probeProblems }
+  }
+  const nextBlock = buildBlock({ presets: merged, tombstones, locks })
+  return applyAndReconcile(ctx, path, previous, nextBlock)
+}
+
+/** Remove a preset: managed entries are dropped, adopted/foreign declarations are tombstoned. */
+async function deletePreset(ctx, body) {
+  const id = body?.id
+  if (typeof id !== 'string' || id.length === 0) return { ok: false, error: 'id is required' }
+  if (OFFICIAL_PRESETS.has(id)) return { ok: false, error: 'official presets cannot be deleted' }
+  const path = patchPathOf(ctx)
+  const previous = await readPatch(path)
+  const previousBlock = extractBlock(previous) ?? ''
+  const conflict = conflictOf(body, previousBlock)
+  if (conflict !== null) return conflict
+  const model = parseBlock(previousBlock)
+  model.tombstones = liveTombstones(ctx, model)
+  if (model.locks.includes(id)) return { ok: false, error: 'preset is locked; unlock it first' }
+  const own = model.presets.find((preset) => preset.id === id)
+  if (own !== undefined) {
+    model.presets = model.presets.filter((preset) => preset.id !== id)
+    if (own.adopted === true && typeof own.rowId === 'string' && !model.tombstones.includes(own.rowId)) {
+      model.tombstones.push(own.rowId)
+    }
+  } else {
+    const declaration = presetDeclarations(ctx).get(id)
+    if (declaration === undefined) return { ok: false, error: `preset declaration not found: ${id}` }
+    if (!model.tombstones.includes(declaration.rowId)) model.tombstones.push(declaration.rowId)
+  }
+  model.locks = model.locks.filter((lockId) => lockId !== id)
+  return applyAndReconcile(ctx, path, previous, buildBlock(model))
+}
+
+/** Take management of another layer's declaration by overriding its Loader row. */
+async function adoptPreset(ctx, body) {
+  const id = body?.id
+  if (typeof id !== 'string' || id.length === 0) return { ok: false, error: 'id is required' }
+  if (OFFICIAL_PRESETS.has(id)) return { ok: false, error: 'official presets cannot be adopted' }
+  const path = patchPathOf(ctx)
+  const previous = await readPatch(path)
+  const previousBlock = extractBlock(previous) ?? ''
+  const conflict = conflictOf(body, previousBlock)
+  if (conflict !== null) return conflict
+  const model = parseBlock(previousBlock)
+  model.tombstones = liveTombstones(ctx, model)
+  if (model.locks.includes(id)) return { ok: false, error: 'preset is locked; unlock it first' }
+  if (model.presets.some((preset) => preset.id === id)) return { ok: false, error: 'preset is already managed' }
+  const declaration = presetDeclarations(ctx).get(id)
+  if (declaration === undefined) {
+    return { ok: false, error: 'cannot adopt: this preset has no Loader declaration row (it may be registered at runtime)' }
+  }
+  const config = declaration.config ?? {}
+  const plugins = Array.isArray(config.plugins) ? cleanValue(config.plugins) : []
+  const problems = await probePresets(ctx, [{ id, plugins }])
+  if (problems.length > 0) return { ok: false, error: 'preset composition cannot activate', problems }
+  model.presets.push({
+    id,
+    name: typeof config.name === 'string' ? config.name : undefined,
+    description: typeof config.description === 'string' ? config.description : undefined,
+    order: typeof config.order === 'number' ? config.order : undefined,
+    plugins,
+    rowId: declaration.rowId,
+    adopted: true,
+  })
+  return applyAndReconcile(ctx, path, previous, buildBlock(model))
+}
+
+/** Lock or unlock a custom preset; locked presets are never rewritten. */
+async function lockPreset(ctx, body) {
+  const id = body?.id
+  if (typeof id !== 'string' || id.length === 0) return { ok: false, error: 'id is required' }
+  if (OFFICIAL_PRESETS.has(id)) return { ok: false, error: 'official presets are always read-only' }
+  const path = patchPathOf(ctx)
+  const previous = await readPatch(path)
+  const previousBlock = extractBlock(previous) ?? ''
+  const conflict = conflictOf(body, previousBlock)
+  if (conflict !== null) return conflict
+  const model = parseBlock(previousBlock)
+  model.tombstones = liveTombstones(ctx, model)
+  const locked = body?.locked === true
+  model.locks = locked
+    ? [...new Set([...model.locks, id])]
+    : model.locks.filter((lockId) => lockId !== id)
+  const nextBlock = buildBlock(model)
+  await writePatch(path, replaceBlock(previous, nextBlock))
+  return { ok: true, locked, revision: blockRevision(nextBlock), appliedNow: false }
 }

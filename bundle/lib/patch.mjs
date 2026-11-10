@@ -3,6 +3,14 @@
  *
  * The block is the only region this plugin may rewrite. Everything before and
  * after it — comments, other patches, user rows — is preserved byte for byte.
+ *
+ * A block holds three kinds of entries:
+ *  - `- insert:` rows created by this plugin (`preset-studio-<id>`);
+ *  - override rows that adopt a declaration another layer already made, keyed
+ *    by that declaration's Loader row id;
+ *  - tombstones (`- id: <row>\n  disabled: true`) that suppress a declaration
+ *    the plugin no longer manages but must not resurrect.
+ * The `# locks:` comment keeps the ids the user opted out of management.
  */
 import { createHash } from 'node:crypto'
 import { isJsExpr, parseYaml, emitListItem } from './yaml.mjs'
@@ -12,6 +20,7 @@ export const END = '# <<< dsh-preset-studio managed block'
 
 export const AGENT_PRESET = '@deepseek-ai/dsh-agent-preset'
 export const ROW_PREFIX = 'preset-studio-'
+const LOCK_LINE = /^#\s*locks:\s*(.*)$/m
 
 export function blockRevision(blockText) {
   return createHash('sha1').update(blockText ?? '').digest('hex')
@@ -50,53 +59,106 @@ export function replaceBlock(text, blockText) {
   return text + separator + blockText
 }
 
-/** Presets declared inside a managed block, in declaration order. */
-export function readBlock(blockText) {
-  if (typeof blockText !== 'string' || blockText.length === 0) return []
+function presetOf(config, rowId, adopted) {
+  if (config === null || typeof config !== 'object' || typeof config.id !== 'string') return null
+  return {
+    id: config.id,
+    name: typeof config.name === 'string' ? config.name : undefined,
+    description: typeof config.description === 'string' ? config.description : undefined,
+    order: typeof config.order === 'number' ? config.order : undefined,
+    plugins: Array.isArray(config.plugins) ? config.plugins : [],
+    rowId,
+    adopted,
+  }
+}
+
+/** The complete managed model held by one block. */
+export function parseBlock(blockText) {
+  const empty = { found: false, presets: [], tombstones: [], locks: [] }
+  if (typeof blockText !== 'string' || blockText.length === 0) return empty
+  const lockMatch = LOCK_LINE.exec(blockText)
+  const locks = lockMatch === null
+    ? []
+    : lockMatch[1].split(',').map((value) => value.trim()).filter((value) => value.length > 0)
   let data
   try {
     data = parseYaml(blockText)
   } catch {
-    return []
+    return { ...empty, found: true, locks }
   }
-  if (!Array.isArray(data)) return []
+  if (!Array.isArray(data)) return { ...empty, found: true, locks }
   const presets = []
+  const tombstones = []
+  const seen = new Set()
   for (const patch of data) {
-    if (patch === null || typeof patch !== 'object' || !Array.isArray(patch.insert)) continue
-    for (const row of patch.insert) {
-      if (row === null || typeof row !== 'object') continue
-      if (row.name !== AGENT_PRESET) continue
-      const config = row.config
-      if (config === null || typeof config !== 'object' || typeof config.id !== 'string') continue
-      presets.push({
-        id: config.id,
-        name: typeof config.name === 'string' ? config.name : undefined,
-        description: typeof config.description === 'string' ? config.description : undefined,
-        order: typeof config.order === 'number' ? config.order : undefined,
-        plugins: Array.isArray(config.plugins) ? config.plugins : [],
-        rowId: typeof row.id === 'string' ? row.id : `${ROW_PREFIX}${config.id}`,
-        kind: 'managed',
-      })
+    if (patch === null || typeof patch !== 'object') continue
+    if (Array.isArray(patch.insert)) {
+      for (const row of patch.insert) {
+        if (row === null || typeof row !== 'object') continue
+        if (typeof row.name !== 'string' || row.name.length === 0) continue
+        const preset = presetOf(row.config, typeof row.id === 'string' ? row.id : `${ROW_PREFIX}${row.config?.id ?? ''}`, false)
+        if (preset === null || seen.has(preset.id)) continue
+        seen.add(preset.id)
+        presets.push(preset)
+      }
+      continue
     }
+    if (typeof patch.id !== 'string' || patch.id.length === 0) continue
+    if (patch.disabled === true) {
+      if (!tombstones.includes(patch.id)) tombstones.push(patch.id)
+      continue
+    }
+    const preset = presetOf(patch.config, patch.id, true)
+    if (preset === null || seen.has(preset.id)) continue
+    seen.add(preset.id)
+    presets.push(preset)
   }
-  return presets
+  return { found: true, presets, tombstones, locks }
 }
 
-export function buildBlock(presets) {
-  if (!Array.isArray(presets) || presets.length === 0) return ''
-  const lines = [BEGIN, '- insert:']
-  for (const preset of presets) {
-    const config = { id: preset.id }
-    if (typeof preset.name === 'string' && preset.name.length > 0) config.name = preset.name
-    if (typeof preset.description === 'string' && preset.description.length > 0) config.description = preset.description
-    if (typeof preset.order === 'number' && Number.isFinite(preset.order)) config.order = preset.order
-    config.plugins = Array.isArray(preset.plugins) ? preset.plugins : []
-    const row = {
-      id: `${ROW_PREFIX}${preset.id}`,
-      name: AGENT_PRESET,
-      config,
+/** Presets declared inside a managed block, in declaration order. */
+export function readBlock(blockText) {
+  return parseBlock(blockText).presets
+}
+
+function presetConfig(preset) {
+  const config = { id: preset.id }
+  if (typeof preset.name === 'string' && preset.name.length > 0) config.name = preset.name
+  if (typeof preset.description === 'string' && preset.description.length > 0) config.description = preset.description
+  if (typeof preset.order === 'number' && Number.isFinite(preset.order)) config.order = preset.order
+  config.plugins = Array.isArray(preset.plugins) ? preset.plugins : []
+  return config
+}
+
+/** Render a managed model back into a block; an empty model removes it. */
+export function buildBlock(model) {
+  const presets = Array.isArray(model) ? model : (model?.presets ?? [])
+  const tombstones = Array.isArray(model?.tombstones) ? model.tombstones : []
+  const locks = Array.isArray(model?.locks) ? model.locks.filter((id) => typeof id === 'string' && id.length > 0) : []
+  if (presets.length === 0 && tombstones.length === 0 && locks.length === 0) return ''
+  const lines = [BEGIN]
+  if (locks.length > 0) lines.push(`# locks: ${locks.join(', ')}`)
+  const created = presets.filter((preset) => preset.adopted !== true)
+  if (created.length > 0) {
+    lines.push('- insert:')
+    for (const preset of created) {
+      lines.push(...emitListItem({
+        id: `${ROW_PREFIX}${preset.id}`,
+        name: AGENT_PRESET,
+        config: presetConfig(preset),
+      }, 4))
     }
-    lines.push(...emitListItem(row, 4))
+  }
+  for (const preset of presets.filter((candidate) => candidate.adopted === true)) {
+    if (typeof preset.rowId !== 'string' || preset.rowId.length === 0) continue
+    lines.push(...emitListItem({
+      id: preset.rowId,
+      name: AGENT_PRESET,
+      config: presetConfig(preset),
+    }, 0))
+  }
+  for (const rowId of tombstones) {
+    lines.push(...emitListItem({ id: rowId, disabled: true }, 0))
   }
   lines.push(END)
   return `${lines.join('\n')}\n`

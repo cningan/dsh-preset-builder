@@ -10,10 +10,21 @@ _Avoid_: 会话模式、权限预设、配置模板
 **预设声明（preset declaration）**：组合树中的一条 `@deepseek-ai/dsh-agent-preset` 行，字段为 `id`、`name`、`description`、`order`、`plugins`。
 _Avoid_: 预设文件、预设目录
 
-**内置预设（built-in preset）**：随 DSH 安装包声明、没有 `name` 字段、显示名由界面文案提供的预设（Minimal、Standard、PTC、Creator）。
-_Avoid_: 官方预设文件
+**官方预设（official preset）**：随 DSH 安装包声明的四个内置预设（Minimal、Standard、PTC、Creator），没有 `name` 字段，显示名由界面文案提供；对本插件永久只读。
+_Avoid_: 内置预设、系统预设
 
-**自定义预设（custom preset）**：除内置预设外，由用户、其它插件或本插件声明的预设。
+**自定义预设（custom preset）**：除官方四个以外的一切预设——无论由本插件创建、用户手写，还是其它插件包声明。默认由本插件管理，可被锁定。
+
+**已托管预设（managed preset）**：托管块内有创建条目或覆盖条目的自定义预设；可直接编辑组合与元数据。
+
+**外部预设（foreign preset）**：由其它补丁层声明、托管块内尚无对应条目的自定义预设；只读，可接管。
+
+**接管（adopt）**：按外部预设原有的 loader 行 id 写一条覆盖声明，把它的组合纳入本插件的托管块。
+
+**锁定（lock）**：把自定义预设标记为「不归本插件管理」；锁定期间不保存、不删除、不接管，界面上只读。
+
+**删除墓碑（tombstone）**：`- id: <loader 行 id>` + `disabled: true` 的补丁条目，用于在删除接管或外部预设后压制原声明，避免其随 bundle 升级复活。
+_Avoid_: 删除标记、备份
 
 **插件行（plugin entry）**：预设组合中的一个组成项，`name` 指向提供能力的包，可携带 `config` 与 `disabled`。
 _Avoid_: 插件、工具（行不一定注册模型工具）
@@ -46,7 +57,7 @@ _Avoid_: 画布、列表
 
 **用户补丁层（user patch layer）**：profile 的 `cordis.patch.yml`，位于所有 bundle 层之后，可覆盖行配置、禁用行、插入新行。
 
-**托管块（managed block）**：用户补丁层中由本插件维护的一段带注释标记的 `insert` 条目集合；插件只替换这段区域。
+**托管块（managed block）**：用户补丁层中由本插件维护的一段带注释标记的区域，含创建声明（`insert`）、接管覆盖条目、删除墓碑与 `# locks:` 锁定名单；插件只替换这段区域。
 _Avoid_: 插件配置、数据文件
 
 **热应用（hot apply）**：写入用户补丁层后经 HMR 立即重载组合，无需重启应用。

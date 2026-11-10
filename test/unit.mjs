@@ -3,7 +3,7 @@
  * from the repository root; it needs the bundle's local dependencies.
  */
 import assert from 'node:assert/strict'
-import { buildBlock, readBlock, replaceBlock, extractBlock, validatePresets, blockRevision } from '../bundle/lib/patch.mjs'
+import { buildBlock, parseBlock, readBlock, replaceBlock, extractBlock, validatePresets, blockRevision } from '../bundle/lib/patch.mjs'
 import { describeDisabledExpression } from '../bundle/lib/platform.mjs'
 import { parseYaml } from '../bundle/lib/yaml.mjs'
 
@@ -80,6 +80,44 @@ test('platform expressions are read conservatively', () => {
 test('invalid presets are reported, not silently repaired', () => {
   assert.ok(validatePresets([{ id: 'Bad Id', plugins: [] }]).length > 0)
   assert.ok(validatePresets([{ id: 'ok', plugins: [{ id: 'a', name: 'x' }, { id: 'a', name: 'y' }] }]).length > 0)
+})
+
+test('managed model keeps adopted rows, tombstones and locks', () => {
+  const model = {
+    presets: [
+      preset,
+      {
+        id: 'foreign',
+        name: 'Foreign',
+        plugins: [{ id: 'tool-web', name: '@deepseek-ai/dsh-tool-web' }],
+        rowId: 'preset-foreign',
+        adopted: true,
+      },
+    ],
+    tombstones: ['preset-gone'],
+    locks: ['locked-one', 'foreign'],
+  }
+  const block = buildBlock(model)
+  assert.match(block, /# locks: locked-one, foreign/)
+  assert.match(block, /- id: preset-foreign/)
+  assert.match(block, /- id: preset-gone\n  disabled: true/)
+  const parsed = parseBlock(block)
+  assert.equal(parsed.presets.length, 2)
+  const adopted = parsed.presets.find((row) => row.id === 'foreign')
+  assert.equal(adopted.adopted, true)
+  assert.equal(adopted.rowId, 'preset-foreign')
+  assert.deepEqual(parsed.tombstones, ['preset-gone'])
+  assert.deepEqual(parsed.locks, ['locked-one', 'foreign'])
+  assert.equal(parsed.presets.find((row) => row.id === 'my-mode').adopted, false)
+})
+
+test('an empty model removes the block, a locks-only model keeps it', () => {
+  assert.equal(buildBlock({ presets: [], tombstones: [], locks: [] }), '')
+  const locksOnly = buildBlock({ presets: [], tombstones: [], locks: ['locked-one'] })
+  assert.match(locksOnly, /# locks: locked-one/)
+  const parsed = parseBlock(locksOnly)
+  assert.deepEqual(parsed.locks, ['locked-one'])
+  assert.equal(parsed.presets.length, 0)
 })
 
 test('parsed YAML keeps js tags as expression objects', () => {
