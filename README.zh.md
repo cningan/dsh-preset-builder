@@ -45,9 +45,11 @@ DSH 的 Web 界面能查看预设配置（只读 YAML）、能把某个预设设
 
 ## 安装
 
-仓库：<https://github.com/cningan/dsh-preset-studio>
+仓库：<https://github.com/cningan/dsh-preset-studio>；npm 包名：`dsh-preset-builder`。
 
-把本仓库的 `bundle/` 用 DSH 的 `plugin_manager` 安装为 bundle（`install_bundle`）；本机开发用 `link:` 指向 `bundle/`。Host 侧改动需要重启 DSH，纯界面改动刷新页面即可。
+把本仓库的 `bundle/` 用 DSH 的 `plugin_manager` 安装为 bundle（`install_bundle`），或从 npm 按包名 `dsh-preset-builder` 安装。本机开发用 `link:` 指向 `bundle/`。Host 侧改动需要重启 DSH，纯界面改动刷新页面即可。
+
+> 从旧包名迁移：0.2.7 起包名从 `dsh-preset-studio` 改为 `dsh-preset-builder`（旧名在 npm 上属于另一个插件）。以旧名 link 安装的 profile 需要先移除旧包，再按 `dsh-preset-builder` 安装并重启；托管块里的预设置不受影响。
 
 ## 状态
 

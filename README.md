@@ -45,9 +45,11 @@ Specification: [SPEC.md](SPEC.md). Chinese README: [README.zh.md](README.zh.md).
 
 ## Install
 
-Repository: <https://github.com/cningan/dsh-preset-studio>
+Repository: <https://github.com/cningan/dsh-preset-studio>; npm package: `dsh-preset-builder`.
 
-Install this repository's `bundle/` as a bundle through DSH's `plugin_manager` (`install_bundle`); for local development point a `link:` dependency at `bundle/`. Host-side changes need a DSH restart; UI-only changes need a page refresh.
+Install this repository's `bundle/` as a bundle through DSH's `plugin_manager` (`install_bundle`), or install the npm package by name `dsh-preset-builder`. For local development point a `link:` dependency at `bundle/`. Host-side changes need a DSH restart; UI-only changes need a page refresh.
+
+> Migrating from the old name: since 0.2.7 the package is `dsh-preset-builder` (the old `dsh-preset-studio` name on npm belongs to a different plugin). A profile that linked the old name must remove it, install `dsh-preset-builder`, and restart; presets in the managed block are unaffected.
 
 ## Status
 

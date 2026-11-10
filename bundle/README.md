@@ -8,7 +8,7 @@
 
 ## 安装
 
-在本仓库的 `bundle/` 目录或从 npm 安装后，通过 DSH 的 `plugin_manager` 安装为 bundle：
+npm 包名：`dsh-preset-builder`。在本仓库的 `bundle/` 目录或从 npm 安装后，通过 DSH 的 `plugin_manager` 安装为 bundle：
 
 ```powershell
 # 本地开发（DSH 插件管理器指向本目录）
