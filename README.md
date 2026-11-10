@@ -14,6 +14,7 @@ DSH's Web UI can show a preset's configuration (read-only YAML) and make one the
 - Presets declared by other bundles can be **adopted** and then edited like your own; any custom preset can be **locked** to opt out of management.
 - Deleting a custom preset takes effect immediately; adopted/foreign declarations leave a disabled tombstone so a bundle update cannot resurrect them.
 - Collect packages and their rows into the preset, with automatic package groups for multi-row packages.
+- The package drawer only offers rows **not active in the Host**; packages that are entirely active stay folded at the bottom (expanded while searching) with no collect action, so nothing is registered twice.
 - Three row actions: enable, disable (keep the declaration), remove (delete the row).
 - Structure view (root / groups / rows) and package view (rows grouped by their package), switchable.
 - Platform-conditional rows (`disabled: !!js process.platform === ...`) are read-only and show a platform badge.

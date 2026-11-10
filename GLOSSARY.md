@@ -29,6 +29,15 @@ _Avoid_: 删除标记、备份
 **插件行（plugin entry）**：预设组合中的一个组成项，`name` 指向提供能力的包，可携带 `config` 与 `disabled`。
 _Avoid_: 插件、工具（行不一定注册模型工具）
 
+**Host 行（Host row）**：在 profile 装载树（Host 作用域）中挂载的插件行；与预设行是两份独立实例，同名服务或工具两边都启用会重复注册。
+_Avoid_: 全局插件、系统插件
+
+**预设行（preset row）**：预设在会话作用域内挂载的插件行；由 `config.plugins` 声明，随预设启用。
+_Avoid_: 会话插件
+
+**可收录行（collectable row）**：当前在 Host 未启用的行；只有可收录行能进入预设，收录后默认在预设内启用。
+_Avoid_: 可用行、空闲插件
+
 **结构组（composition group）**：`name: cordis:group` 的行，用于组织子行；不设 `isolate` 时只是文件夹，设了才是服务隔离边界。
 _Avoid_: 包组（包组是本插件自动创建的、以包命名的结构组）
 
@@ -41,8 +50,8 @@ _Avoid_: 插件分组
 **平台变体（platform variant）**：`disabled` 为 `!!js` 表达式（如 `process.platform === 'win32'`）的行；它只在部分平台挂载。
 _Avoid_: 平台插件、条件行（条件也可以是其它上下文）
 
-**收录（collect）**：把一个包下的行加入预设的动作。
-_Avoid_: 安装、启用（收录不改变包的安装与启用状态）
+**收录（collect）**：把一个包下**可收录的**行加入预设的动作。
+_Avoid_: 安装、启用（收录不改变 Host 侧的安装与启用状态）
 
 **禁用（disable）**：保留行声明但不挂载。
 _Avoid_: 停用（口语可用，文档统一用禁用）

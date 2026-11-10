@@ -48,6 +48,11 @@ window.__ModuleLoader__.load({
       packages: '包',
       searchPackages: '搜索包名或行 id',
       saveCheckHint: '保存前会实际挂载校验；服务类行需放进带 isolate 的组。',
+      hostActive: 'Host 已启用',
+      hostActiveSection: 'Host 已启用 · 不可收录',
+      hostActiveHint: '这些包的行已经挂在 Host 上；收进预设会重复注册，所以只列出、不提供收录。',
+      collectUsable: '收录可用行',
+      collectNone: '该包的行都在 Host 启用，没有可收录的行。',
       emptyPackages: '没有匹配的包。',
       rows: '行',
       noRows: '这个预设还没有任何行。从右侧包抽屉收录开始。',
@@ -135,6 +140,11 @@ window.__ModuleLoader__.load({
       packages: 'Packages',
       searchPackages: 'Search package or row id',
       saveCheckHint: 'Every save mounts each preset once; rows that provide services need an isolate group.',
+      hostActive: 'in host',
+      hostActiveSection: 'Active in host · not collectable',
+      hostActiveHint: 'These packages are already mounted by the Host; collecting them would register twice, so they are listed but not collectable.',
+      collectUsable: 'Collect available rows',
+      collectNone: 'Every row of this package is active in the Host; nothing to collect.',
       emptyPackages: 'No matching package.',
       rows: 'rows',
       noRows: 'This preset has no row yet. Start by collecting a package.',
@@ -662,6 +672,7 @@ window.__ModuleLoader__.load({
     function Drawer({ api }) {
       const t = api.t
       const [query, setQuery] = React.useState('')
+      const [showActive, setShowActive] = React.useState(false)
       const packages = api.state?.packages ?? []
       const filtered = React.useMemo(() => {
         const needle = query.trim().toLowerCase()
@@ -671,32 +682,54 @@ window.__ModuleLoader__.load({
           || pkg.rows.some((row) => String(row.id).toLowerCase().includes(needle)
             || String(row.moduleName).toLowerCase().includes(needle)))
       }, [packages, query])
+      const usable = filtered.filter((pkg) => pkg.rows.some((row) => !row.enabled))
+      const active = filtered.filter((pkg) => pkg.rows.length > 0 && pkg.rows.every((row) => row.enabled))
+      const activeOpen = showActive || query.trim().length > 0
       return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 8, minHeight: 0 } },
         h('input', { style: styles.search, value: query, placeholder: t('searchPackages'), onChange: (event) => setQuery(event.target.value) }),
         h('div', { style: { ...styles.muted, lineHeight: 1.4 } }, t('saveCheckHint')),
-        filtered.length === 0
+        usable.length === 0
           ? h('div', { style: styles.empty }, t('emptyPackages'))
-          : filtered.map((pkg) => h(PackageCard, { key: pkg.name, api, pkg })))
+          : usable.map((pkg) => h(PackageCard, { key: pkg.name, api, pkg })),
+        active.length > 0
+          ? h('div', { style: { display: 'flex', flexDirection: 'column', gap: 6, marginTop: 6 } },
+              h('button', {
+                type: 'button',
+                style: { ...styles.sectionTitle, background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer', textAlign: 'left', padding: 0 },
+                onClick: () => setShowActive(!showActive),
+              }, (activeOpen ? '▾ ' : '▸ ') + t('hostActiveSection') + ' · ' + active.length),
+              activeOpen ? h('div', { style: { ...styles.muted, lineHeight: 1.4 } }, t('hostActiveHint')) : null,
+              activeOpen ? active.map((pkg) => h(PackageCard, { key: pkg.name, api, pkg })) : null)
+          : null)
     }
 
     function PackageCard({ api, pkg }) {
       const t = api.t
       const [open, setOpen] = React.useState(false)
+      const collectable = pkg.rows.filter((row) => !row.enabled)
+      const mixed = collectable.length > 0 && collectable.length < pkg.rows.length
       return h('div', { style: styles.packageCard },
         h('div', { style: styles.packageHead },
           h('button', { type: 'button', style: styles.buttonGhost, onClick: () => setOpen(!open) }, open ? '▾' : '▸'),
           h('span', { style: styles.packageName, title: pkg.name }, pkg.title && pkg.title !== pkg.name ? pkg.title : pkg.name),
           h('span', { style: styles.badge }, pkg.official ? t('officialTag') : t('thirdParty')),
+          collectable.length === 0 ? h('span', { style: styles.badgeWarn }, t('hostActive')) : null,
           h('span', { style: styles.badge }, pkg.rows.length + ' ' + t('rows'))),
         pkg.description ? h('div', { style: styles.muted }, pkg.description) : null,
         h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap' } },
-          h('button', { type: 'button', style: styles.button, onClick: () => api.collectPackage(pkg) }, t('collect'))),
+          collectable.length === 0
+            ? h('div', { style: styles.muted }, t('collectNone'))
+            : h('button', {
+                type: 'button', style: styles.button,
+                onClick: () => api.collectPackage(pkg, mixed ? collectable : undefined),
+              }, mixed ? t('collectUsable') : t('collect'))),
         open ? h('div', { style: { display: 'flex', flexDirection: 'column', gap: 4 } },
           pkg.rows.map((row) => h('div', { key: row.id + ':' + row.moduleName, style: { display: 'flex', gap: 6, alignItems: 'center', fontSize: 11, flexWrap: 'wrap' } },
             h('code', { style: { ...styles.code, flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, row.id || row.moduleName),
+            row.enabled ? h('span', { style: styles.badgeWarn }, t('hostActive')) : null,
             row.disabled?.kind === 'platform' ? h('span', { style: styles.badgeWarn }, row.disabled.label) : null,
             row.disabled?.kind === 'expression' ? h('span', { style: styles.badgeWarn }, t('conditional')) : null,
-            h('button', { type: 'button', style: styles.buttonGhost, onClick: () => api.collectPackage(pkg, [row]) }, t('collectRow')))))
+            row.enabled ? null : h('button', { type: 'button', style: styles.buttonGhost, onClick: () => api.collectPackage(pkg, [row]) }, t('collectRow')))))
           : null)
     }
 
@@ -1036,7 +1069,11 @@ window.__ModuleLoader__.load({
           setNotice(t('noEditablePreset'))
           return
         }
-        const sourceRows = onlyRows ?? pkg.rows
+        const sourceRows = (onlyRows ?? pkg.rows).filter((row) => !row.enabled)
+        if (sourceRows.length === 0) {
+          setNotice(t('collectNone'))
+          return
+        }
         mutatePlugins(target.id, (plugins) => {
           const used = new Set()
           walkRows(plugins, (row) => used.add(row.id))
@@ -1046,8 +1083,9 @@ window.__ModuleLoader__.load({
             used.add(id)
             const next = { id, name: row.moduleName }
             if (row.config !== undefined && row.config !== null && Object.keys(row.config).length > 0) next.config = clone(row.config)
-            if (row.disabled?.kind === 'static' && row.disabled.value === true) next.disabled = true
-            else if (row.disabled?.kind === 'platform' || row.disabled?.kind === 'expression') next.disabled = { __js: row.disabled.text }
+            // A statically disabled host row is preset-only: mount it enabled in
+            // the preset. Platform conditions are part of the row's identity.
+            if (row.disabled?.kind === 'platform' || row.disabled?.kind === 'expression') next.disabled = { __js: row.disabled.text }
             return next
           })
           if (rows.length === 0) return
