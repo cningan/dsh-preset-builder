@@ -1,5 +1,12 @@
 # 变更记录
 
+## 0.2.3 — 未发布
+
+- 包标题/简介跟随界面语言：`/state` 返回 `titles`/`descriptions` 本地化映射，客户端用 `ctx.locale.resolveText()` 解析（系统语言或设置里的语言选择）；第三方包只要带 `locale/*.json` 也走同一条路径，缺失时退回 manifest 名称/描述。
+- YAML 视图支持未保存草稿：新增 `POST /yaml-preview`，用保存时的同一序列化器渲染当前草稿；新建或未保存时显示「草稿预览」标签，不再报「读取 YAML 失败」。
+- 包卡片重排：中文标题、模块名、两行简介、操作区分行；长标题省略；复制 YAML 按钮在无内容时禁用。
+- 独立实例验证：`dsh-tool-web` 卡片显示「网页搜索与读取工具」；新建空白预设切到 YAML 能立即看到 `- id: preset-studio-preset …` 与「草稿预览」提示。
+
 ## 0.2.2 — 未发布
 
 - 包卡片显示官方中文名称与简介：读取各包 `locale/zh.json` 的 `meta.title`/`meta.description`。`pluginPackages.metaOf()` 返回的是本地化映射（`{en, zh}`），此前只接受字符串，所以全部退回包名。

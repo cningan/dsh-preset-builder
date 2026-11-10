@@ -16,6 +16,8 @@ DSH's Web UI can show a preset's configuration (read-only YAML) and make one the
 - Collect packages and their rows into the preset, with automatic package groups for multi-row packages.
 - The package drawer only offers rows **not active in the Host**; packages that are entirely active stay folded at the bottom (expanded while searching) with no collect action, so nothing is registered twice. Rows already declared in the current preset are filtered out too.
 - Package cards show the official Chinese title and description from each package's `locale/zh.json`; non-official packages sort first and official ones last.
+- Titles and descriptions follow the interface language (the in-app language setting or the system language); third-party packages with `locale/*.json` work the same way.
+- The YAML tab previews unsaved drafts (marked as a draft preview) instead of failing for new presets.
 - Three row actions: enable, disable (keep the declaration), remove (delete the row).
 - Structure view (root / groups / rows) and package view (rows grouped by their package), switchable.
 - Platform-conditional rows (`disabled: !!js process.platform === ...`) are read-only and show a platform badge.

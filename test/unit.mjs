@@ -6,7 +6,7 @@ import assert from 'node:assert/strict'
 import { buildBlock, parseBlock, readBlock, replaceBlock, extractBlock, validatePresets, blockRevision } from '../bundle/lib/patch.mjs'
 import { describeDisabledExpression } from '../bundle/lib/platform.mjs'
 import { parseYaml } from '../bundle/lib/yaml.mjs'
-import { pickText } from '../bundle/lib/inventory.mjs'
+import { pickText, textMap } from '../bundle/lib/inventory.mjs'
 
 let passed = 0
 function test(name, fn) {
@@ -131,6 +131,12 @@ test('localized display text prefers Chinese', () => {
   assert.equal(pickText({ 'zh-cn': '计时服务', en: 'Timer' }), '计时服务')
   assert.equal(pickText('plain'), 'plain')
   assert.equal(pickText(undefined), undefined)
+})
+
+test('localized text maps keep lowercase language ids', () => {
+  assert.deepEqual(textMap({ ZH: '网页工具', En: 'Web tools' }), { zh: '网页工具', en: 'Web tools' })
+  assert.deepEqual(textMap('plain'), { en: 'plain' })
+  assert.equal(textMap({}), undefined)
 })
 
 console.log(`\n${passed} checks passed`)

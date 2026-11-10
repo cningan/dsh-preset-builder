@@ -42,6 +42,17 @@ export function pickText(value) {
   return undefined
 }
 
+/** Normalize a `LocalizedText` value to a plain lowercase-id map. */
+export function textMap(value) {
+  if (typeof value === 'string') return value.trim() === '' ? undefined : { en: value }
+  if (value === null || typeof value !== 'object') return undefined
+  const map = {}
+  for (const [key, text] of Object.entries(value)) {
+    if (typeof text === 'string' && text.trim() !== '') map[String(key).toLowerCase()] = text
+  }
+  return Object.keys(map).length === 0 ? undefined : map
+}
+
 function metaOf(ctx, name, base) {
   const packages = ctx.get('pluginPackages')
   if (packages === undefined || typeof packages.metaOf !== 'function') return undefined
@@ -50,7 +61,9 @@ function metaOf(ctx, name, base) {
     if (meta === null || typeof meta !== 'object') return undefined
     return {
       title: pickText(meta.title),
+      titles: textMap(meta.title),
       description: pickText(meta.description),
+      descriptions: textMap(meta.description),
       icon: typeof meta.icon === 'string' ? meta.icon : undefined,
     }
   } catch {
@@ -81,7 +94,9 @@ export function buildInventory(ctx) {
       record = {
         name: packageName,
         title: meta?.title || packageName,
+        titles: meta?.titles,
         description: meta?.description || '',
+        descriptions: meta?.descriptions,
         icon: meta?.icon,
         official: packageName.startsWith('@deepseek-ai/'),
         rows: [],

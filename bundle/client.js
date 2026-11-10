@@ -96,6 +96,7 @@ window.__ModuleLoader__.load({
       copyYaml: '复制 YAML',
       copied: '已复制',
       yamlFailed: '读取 YAML 失败',
+      yamlDraft: '草稿预览：保存前只在这里显示，不会写入文件。',
       collect: '收录整包',
       collectRow: '收录此行',
       targetRoot: '收录到：预设根',
@@ -190,6 +191,7 @@ window.__ModuleLoader__.load({
       copyYaml: 'Copy YAML',
       copied: 'Copied',
       yamlFailed: 'Failed to read YAML',
+      yamlDraft: 'Draft preview: shown here only; nothing is written until you save.',
       collect: 'Collect package',
       collectRow: 'Collect row',
       targetRoot: 'Collecting to: preset root',
@@ -234,9 +236,12 @@ window.__ModuleLoader__.load({
       search: { width: '100%', padding: '6px 9px', borderRadius: 8, border: `1px solid ${tone(14)}`, background: tone(4), color: 'inherit', font: 'inherit', boxSizing: 'border-box' },
       input: { width: '100%', padding: '5px 8px', borderRadius: 7, border: `1px solid ${tone(14)}`, background: tone(4), color: 'inherit', font: 'inherit', boxSizing: 'border-box', fontSize: 12 },
       textarea: { width: '100%', minHeight: 90, padding: '6px 8px', borderRadius: 7, border: `1px solid ${tone(14)}`, background: tone(4), color: 'inherit', font: 'ui-monospace, SFMono-Regular, Consolas, monospace', fontSize: 11, boxSizing: 'border-box', resize: 'vertical' },
-      packageCard: { border: `1px solid ${tone(10)}`, borderRadius: 9, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 6 },
+      packageCard: { border: `1px solid ${tone(10)}`, borderRadius: 9, padding: '9px 11px', display: 'flex', flexDirection: 'column', gap: 5 },
       packageHead: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
       packageName: { flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 550 },
+      packageTitle: { flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600, fontSize: 12.5, background: 'transparent', border: 'none', color: 'inherit', textAlign: 'left', padding: 0, cursor: 'pointer' },
+      packageModule: { fontSize: 10, opacity: 0.55, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+      packageDesc: { fontSize: 11.5, opacity: 0.68, lineHeight: 1.45, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' },
       muted: { opacity: 0.62, fontSize: 12 },
       empty: { padding: '18px 8px', opacity: 0.6, textAlign: 'center', fontSize: 12 },
       errorBox: { padding: '10px 12px', borderRadius: 8, background: tone(8), border: `1px solid ${tone(16)}`, fontSize: 12 },
@@ -647,19 +652,34 @@ window.__ModuleLoader__.load({
       const [text, setText] = React.useState('')
       const [error, setError] = React.useState('')
       const [copied, setCopied] = React.useState(false)
+      const managed = preset.kind === 'managed'
+      const saved = (api.state?.presets ?? []).find((item) => item.id === preset.id)
+      const persisted = saved !== undefined && saved.kind === 'managed'
+      const rowId = typeof saved?.rowId === 'string' ? saved.rowId : undefined
+      const normalized = (value) => JSON.stringify({
+        name: value?.name ?? '',
+        description: value?.description ?? '',
+        order: typeof value?.order === 'number' ? value.order : undefined,
+        plugins: Array.isArray(value?.plugins) ? value.plugins : [],
+      })
+      const changed = persisted && normalized(preset) !== normalized(saved)
+      const draft = managed && (!persisted || changed)
       React.useEffect(() => {
         let alive = true
         setText('')
         setError('')
-        requestJson('/yaml?id=' + encodeURIComponent(preset.id))
+        const request = managed
+          ? requestJson('/yaml-preview', { method: 'POST', body: JSON.stringify({ preset, rowId }) })
+          : requestJson('/yaml?id=' + encodeURIComponent(preset.id))
+        request
           .then((body) => { if (alive) setText(body.yaml ?? '') })
           .catch((cause) => { if (alive) setError(String(cause.message ?? cause)) })
         return () => { alive = false }
-      }, [preset.id, preset.plugins])
+      }, [preset.id, preset.plugins, managed, rowId])
       return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 8 } },
         h('div', { style: styles.toolbar },
           h('button', {
-            type: 'button', style: styles.button,
+            type: 'button', style: styles.button, disabled: text.length === 0,
             onClick: async () => {
               try {
                 await navigator.clipboard.writeText(text)
@@ -669,7 +689,8 @@ window.__ModuleLoader__.load({
                 setError('clipboard unavailable')
               }
             },
-          }, copied ? t('copied') : t('copyYaml'))),
+          }, copied ? t('copied') : t('copyYaml')),
+          draft ? h('span', { style: styles.badgeWarn }, t('yamlDraft')) : null),
         error.length > 0 ? h('div', { style: styles.errorBox }, t('yamlFailed') + ': ' + error) : null,
         text.length > 0 ? h('pre', { style: styles.yaml }, text) : h('div', { style: styles.empty }, t('loading')))
     }
@@ -690,6 +711,8 @@ window.__ModuleLoader__.load({
         const matches = needle.length === 0 ? packages : packages.filter((pkg) => pkg.name.toLowerCase().includes(needle)
           || String(pkg.title ?? '').toLowerCase().includes(needle)
           || String(pkg.description ?? '').toLowerCase().includes(needle)
+          || Object.values(pkg.titles ?? {}).some((text) => String(text).toLowerCase().includes(needle))
+          || Object.values(pkg.descriptions ?? {}).some((text) => String(text).toLowerCase().includes(needle))
           || pkg.rows.some((row) => String(row.id).toLowerCase().includes(needle)
             || String(row.moduleName).toLowerCase().includes(needle)))
         return [...matches].sort((left, right) => {
@@ -724,16 +747,18 @@ window.__ModuleLoader__.load({
       const [open, setOpen] = React.useState(false)
       const collectable = rows.filter((row) => !row.enabled)
       const mixed = collectable.length > 0 && collectable.length < rows.length
-      const displayName = pkg.title && pkg.title !== pkg.name ? pkg.title : pkg.name
+      const title = api.resolveText(pkg.titles) ?? pkg.title ?? pkg.name
+      const description = api.resolveText(pkg.descriptions) ?? pkg.description ?? ''
+      const displayName = title && title !== pkg.name ? title : pkg.name
       return h('div', { style: styles.packageCard },
         h('div', { style: styles.packageHead },
           h('button', { type: 'button', style: styles.buttonGhost, onClick: () => setOpen(!open) }, open ? '▾' : '▸'),
-          h('span', { style: styles.packageName, title: pkg.name }, displayName),
+          h('button', { type: 'button', style: styles.packageTitle, title: pkg.name, onClick: () => setOpen(!open) }, displayName),
           h('span', { style: pkg.official ? styles.badge : styles.badgeWarn }, pkg.official ? t('officialTag') : t('thirdParty')),
           collectable.length === 0 ? h('span', { style: styles.badgeWarn }, t('hostActive')) : null,
           h('span', { style: styles.badge }, rows.length + ' ' + t('rows'))),
-        displayName !== pkg.name ? h('div', { style: styles.muted }, pkg.name) : null,
-        pkg.description ? h('div', { style: styles.muted }, pkg.description) : null,
+        displayName !== pkg.name ? h('div', { style: styles.packageModule, title: pkg.name }, pkg.name) : null,
+        description.length > 0 ? h('div', { style: styles.packageDesc, title: description }, description) : null,
         h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap' } },
           collectable.length === 0
             ? h('div', { style: styles.muted }, t('collectNone'))
@@ -830,7 +855,7 @@ window.__ModuleLoader__.load({
           : null)
     }
 
-    function StudioPage({ t }) {
+    function StudioPage({ t, resolveText }) {
       const [state, setState] = React.useState(null)
       const [draft, setDraft] = React.useState([])
       const [saved, setSaved] = React.useState([])
@@ -1143,6 +1168,7 @@ window.__ModuleLoader__.load({
 
       const api = {
         t, state, draft, selectedId, selected, dirty, saving, notice, status,
+        resolveText,
         view, tab, menuOpen, collapsed, configEditorId, isolateEditorId, selectedGroupId, warnings, baseRevision,
         officialPresets, foreignPresets,
         setMenuOpen, setView, setTab, setNotice,
@@ -1200,6 +1226,23 @@ window.__ModuleLoader__.load({
     async function apply(ctx) {
       ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'preset-studio: dictionaries')
       const t = ctx.locale.bind(NS)
+      const resolveText = (value) => {
+        try {
+          if (ctx.locale !== undefined && typeof ctx.locale.resolveText === 'function') {
+            const text = ctx.locale.resolveText(value)
+            if (typeof text === 'string' && text.length > 0) return text
+          }
+        } catch {
+          // fall through to the static map
+        }
+        if (typeof value === 'string') return value
+        if (value !== null && typeof value === 'object') {
+          for (const key of ['zh', 'zh-cn', 'en']) {
+            if (typeof value[key] === 'string' && value[key].length > 0) return value[key]
+          }
+        }
+        return undefined
+      }
       if (!(await sidebarEntryEnabled())) return
 
       ctx.slots.inject('sidebar.panellist', () => ctx.slots.register({
@@ -1215,7 +1258,7 @@ window.__ModuleLoader__.load({
           name: 'main',
           key: PANEL_ID,
           locale: NS,
-        }, () => h(StudioPage, { t }))
+        }, () => h(StudioPage, { t, resolveText }))
       })
     }
 

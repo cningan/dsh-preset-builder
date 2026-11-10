@@ -77,6 +77,10 @@ async function dispatch(ctx, config, server, req, res) {
       const id = url.searchParams.get('id') ?? ''
       return sendJson(res, await presetYaml(ctx, id))
     }
+    if (req.method === 'POST' && route === '/yaml-preview') {
+      if (!sameOrigin(server, req)) return sendJson(res, 403, { ok: false, error: 'cross-origin request rejected' })
+      return sendJson(res, yamlPreview(await readJsonBody(req)))
+    }
     if (req.method === 'POST' && route === '/verify') {
       if (!sameOrigin(server, req)) return sendJson(res, 403, { ok: false, error: 'cross-origin request rejected' })
       const body = await readJsonBody(req)
@@ -469,6 +473,20 @@ async function presetYaml(ctx, id) {
     return { ok: true, id, kind: 'builtin', yaml: `${emitListItem(row, 0).join('\n')}\n` }
   }
   return { ok: false, error: `preset not found: ${id}` }
+}
+
+/** Render the draft preset as YAML without touching the profile. */
+function yamlPreview(body) {
+  const preset = body?.preset
+  if (preset === null || typeof preset !== 'object' || Array.isArray(preset)) throw new Error('preset is required')
+  if (typeof preset.id !== 'string' || preset.id.length === 0) throw new Error('preset id is required')
+  const rowId = typeof body?.rowId === 'string' && body.rowId.length > 0 ? body.rowId : `${ROW_PREFIX}${preset.id}`
+  const config = { id: preset.id }
+  if (typeof preset.name === 'string' && preset.name.length > 0) config.name = preset.name
+  if (typeof preset.description === 'string' && preset.description.length > 0) config.description = preset.description
+  if (typeof preset.order === 'number' && Number.isFinite(preset.order)) config.order = preset.order
+  config.plugins = Array.isArray(preset.plugins) ? preset.plugins : []
+  return { ok: true, yaml: `${emitListItem({ id: rowId, name: AGENT_PRESET, config }, 0).join('\n')}\n` }
 }
 
 function conflictOf(body, blockText) {
