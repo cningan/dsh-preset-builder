@@ -55,6 +55,8 @@ window.__ModuleLoader__.load({
       thirdPartyHostHint: '这些是已安装的第三方包；它们的行在 Host 中已经启用，收进预设有重复注册风险，因此只展示、不提供收录。',
       presetOnly: '仅预设',
       presetOnlyHint: '该包只被预设使用，不在 Host 装载树里；收录后由预设挂载。',
+      inactiveBundle: '未启用',
+      inactiveBundleHint: '这个包已安装但未在 Host 启用；收录后由预设挂载。',
       hostActive: 'Host 已启用',
       hostActiveSection: 'Host 管理 · 不可收录',
       hostActiveHint: '这些包的行已由 Host 启用，或由平台/环境条件决定；收进预设可能重复挂载，因此只列出、不提供收录。',
@@ -174,6 +176,8 @@ window.__ModuleLoader__.load({
       thirdPartyHostHint: 'Installed third-party packages whose rows are already active in the Host. Collecting them into a preset would register the same plugin twice, so they are listed without a collect action.',
       presetOnly: 'preset-only',
       presetOnlyHint: 'This package is only mounted by presets (absent from the Host loader); collected rows are mounted by the preset.',
+      inactiveBundle: 'inactive',
+      inactiveBundleHint: 'This package is installed but not active in the Host; collected rows are mounted by the preset.',
       hostActive: 'in host',
       hostActiveSection: 'Host-managed · not collectable',
       hostActiveHint: 'These rows are active in the Host or decided by a platform/environment condition; collecting them could register the same plugin twice, so they are listed but not collectable.',
@@ -868,6 +872,7 @@ window.__ModuleLoader__.load({
           h('button', { type: 'button', style: styles.packageTitle, title: pkg.name, onClick: () => setOpen(!open) }, displayName),
           h('span', { style: pkg.official ? styles.badge : styles.badgeWarn }, pkg.official ? t('officialTag') : t('thirdParty')),
           pkg.presetOnly === true ? h('span', { style: styles.badgeWarn, title: t('presetOnlyHint') }, t('presetOnly')) : null,
+          pkg.inactiveBundle === true ? h('span', { style: styles.badgeWarn, title: t('inactiveBundleHint') }, t('inactiveBundle')) : null,
           collectable.length === 0
             ? rows.some((row) => row.enabled)
               ? h('span', { style: styles.badgeWarn }, t('hostActive'))

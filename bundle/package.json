@@ -1,6 +1,6 @@
 {
   "name": "dsh-preset-builder",
-  "version": "0.2.8",
+  "version": "0.2.9",
   "type": "module",
   "description": "Build custom Agent presets in the DSH Web UI: collect package rows, edit groups and config, save as ordinary preset declarations.",
   "author": "cningan",

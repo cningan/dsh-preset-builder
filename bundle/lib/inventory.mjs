@@ -1,8 +1,11 @@
 /**
  * Read model of the composition: packages and the rows they contribute.
  */
+import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { cleanValue } from './patch.mjs'
 import { describeDisabledExpression } from './platform.mjs'
+import { parseYaml } from './yaml.mjs'
 
 /** Package name of a module specifier: `@scope/name/sub` -> `@scope/name`. */
 export function packageNameOf(specifier) {
@@ -81,7 +84,8 @@ function slugOf(text) {
  * the Host loader. Rows found in preset trees become collectable, so the drawer
  * offers persona and friends without hand-typed module names.
  */
-export function addPresetOnlyPackages(ctx, packages, trees) {
+export function addPresetOnlyPackages(ctx, packages, trees, options = {}) {
+  const markInactive = options.markInactive === true
   const knownModules = new Set()
   for (const pkg of packages) {
     for (const row of pkg.rows) knownModules.add(row.moduleName)
@@ -95,6 +99,9 @@ export function addPresetOnlyPackages(ctx, packages, trees) {
         continue
       }
       if (typeof row.name !== 'string' || row.name.length === 0) continue
+      // A conditional row is decided by the Host/preset expression, so it is
+      // not a safe row to copy into a preset: it could mount twice.
+      if (row.disabled !== null && typeof row.disabled === 'object' && '__js' in row.disabled) continue
       if (row.name.startsWith('cordis:') || knownModules.has(row.name)) continue
       const packageName = packageNameOf(row.name)
       let record = byPackage.get(packageName)
@@ -109,6 +116,7 @@ export function addPresetOnlyPackages(ctx, packages, trees) {
           icon: meta?.icon,
           official: packageName.startsWith('@deepseek-ai/'),
           presetOnly: true,
+          inactiveBundle: markInactive,
           rows: [],
         }
         byPackage.set(packageName, record)
@@ -141,6 +149,44 @@ export function addPresetOnlyPackages(ctx, packages, trees) {
   }
   packages.sort((a, b) => a.name.localeCompare(b.name))
   return packages
+}
+
+/**
+ * Installed profile bundles that are not part of the Host loader (disabled or
+ * otherwise absent) still declare rows in their bundle patch. Those modules can
+ * be mounted by a preset, so expose them as collectable packages. Without this
+ * the drawer only knows Host rows and third-party packages that are switched
+ * off never appear at all.
+ */
+export async function addInactiveBundlePackages(ctx, packages, profileDir) {
+  if (typeof profileDir !== 'string' || profileDir.length === 0) return packages
+  let manifest
+  try {
+    manifest = JSON.parse(await readFile(join(profileDir, 'package.json'), 'utf8'))
+  } catch {
+    return packages
+  }
+  const known = new Set(packages.filter((pkg) => pkg.rows.length > 0).map((pkg) => pkg.name))
+  const trees = []
+  for (const dep of Object.keys(manifest?.dependencies ?? {})) {
+    if (known.has(dep)) continue
+    try {
+      const pkgDir = join(profileDir, 'node_modules', dep)
+      const meta = JSON.parse(await readFile(join(pkgDir, 'package.json'), 'utf8'))
+      const patchRel = meta?.dsh?.bundle?.patch
+      if (typeof patchRel !== 'string' || patchRel.length === 0) continue
+      const parsed = parseYaml(await readFile(join(pkgDir, patchRel), 'utf8'))
+      if (!Array.isArray(parsed)) continue
+      for (const entry of parsed) {
+        if (entry !== null && typeof entry === 'object' && Array.isArray(entry.insert)) trees.push(entry.insert)
+      }
+      known.add(dep)
+    } catch {
+      // A broken or platform-specific bundle must not break the whole drawer.
+    }
+  }
+  if (trees.length === 0) return packages
+  return addPresetOnlyPackages(ctx, packages, trees, { markInactive: true })
 }
 
 export function buildInventory(ctx) {
