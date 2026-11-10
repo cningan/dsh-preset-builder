@@ -47,7 +47,17 @@ export function scalarText(value) {
   return JSON.stringify(String(value))
 }
 
-function emitValue(value, indent) {
+function isMultilineString(value) {
+  return typeof value === 'string' && value.includes('\n')
+}
+
+function blockLines(value, indent) {
+  const body = value.endsWith('\n') ? value.slice(0, -1) : value
+  const pad = ' '.repeat(indent)
+  return body.split('\n').map((line) => (line.length === 0 ? '' : pad + line))
+}
+
+function emitValue(value, indent = 0) {
   const pad = ' '.repeat(indent)
   if (value === null || value === undefined || typeof value !== 'object' || isJsExpr(value)) {
     return [pad + scalarText(value)]
@@ -65,7 +75,11 @@ function emitValue(value, indent) {
   const lines = []
   for (const key of keys) {
     const child = value[key]
-    if (child !== null && typeof child === 'object' && !isJsExpr(child)) {
+    if (isMultilineString(child)) {
+      const chomp = child.endsWith('\n') ? '|' : '|-'
+      lines.push(`${pad}${keyText(key)}: ${chomp}`)
+      lines.push(...blockLines(child, indent + 2))
+    } else if (child !== null && typeof child === 'object' && !isJsExpr(child)) {
       lines.push(`${pad}${keyText(key)}:`)
       lines.push(...emitValue(child, indent + 2))
     } else {
@@ -75,8 +89,12 @@ function emitValue(value, indent) {
   return lines
 }
 
-function emitListItem(value, indent) {
+function emitListItem(value, indent = 0) {
   const pad = ' '.repeat(indent)
+  if (isMultilineString(value)) {
+    const chomp = value.endsWith('\n') ? '|' : '|-'
+    return [`${pad}- ${chomp}`, ...blockLines(value, indent + 2)]
+  }
   const lines = emitValue(value, indent + 2)
   lines[0] = `${pad}- ${lines[0].slice(indent + 2)}`
   return lines

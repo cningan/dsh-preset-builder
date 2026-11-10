@@ -83,6 +83,16 @@ window.__ModuleLoader__.load({
       viewStructure: '结构视图',
       viewPackage: '包视图',
       addGroup: '新建组',
+      addRow: '添加行',
+      addRowHint: '手动加入模块行（适合仅预设使用的包，如 persona 人设）；配置按 JSON 对象填写，长字符串会自动变成多行编辑。',
+      moduleNamePlaceholder: '模块名，如 @deepseek-ai/dsh-persona',
+      rowIdPlaceholder: '行 id（可选）',
+      configJsonPlaceholder: '配置 JSON，如 {"section": "..."}',
+      addRowConfirm: '添加',
+      personaTemplate: '人设模板',
+      moduleRequired: '请填写模块名。',
+      configJsonInvalid: '配置必须是 JSON 对象。',
+      cancel: '取消',
       removeGroup: '删除组',
       isolate: 'isolate',
       isolateHint: 'JSON，例如 {"planMode": true}',
@@ -181,6 +191,16 @@ window.__ModuleLoader__.load({
       viewStructure: 'Structure',
       viewPackage: 'Packages',
       addGroup: 'Add group',
+      addRow: 'Add row',
+      addRowHint: 'Add a module row by hand (useful for preset-only packages such as persona); config is a JSON object, and long strings become multiline editors.',
+      moduleNamePlaceholder: 'module, e.g. @deepseek-ai/dsh-persona',
+      rowIdPlaceholder: 'row id (optional)',
+      configJsonPlaceholder: 'config JSON, e.g. {"section": "..."}',
+      addRowConfirm: 'Add',
+      personaTemplate: 'Persona template',
+      moduleRequired: 'Module name is required.',
+      configJsonInvalid: 'Config must be a JSON object.',
+      cancel: 'Cancel',
       removeGroup: 'Remove group',
       isolate: 'isolate',
       isolateHint: 'JSON, e.g. {"planMode": true}',
@@ -219,8 +239,8 @@ window.__ModuleLoader__.load({
       .ps-root button { transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; }
       .ps-root button:not(:disabled):hover { background-color: color-mix(in srgb, currentColor 8%, transparent); }
       .ps-root button:disabled { opacity: 0.45; cursor: default; }
-      .ps-root :focus-visible { outline: 2px solid color-mix(in srgb, currentColor 45%, transparent); outline-offset: 1px; border-radius: 5px; }
-      .ps-root input:focus-visible, .ps-root textarea:focus-visible { outline-offset: 0; }
+      .ps-root :focus-visible { outline: none; }
+      .ps-root input:focus-visible, .ps-root textarea:focus-visible { outline: 2px solid color-mix(in srgb, currentColor 40%, transparent); outline-offset: 0; }
       .ps-scroll { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, currentColor 20%, transparent) transparent; }
       .ps-scroll::-webkit-scrollbar { width: 9px; height: 9px; }
       .ps-scroll::-webkit-scrollbar-thumb { background: color-mix(in srgb, currentColor 18%, transparent); border-radius: 999px; border: 2px solid transparent; background-clip: padding-box; }
@@ -244,7 +264,7 @@ window.__ModuleLoader__.load({
       right: { width: 360, flex: '0 0 360px', borderLeft: `1px solid ${tone(10)}`, padding: '12px 14px', gap: 8 },
       sectionTitle: { fontSize: 11, letterSpacing: '0.04em', opacity: 0.6, textTransform: 'uppercase', margin: '4px 4px 2px' },
       presetItem: { display: 'flex', flexDirection: 'column', gap: 2, padding: '6px 8px', borderRadius: 8, border: '1px solid transparent', background: 'transparent', color: 'inherit', textAlign: 'left', cursor: 'pointer', font: 'inherit' },
-      presetItemActive: { background: tone(9), borderColor: tone(18) },
+      presetItemActive: { background: tone(9) },
       presetName: { fontWeight: 550, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
       presetMeta: { fontSize: 11, opacity: 0.6 },
       badge: { fontSize: 10, padding: '1px 6px', borderRadius: 999, background: tone(10), opacity: 0.9, whiteSpace: 'nowrap' },
@@ -503,6 +523,8 @@ window.__ModuleLoader__.load({
           h('button', { type: 'button', style: styles.buttonGhost, onClick: () => api.removeRow(preset.id, row.id) }, t('remove'))))
     }
 
+    const PROSE_KEY = /(section|prompt|instruction|instructions|description|content|text|message|template|role|persona)/i
+
     function ConfigEditor({ api, preset, row }) {
       const t = api.t
       const [value, setValue] = React.useState(() => clone(row.config ?? {}))
@@ -537,7 +559,7 @@ window.__ModuleLoader__.load({
           ? h('div', { style: { display: 'flex', flexDirection: 'column', gap: 4 } },
               simpleKeys.map(([key, child]) => h('label', {
                 key,
-                style: { display: 'flex', alignItems: 'center', gap: 6, fontSize: 11 },
+                style: { display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 11 },
               },
                 h('span', { style: { minWidth: 130, opacity: 0.72, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, key),
                 typeof child === 'boolean'
@@ -546,15 +568,21 @@ window.__ModuleLoader__.load({
                       checked: child,
                       onChange: (event) => update({ ...value, [key]: event.target.checked }),
                     })
-                  : h('input', {
-                      style: { ...styles.input, flex: '1 1 auto', maxWidth: 280 },
-                      type: typeof child === 'number' ? 'number' : 'text',
-                      value: String(child),
-                      onChange: (event) => update({
-                        ...value,
-                        [key]: typeof child === 'number' ? Number(event.target.value) : event.target.value,
-                      }),
-                    }))))
+                  : typeof child === 'string' && (child.includes('\n') || child.length > 80 || PROSE_KEY.test(key))
+                    ? h('textarea', {
+                        style: { ...styles.input, minHeight: 76, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5 },
+                        value: child,
+                        onChange: (event) => update({ ...value, [key]: event.target.value }),
+                      })
+                    : h('input', {
+                        style: { ...styles.input, flex: '1 1 auto', maxWidth: 280 },
+                        type: typeof child === 'number' ? 'number' : 'text',
+                        value: String(child),
+                        onChange: (event) => update({
+                          ...value,
+                          [key]: typeof child === 'number' ? Number(event.target.value) : event.target.value,
+                        }),
+                      }))))
           : null,
         h('textarea', {
           style: styles.textarea,
@@ -818,6 +846,69 @@ window.__ModuleLoader__.load({
           : null)
     }
 
+    function AddRowView({ api, preset }) {
+      const t = api.t
+      const [name, setName] = React.useState('')
+      const [id, setId] = React.useState('')
+      const [config, setConfig] = React.useState('')
+      const [error, setError] = React.useState('')
+      const fillPersona = () => {
+        setName('@deepseek-ai/dsh-persona')
+        setId('persona')
+        setConfig(JSON.stringify({ section: '' }, null, 2))
+        setError('')
+      }
+      const submit = () => {
+        if (name.trim().length === 0) {
+          setError(t('moduleRequired'))
+          return
+        }
+        let parsed
+        if (config.trim().length > 0) {
+          try {
+            parsed = JSON.parse(config)
+          } catch {
+            setError(t('configJsonInvalid'))
+            return
+          }
+          if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+            setError(t('configJsonInvalid'))
+            return
+          }
+        }
+        api.addRow(preset.id, { name: name.trim(), id: id.trim(), config: parsed })
+      }
+      return h('div', { style: styles.card },
+        h('div', { style: styles.sectionTitle }, t('addRow')),
+        h('div', { style: styles.muted }, t('addRowHint')),
+        h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap' } },
+          h('input', {
+            style: { ...styles.input, flex: '1 1 220px' },
+            value: name,
+            placeholder: t('moduleNamePlaceholder'),
+            onChange: (event) => setName(event.target.value),
+          }),
+          h('input', {
+            style: { ...styles.input, flex: '0 1 150px' },
+            value: id,
+            placeholder: t('rowIdPlaceholder'),
+            onChange: (event) => setId(event.target.value),
+          })),
+        h('textarea', {
+          style: styles.textarea,
+          value: config,
+          placeholder: t('configJsonPlaceholder'),
+          spellCheck: false,
+          onChange: (event) => setConfig(event.target.value),
+        }),
+        error.length > 0 ? h('div', { style: styles.errorBox }, error) : null,
+        h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' } },
+          h('button', { type: 'button', style: styles.buttonPrimary, onClick: submit }, t('addRowConfirm')),
+          h('button', { type: 'button', style: styles.button, onClick: fillPersona }, t('personaTemplate')),
+          h('span', { style: { flex: '1 1 auto' } }),
+          h('button', { type: 'button', style: styles.buttonGhost, onClick: () => api.setAddRowOpen(false) }, t('cancel'))))
+    }
+
     function SaveBar({ api }) {
       const t = api.t
       const dirty = api.dirty
@@ -880,7 +971,9 @@ window.__ModuleLoader__.load({
           api.tab === 'compose' && managed ? h('button', { type: 'button', style: api.view === 'package' ? styles.buttonPrimary : styles.button, onClick: () => api.setView('package') }, t('viewPackage')) : null,
           api.tab === 'compose' && managed ? h('span', { style: { flex: '1 1 auto' } }) : null,
           api.tab === 'compose' && managed && !locked ? h('span', { style: styles.muted }, api.selectedGroupId === null ? t('targetRoot') : t('targetGroup', { id: api.selectedGroupId })) : null,
+          api.tab === 'compose' && editable ? h('button', { type: 'button', style: styles.button, onClick: () => api.setAddRowOpen(!api.addRowOpen) }, t('addRow')) : null,
           api.tab === 'compose' && editable ? h('button', { type: 'button', style: styles.button, onClick: () => api.addGroup(preset.id) }, t('addGroup')) : null),
+        editable && api.tab === 'compose' && api.addRowOpen ? h(AddRowView, { api, preset }) : null,
         api.tab === 'yaml'
           ? h(YAMLView, { api, preset })
           : !managed
@@ -914,6 +1007,7 @@ window.__ModuleLoader__.load({
       const [configEditorId, setConfigEditorId] = React.useState(null)
       const [isolateEditorId, setIsolateEditorId] = React.useState(null)
       const [selectedGroupId, setSelectedGroupId] = React.useState(null)
+      const [addRowOpen, setAddRowOpen] = React.useState(false)
 
       const dirty = React.useMemo(() => JSON.stringify(draft) !== JSON.stringify(saved), [draft, saved])
 
@@ -1186,9 +1280,27 @@ window.__ModuleLoader__.load({
         })
       }
 
+      const addRow = (presetId, { name, id, config }) => {
+        const target = selected
+        if (target === null || target.kind !== 'managed' || target.locked === true) {
+          setNotice(t('noEditablePreset'))
+          return
+        }
+        mutatePlugins(presetId, (plugins) => {
+          const used = new Set()
+          walkRows(plugins, (row) => used.add(row.id))
+          const rowId = uniqueName(id || slugify(packageNameOf(name)) || 'row', used)
+          const row = { id: rowId, name }
+          if (config !== undefined && config !== null && Object.keys(config).length > 0) row.config = config
+          const group = selectedGroupId === null ? undefined : locate(plugins, selectedGroupId)
+          const list = group !== undefined ? group.row.config : plugins
+          list.push(row)
+        })
+        setAddRowOpen(false)
+      }
+
       const warnings = React.useMemo(() => {
         const issues = []
-        const installed = new Set((state?.packages ?? []).map((pkg) => pkg.name))
         for (const preset of draft) {
           if (preset.locked === true) continue
           if (typeof preset.name !== 'string' || preset.name.trim().length === 0) issues.push(preset.id + ': ' + t('name') + ' —')
@@ -1198,9 +1310,6 @@ window.__ModuleLoader__.load({
           walkRows(preset.plugins, (row) => {
             if (seen.has(row.id)) issues.push(preset.id + ': ' + t('duplicateRow') + ' ' + row.id)
             seen.add(row.id)
-            if (row.name !== 'cordis:group' && !installed.has(packageNameOf(row.name))) {
-              issues.push(preset.id + ': ' + t('stalePackage') + ' ' + row.name)
-            }
           })
         }
         return issues
@@ -1220,6 +1329,7 @@ window.__ModuleLoader__.load({
         toggleRow, removeRow, moveRow, applyRowConfig, resetRowConfig,
         toggleConfig: (id) => setConfigEditorId((current) => current === id ? null : id),
         addGroup, removeGroup,
+        addRowOpen, setAddRowOpen, addRow,
         toggleIsolateEditor: (id) => setIsolateEditorId((current) => current === id ? null : id),
         applyIsolate,
         selectGroup: (id) => setSelectedGroupId(id),

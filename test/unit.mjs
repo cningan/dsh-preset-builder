@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict'
 import { buildBlock, parseBlock, readBlock, replaceBlock, extractBlock, validatePresets, blockRevision } from '../bundle/lib/patch.mjs'
 import { describeDisabledExpression } from '../bundle/lib/platform.mjs'
-import { parseYaml } from '../bundle/lib/yaml.mjs'
+import { emitListItem, parseYaml } from '../bundle/lib/yaml.mjs'
 import { pickText, textMap } from '../bundle/lib/inventory.mjs'
 
 let passed = 0
@@ -137,6 +137,19 @@ test('localized text maps keep lowercase language ids', () => {
   assert.deepEqual(textMap({ ZH: '网页工具', En: 'Web tools' }), { zh: '网页工具', en: 'Web tools' })
   assert.deepEqual(textMap('plain'), { en: 'plain' })
   assert.equal(textMap({}), undefined)
+})
+
+test('multiline strings emit block scalars and round-trip', () => {
+  const text = emitListItem({
+    id: 'persona',
+    name: '@deepseek-ai/dsh-persona',
+    config: { section: '第一行\n第二行' },
+  }).join('\n')
+  assert.equal(text.includes('section: |-'), true, text)
+  assert.equal(parseYaml(text)[0].config.section, '第一行\n第二行')
+  const trailing = emitListItem({ config: { section: 'a\nb\n' } }).join('\n')
+  assert.equal(trailing.includes('section: |'), true, trailing)
+  assert.equal(parseYaml(trailing)[0].config.section, 'a\nb\n')
 })
 
 console.log(`\n${passed} checks passed`)
