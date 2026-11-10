@@ -8,7 +8,7 @@
  * declares (adopt it to edit), and the user may lock any of them.
  */
 window.__ModuleLoader__.load({
-  id: 'dsh-preset-studio',
+  id: 'dsh-preset-builder',
   factory(require) {
     const React = require('react')
     const h = React.createElement

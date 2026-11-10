@@ -24,7 +24,7 @@ import {
 import { readBuiltInPreset, readRegistryDocument } from './lib/presets.mjs'
 import { emitListItem, parseYaml } from './lib/yaml.mjs'
 
-export const name = 'dsh-preset-studio'
+export const name = 'dsh-preset-builder'
 
 export const inject = ['webServer']
 
