@@ -119,6 +119,11 @@ window.__ModuleLoader__.load({
       name: '名称',
       description: '描述',
       order: '排序',
+      presetId: '代号',
+      presetIdHint: '保存前可改：小写字母、数字、连字符',
+      invalidId: '代号只能包含小写字母、数字和连字符。',
+      duplicateId: '代号已被占用。',
+      unsavedHere: '未保存',
       pending: '等待生效',
       needsRestart: '已保存；当前没有 HMR，重启应用后生效。',
       groupEmpty: '空组',
@@ -229,6 +234,11 @@ window.__ModuleLoader__.load({
       name: 'Name',
       description: 'Description',
       order: 'Order',
+      presetId: 'ID',
+      presetIdHint: 'Editable before saving: lowercase letters, digits, hyphens',
+      invalidId: 'ID may only contain lowercase letters, digits and hyphens.',
+      duplicateId: 'That ID is already taken.',
+      unsavedHere: 'unsaved',
       pending: 'pending',
       needsRestart: 'Saved; HMR is unavailable, restart the application to apply.',
       groupEmpty: 'Empty group',
@@ -433,6 +443,7 @@ window.__ModuleLoader__.load({
     }
 
     function PresetItem({ api, preset, name, badges }) {
+      const t = api.t
       const active = preset.id === api.selectedId
       return h('button', {
         type: 'button',
@@ -443,7 +454,9 @@ window.__ModuleLoader__.load({
         h('span', { style: styles.presetName },
           name,
           ...badges,
-          active && api.dirty ? h('span', { style: styles.badgeWarn }, '●') : null),
+          api.presetDirty(preset)
+            ? h('span', { style: styles.badgeWarn, title: t('unsaved') }, t('unsavedHere'))
+            : null),
         h('span', { style: styles.presetMeta },
           h('code', { style: styles.code }, preset.id),
           preset.order !== undefined ? ' · ' + preset.order : ''))
@@ -915,6 +928,44 @@ window.__ModuleLoader__.load({
           h('button', { type: 'button', style: styles.buttonGhost, onClick: () => api.setAddRowOpen(false) }, t('cancel'))))
     }
 
+    function PresetIdField({ api, preset }) {
+      const t = api.t
+      const [text, setText] = React.useState(preset.id)
+      const [error, setError] = React.useState('')
+      React.useEffect(() => {
+        setText(preset.id)
+        setError('')
+      }, [preset.id])
+      const commit = () => {
+        const next = text.trim()
+        if (next === preset.id) {
+          setError('')
+          return
+        }
+        const problem = api.renamePreset(preset.id, next)
+        setError(problem ?? '')
+      }
+      return h('div', { style: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' } },
+        h('span', { style: { ...styles.muted, fontSize: 11 } }, t('presetId')),
+        h('input', {
+          style: { ...styles.input, width: 170, fontSize: 11, fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace' },
+          value: text,
+          spellCheck: false,
+          'aria-label': t('presetId'),
+          onChange: (event) => {
+            setText(event.target.value)
+            setError('')
+          },
+          onBlur: commit,
+          onKeyDown: (event) => {
+            if (event.key === 'Enter') commit()
+          },
+        }),
+        error.length > 0
+          ? h('span', { style: { ...styles.badgeWarn, fontSize: 10 } }, error)
+          : h('span', { style: { ...styles.muted, fontSize: 10 } }, t('presetIdHint')))
+    }
+
     function SaveBar({ api }) {
       const t = api.t
       const dirty = api.dirty
@@ -940,7 +991,9 @@ window.__ModuleLoader__.load({
               ? h('input', { style: { ...styles.input, flex: '1 1 180px', minWidth: 120 }, value: preset.name ?? '', placeholder: t('name'), onChange: (event) => api.updatePreset(preset.id, { name: event.target.value }) })
               : h('strong', { style: { flex: '1 1 180px', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, preset.name || preset.id),
             editable
-              ? h('input', { style: { ...styles.input, width: 64, flex: '0 0 64px' }, type: 'number', value: preset.order ?? '', placeholder: t('order'), onChange: (event) => api.updatePreset(preset.id, { order: event.target.value === '' ? undefined : Number(event.target.value) }) })
+              ? h('label', { style: { display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, opacity: 0.75 } },
+                  h('span', null, t('order')),
+                  h('input', { style: { ...styles.input, width: 64, flex: '0 0 64px' }, type: 'number', value: preset.order ?? '', placeholder: t('order'), onChange: (event) => api.updatePreset(preset.id, { order: event.target.value === '' ? undefined : Number(event.target.value) }) }))
               : preset.order !== undefined ? h('span', { style: styles.badge }, 'order ' + preset.order) : null,
             h('span', { style: { flex: '1 1 auto' } }),
             !official && locked ? h('button', { type: 'button', style: styles.button, onClick: () => api.setLocked(preset.id, false) }, t('unlock')) : null,
@@ -948,7 +1001,9 @@ window.__ModuleLoader__.load({
             !official && !locked ? h('button', { type: 'button', style: styles.button, onClick: () => api.deletePreset(preset.id) }, t('deletePreset')) : null,
             !official && !managed && !locked && preset.canAdopt ? h('button', { type: 'button', style: styles.buttonPrimary, onClick: () => api.adoptPreset(preset.id) }, t('adopt')) : null),
           h('div', { style: { display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' } },
-            h('code', { style: styles.code }, preset.id),
+            api.canRenamePreset(preset.id)
+              ? h(PresetIdField, { api, preset })
+              : h('code', { style: styles.code }, preset.id),
             official ? h('span', { style: styles.badge }, t('officialTag')) : null,
             !official && !managed && !locked ? h('span', { style: styles.badge }, t('foreign')) : null,
             locked ? h('span', { style: styles.badgeWarn }, t('locked')) : null,
@@ -1060,6 +1115,25 @@ window.__ModuleLoader__.load({
       const foreignPresets = React.useMemo(() => (state?.presets ?? []).filter((preset) => preset.kind === 'foreign'), [state])
 
       const updatePreset = (id, patch) => setDraft((prev) => prev.map((preset) => preset.id === id ? { ...preset, ...patch } : preset))
+
+      const savedById = React.useMemo(() => new Map(saved.map((preset) => [preset.id, preset])), [saved])
+      const presetDirty = (preset) => {
+        if (!draft.some((entry) => entry.id === preset.id)) return false
+        const base = savedById.get(preset.id)
+        return base === undefined || JSON.stringify(base) !== JSON.stringify(preset)
+      }
+      const canRenamePreset = (id) => !saved.some((preset) => preset.id === id) && draft.some((preset) => preset.id === id)
+      const renamePreset = (oldId, rawId) => {
+        const next = String(rawId ?? '').trim()
+        if (next === oldId) return undefined
+        if (!/^[a-z0-9][a-z0-9-]*$/.test(next)) return t('invalidId')
+        if (draft.some((preset) => preset.id === next) || (state?.presets ?? []).some((preset) => preset.id === next)) {
+          return t('duplicateId')
+        }
+        setDraft((prev) => prev.map((preset) => preset.id === oldId ? { ...preset, id: next } : preset))
+        if (selectedId === oldId) setSelectedId(next)
+        return undefined
+      }
 
       const mutatePlugins = (id, mutate) => setDraft((prev) => prev.map((preset) => {
         if (preset.id !== id) return preset
@@ -1332,6 +1406,7 @@ window.__ModuleLoader__.load({
         createBlank: () => createPreset(undefined), copyPreset,
         deletePreset, adoptPreset, setLocked,
         updatePreset, save, discard,
+        presetDirty, canRenamePreset, renamePreset,
         toggleRow, removeRow, moveRow, applyRowConfig, resetRowConfig,
         toggleConfig: (id) => setConfigEditorId((current) => current === id ? null : id),
         addGroup, removeGroup,

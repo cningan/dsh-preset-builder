@@ -1,9 +1,19 @@
 {
   "name": "dsh-preset-studio",
-  "version": "0.2.6",
-  "private": true,
+  "version": "0.2.7",
   "type": "module",
   "description": "Build custom Agent presets in the DSH Web UI: collect package rows, edit groups and config, save as ordinary preset declarations.",
+  "author": "cningan",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cningan/dsh-preset-studio.git"
+  },
+  "homepage": "https://github.com/cningan/dsh-preset-studio#readme",
+  "bugs": {
+    "url": "https://github.com/cningan/dsh-preset-studio/issues"
+  },
+  "keywords": ["dsh", "deepseek-harness", "cordis", "agent-preset", "plugin"],
   "main": "index.js",
   "exports": {
     ".": "./index.js",
@@ -13,11 +23,13 @@
   },
   "files": [
     "index.js",
-    "lib/**/*.js",
+    "lib",
     "client.js",
     "cordis.patch.yml",
-    "locale/*.json",
-    "icon.svg"
+    "locale",
+    "icon.svg",
+    "README.md",
+    "LICENSE"
   ],
   "dependencies": {
     "@deepseek-ai/schemastery": "^3.19.0",

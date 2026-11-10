@@ -10,7 +10,8 @@ DSH's Web UI can show a preset's configuration (read-only YAML) and make one the
 
 - Left-sidebar entry **预设工坊 / Preset Workshop** with a three-column workspace: preset list, composition area, package drawer.
 - Two categories only: the four official presets are permanently read-only; every other preset is a **custom** preset with the same management surface.
-- Create a preset from blank, from an official preset, or from another custom preset; edit name, description and order.
+- Create a preset from blank, from an official preset, or from another custom preset; edit name, description and order; **rename the preset id before its first save** (lowercase letters, digits, hyphens; duplicates rejected).
+- Presets with pending changes show a "unsaved" badge; untouched presets stay quiet.
 - Presets declared by other bundles can be **adopted** and then edited like your own; any custom preset can be **locked** to opt out of management.
 - Deleting a custom preset takes effect immediately; adopted/foreign declarations leave a disabled tombstone so a bundle update cannot resurrect them.
 - Collect packages and their rows into the preset, with automatic package groups for multi-row packages.
@@ -42,13 +43,19 @@ Declarations are written into the profile's user patch layer as a marked managed
 
 Specification: [SPEC.md](SPEC.md). Chinese README: [README.zh.md](README.zh.md).
 
+## Install
+
+Repository: <https://github.com/cningan/dsh-preset-studio>
+
+Install this repository's `bundle/` as a bundle through DSH's `plugin_manager` (`install_bundle`); for local development point a `link:` dependency at `bundle/`. Host-side changes need a DSH restart; UI-only changes need a page refresh.
+
 ## Status
 
-v0.2 installable. Verified in an **isolated DSH instance** (separate `DSH_HOME` and a temporary profile) through the UI: sidebar entry, three-column layout, blank-preset creation, package collection, save, lock/unlock, and immediate deletion. A manually inserted foreign declaration in that profile also verified adoption → edit → delete-with-tombstone. The desktop "new preset white screen" was traced to an undefined client variable and fixed. Pre-save mount validation, acceptance of the official Standard composition, rejection of host-service conflicts, and 9 unit checks all pass.
+v0.2.7 installable. Verified in an **isolated DSH instance** (separate `DSH_HOME` and a temporary profile) through the UI: sidebar entry, three-column layout, blank-preset creation, id rename, package collection, save, lock/unlock, immediate deletion, automatic preset-only package discovery (persona), and the YAML draft preview. A manually inserted foreign declaration in that profile also verified adoption → edit → delete-with-tombstone. Pre-save mount validation, acceptance of the official Standard composition, rejection of host-service conflicts, and 13 unit checks all pass.
 
 ## Verification
 
-- `node test/unit.mjs`: managed-block round trip, empty-root insertion, idempotence, platform expression parsing, `!!js` tags, and the adoption/tombstone/lock model.
+- `node test/unit.mjs`: managed-block round trip, empty-root insertion, idempotence, platform expression parsing, `!!js` tags, the adoption/tombstone/lock model, multiline block scalars, and preset-only package merging.
 - HTTP smoke: `/state`, `/preset-source`, `/save`, `/presets/delete` and `/presets/lock`; deletion removes the preset from the registry immediately, and a locked preset ignores save payloads.
 
 ## Development
