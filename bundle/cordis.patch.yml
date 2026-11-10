@@ -1,0 +1,5 @@
+# 预设工坊：一个 Host 行提供状态接口与 profile 写入，一个 Client 行提供侧栏入口。
+# 自建预设不在这里声明；它们由插件写进 profile 用户补丁层的托管 insert 块。
+- insert:
+    - id: preset-studio
+      name: dsh-preset-studio

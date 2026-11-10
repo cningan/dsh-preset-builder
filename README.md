@@ -32,7 +32,12 @@ Specification: [SPEC.md](SPEC.md). Chinese README: [README.zh.md](README.zh.md).
 
 ## Status
 
-v0.1 in development. See [CHANGELOG.md](CHANGELOG.md).
+v0.1 installable. Verified: Host endpoints, managed-block write/hot-apply/delete, built-in preset source parsing, pure-function unit checks. Pending: the sidebar entry and workbench rendering in the desktop window after a page refresh (the automated browser cannot pass this machine's Web authentication).
+
+## Verification
+
+- `node test/unit.mjs`: managed-block round trip, empty-root insertion, idempotence, platform expression parsing, `!!js` tags.
+- HTTP smoke: `GET /plugins/preset-studio/state`, `GET /preset-source?id=standard`, and `POST /save` for create then delete; after saving, the registry list gains and loses the preset, and only the managed block changes.
 
 ## Development
 

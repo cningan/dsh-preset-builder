@@ -32,7 +32,12 @@ DSH 的 Web 界面能查看预设配置（只读 YAML）、能把某个预设设
 
 ## 状态
 
-v0.1 开发中，见 [CHANGELOG.md](CHANGELOG.md)。
+v0.1 可安装。已验证：Host 端点、托管块写入/热应用/删除、官方预设源文件解析、纯函数单测。待确认：桌面端页面刷新后的侧栏入口与工作台渲染（需要已登录的 Web 会话，自动浏览器无法通过本机 Web 鉴权）。
+
+## 验证
+
+- `node test/unit.mjs`：托管块往返、空根替换、幂等、平台表达式解析、`!!js` 标签。
+- HTTP 冒烟：`GET /plugins/preset-studio/state`、`GET /preset-source?id=standard`、`POST /save` 新建与删除，均通过；保存后 registry 列表出现/消失，托管块只改自身区域。
 
 ## 开发
 
