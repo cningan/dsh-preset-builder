@@ -60,6 +60,15 @@ v0.2.7 可安装。已在**独立 DSH 实例**（独立 `DSH_HOME` 与临时 pro
 - `node test/unit.mjs`：托管块往返、空根替换、幂等、平台表达式解析、`!!js` 标签、接管/墓碑/锁定模型、多行块标量、仅预设包归并。
 - HTTP 冒烟：`/state`、`/preset-source`、`/save`、`/presets/delete`、`/presets/lock` 均通过；删除后 registry 立即消失，锁定期间保存载荷被忽略。
 
+## 发布
+
+日常发布由 GitHub Actions 完成，不手工 `npm publish`：
+
+- `ci.yml`：push/PR 安装依赖、语法检查、13 项单测、`npm pack --dry-run`。
+- `publish.yml`：推 `v*` tag 触发，经 GitHub OIDC（Trusted Publishing）发布到 npm，并自动创建带 tgz 的 GitHub Release；tag 必须等于 `bundle/package.json` 的 version，否则先失败。
+- 发布动作：改代码 → 在 `bundle/` 下 `npm version patch|minor|major` → `git push --follow-tags`。
+- 只有首次建包允许人工 `npm publish`。
+
 ## 开发
 
 需要带 profile 的 DSH 桌面端。准备好 bundle 目录后，用 `plugin_manager` 的 `install_bundle` 指向本仓库的 `bundle/` 安装。契约见 [SPEC.md](SPEC.md)，领域词汇见 [GLOSSARY.md](GLOSSARY.md)。

@@ -60,6 +60,15 @@ v0.2.7 installable. Verified in an **isolated DSH instance** (separate `DSH_HOME
 - `node test/unit.mjs`: managed-block round trip, empty-root insertion, idempotence, platform expression parsing, `!!js` tags, the adoption/tombstone/lock model, multiline block scalars, and preset-only package merging.
 - HTTP smoke: `/state`, `/preset-source`, `/save`, `/presets/delete` and `/presets/lock`; deletion removes the preset from the registry immediately, and a locked preset ignores save payloads.
 
+## Release
+
+Day-to-day releases run in GitHub Actions; do not publish by hand:
+
+- `ci.yml`: install, syntax checks, 13 unit checks, and `npm pack --dry-run` on push/PR.
+- `publish.yml`: a `v*` tag publishes through GitHub OIDC (Trusted Publishing) and opens a GitHub Release with the tgz; the tag must equal `bundle/package.json`'s version or the run fails first.
+- Release flow: change code → `npm version patch|minor|major` inside `bundle/` → `git push --follow-tags`.
+- Only the very first publish of a new package is allowed to run `npm publish` manually.
+
 ## Development
 
 Requires the DSH desktop app with a profile. Prepare the bundle directory, then install it with `plugin_manager` `install_bundle` against this package directory (`bundle/`). See [SPEC.md](SPEC.md) for the contract and [GLOSSARY.md](GLOSSARY.md) for the domain vocabulary.

@@ -49,6 +49,10 @@ window.__ModuleLoader__.load({
       searchPackages: '搜索包名或行 id',
       saveCheckHint: '保存前会挂载校验；服务类行需 isolate 组。',
       collectableSection: '可收录',
+      officialCollectable: '官方 · 可收录',
+      thirdPartyCollectable: '非官方 · 可收录',
+      thirdPartyHost: '非官方 · Host 已启用',
+      thirdPartyHostHint: '这些是已安装的第三方包；它们的行在 Host 中已经启用，收进预设有重复注册风险，因此只展示、不提供收录。',
       presetOnly: '仅预设',
       presetOnlyHint: '该包只被预设使用，不在 Host 装载树里；收录后由预设挂载。',
       hostActive: 'Host 已启用',
@@ -164,6 +168,10 @@ window.__ModuleLoader__.load({
       searchPackages: 'Search package or row id',
       saveCheckHint: 'Mounted before save; service rows need an isolate group.',
       collectableSection: 'Collectable',
+      officialCollectable: 'Official · collectable',
+      thirdPartyCollectable: 'Community · collectable',
+      thirdPartyHost: 'Community · active in Host',
+      thirdPartyHostHint: 'Installed third-party packages whose rows are already active in the Host. Collecting them into a preset would register the same plugin twice, so they are listed without a collect action.',
       presetOnly: 'preset-only',
       presetOnlyHint: 'This package is only mounted by presets (absent from the Host loader); collected rows are mounted by the preset.',
       hostActive: 'in host',
@@ -803,27 +811,47 @@ window.__ModuleLoader__.load({
       const usable = listed.filter((entry) => entry.rows.some(isCollectableRow))
       const hostManaged = listed.filter((entry) => entry.rows.length > 0
         && entry.rows.every((row) => row.enabled || row.disabled?.kind === 'expression'))
+      const thirdUsable = usable.filter((entry) => entry.pkg.official !== true)
+      const thirdHost = hostManaged.filter((entry) => entry.pkg.official !== true)
+      const officialUsable = usable.filter((entry) => entry.pkg.official === true)
+      const officialHost = hostManaged.filter((entry) => entry.pkg.official === true)
+      const empty = usable.length === 0 && hostManaged.length === 0
+      const section = { display: 'flex', flexDirection: 'column', gap: 8, marginTop: 6 }
       const activeOpen = showActive || query.trim().length > 0
       return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 8, minHeight: 0, flex: '1 1 auto' } },
         h('div', { style: { display: 'flex', flexDirection: 'column', gap: 8, paddingBottom: 8, borderBottom: `1px solid ${tone(9)}` } },
           h('input', { style: styles.search, value: query, placeholder: t('searchPackages'), onChange: (event) => setQuery(event.target.value) }),
           h('div', { style: { ...styles.muted, lineHeight: 1.4 } }, t('saveCheckHint') + (declared.size > 0 ? ' ' + t('filteredHint') : ''))),
         h('div', { className: 'ps-scroll', style: { display: 'flex', flexDirection: 'column', gap: 8, minHeight: 0, flex: '1 1 auto', overflowY: 'auto', paddingRight: 6, paddingTop: 4, paddingBottom: 8 } },
-        usable.length === 0
-          ? h('div', { style: styles.empty }, t('emptyPackages'))
-          : h(React.Fragment, null,
-              h('div', { style: styles.sectionTitle }, t('collectableSection') + ' · ' + usable.length),
-              usable.map((entry) => h(PackageCard, { key: entry.pkg.name, api, pkg: entry.pkg, rows: entry.rows }))),
-        hostManaged.length > 0
-          ? h('div', { style: { display: 'flex', flexDirection: 'column', gap: 6, marginTop: 6 } },
-              h('button', {
-                type: 'button',
-                style: { ...styles.sectionTitle, background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer', textAlign: 'left', padding: 0 },
-                onClick: () => setShowActive(!showActive),
-              }, (activeOpen ? '▾ ' : '▸ ') + t('hostActiveSection') + ' · ' + hostManaged.length),
-              activeOpen ? h('div', { style: { ...styles.muted, lineHeight: 1.4 } }, t('hostActiveHint')) : null,
-              activeOpen ? hostManaged.map((entry) => h(PackageCard, { key: entry.pkg.name, api, pkg: entry.pkg, rows: entry.rows })) : null)
-          : null))
+          empty
+            ? h('div', { style: styles.empty }, t('emptyPackages'))
+            : h(React.Fragment, null,
+                thirdUsable.length > 0
+                  ? h('div', { style: section },
+                      h('div', { style: styles.sectionTitle }, t('thirdPartyCollectable') + ' · ' + thirdUsable.length),
+                      thirdUsable.map((entry) => h(PackageCard, { key: entry.pkg.name, api, pkg: entry.pkg, rows: entry.rows })))
+                  : null,
+                thirdHost.length > 0
+                  ? h('div', { style: section },
+                      h('div', { style: styles.sectionTitle }, t('thirdPartyHost') + ' · ' + thirdHost.length),
+                      h('div', { style: { ...styles.muted, lineHeight: 1.4 } }, t('thirdPartyHostHint')),
+                      thirdHost.map((entry) => h(PackageCard, { key: entry.pkg.name, api, pkg: entry.pkg, rows: entry.rows })))
+                  : null,
+                officialUsable.length > 0
+                  ? h('div', { style: section },
+                      h('div', { style: styles.sectionTitle }, t('officialCollectable') + ' · ' + officialUsable.length),
+                      officialUsable.map((entry) => h(PackageCard, { key: entry.pkg.name, api, pkg: entry.pkg, rows: entry.rows })))
+                  : null,
+                officialHost.length > 0
+                  ? h('div', { style: section },
+                      h('button', {
+                        type: 'button',
+                        style: { ...styles.sectionTitle, background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer', textAlign: 'left', padding: 0 },
+                        onClick: () => setShowActive(!showActive),
+                      }, (activeOpen ? '▾ ' : '▸ ') + t('hostActiveSection') + ' · ' + officialHost.length),
+                      activeOpen ? h('div', { style: { ...styles.muted, lineHeight: 1.4 } }, t('hostActiveHint')) : null,
+                      activeOpen ? officialHost.map((entry) => h(PackageCard, { key: entry.pkg.name, api, pkg: entry.pkg, rows: entry.rows })) : null)
+                  : null)))
     }
 
     function PackageCard({ api, pkg, rows }) {

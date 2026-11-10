@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [master, 'feat/**']
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: test (node ${{ matrix.node }})
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install runtime dependencies
+        working-directory: bundle
+        run: npm install --no-audit --no-fund
+
+      - name: Syntax check
+        run: |
+          node --check bundle/client.js
+          node --check bundle/index.js
+
+      - name: Unit tests
+        run: node test/unit.mjs
+
+      - name: Package contents
+        working-directory: bundle
+        run: npm pack --dry-run
