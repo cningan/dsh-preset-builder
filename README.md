@@ -37,7 +37,7 @@ Specification: [SPEC.md](SPEC.md). Chinese README: [README.zh.md](README.zh.md).
 
 ## Status
 
-v0.2 installable. Verified: Host endpoints, managed-block write/hot-apply/delete, official preset source parsing, pre-save mount validation (rejects host-service conflicts, accepts the official Standard composition), immediate deletion, locking and lock-preserved saves, and pure-function unit checks. The sidebar entry, three-column layout, and the create/collect/save path were confirmed in the desktop window. Adoption needs a foreign declaration and is pending a live check (the current profile has none).
+v0.2 installable. Verified in an **isolated DSH instance** (separate `DSH_HOME` and a temporary profile) through the UI: sidebar entry, three-column layout, blank-preset creation, package collection, save, lock/unlock, and immediate deletion. A manually inserted foreign declaration in that profile also verified adoption → edit → delete-with-tombstone. The desktop "new preset white screen" was traced to an undefined client variable and fixed. Pre-save mount validation, acceptance of the official Standard composition, rejection of host-service conflicts, and 9 unit checks all pass.
 
 ## Verification
 

@@ -62,7 +62,7 @@ DSH 的 Agent 预设决定新会话可用的工具与运行方式。当前 Web �
 - 文件层测试在临时目录里构造 profile 补丁样本，验证只改托管块、其余字节不变。
 - 端到端验证：安装后请求状态接口、刷新页面确认侧栏入口与工作台渲染、保存一个测试预设后确认 registry 列表出现、重启应用后确认仍在。
 - 预挂载校验验证：含宿主服务提供者（如 `timer`）的候选预设被 `POST /verify` 与 `/save` 拒绝且文件哈希不变；官方 Standard 组合被接受，无假阳性。
-- 即时操作验证：`/presets/delete` 删除后 registry 立刻消失且托管块被移除；`/presets/lock` 写入 `# locks:`，锁定期间 `/save` 的载荷被忽略、`/presets/delete` 被拒绝；`/presets/adopt` 需要一份外部声明才能端到端验证（当前 profile 暂无外部自定义预设）。
+- 即时操作验证：`/presets/delete` 删除后 registry 立刻消失且托管块被移除；`/presets/lock` 写入 `# locks:`，锁定期间 `/save` 的载荷被忽略、`/presets/delete` 被拒绝；接管在独立实例中以手工外部声明完成端到端验证：接管后 `adopted: true`、删除后留下 `disabled: true` 墓碑且 registry 立即移除。
 - 验证不得修改真实 profile 托管块以外的内容；验证用预设用后删除。
 - 不通过「请求成功」判断功能可用，以界面可见结果与 registry 列表为准。
 

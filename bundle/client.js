@@ -414,7 +414,7 @@ window.__ModuleLoader__.load({
           customItems.length === 0 ? h('div', { style: styles.empty }, t('emptyPresets')) : null,
           customItems.map(({ preset }) => {
             const meta = stateById.get(preset.id)
-            const locked = managed ? (preset.locked === true || meta?.locked === true) : meta?.locked === true
+            const locked = preset.locked === true || meta?.locked === true
             return h(PresetItem, {
               key: preset.id, api, preset,
               name: preset.name || preset.id,
