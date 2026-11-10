@@ -14,7 +14,7 @@ DSH's Web UI can show a preset's configuration (read-only YAML) and make one the
 - Presets declared by other bundles can be **adopted** and then edited like your own; any custom preset can be **locked** to opt out of management.
 - Deleting a custom preset takes effect immediately; adopted/foreign declarations leave a disabled tombstone so a bundle update cannot resurrect them.
 - Collect packages and their rows into the preset, with automatic package groups for multi-row packages.
-- The package drawer only offers rows **not active in the Host**; packages that are entirely active stay folded at the bottom (expanded while searching) with no collect action, so nothing is registered twice. Rows already declared in the current preset are filtered out too.
+- The package drawer only offers **statically disabled** rows (`disabled: true`, i.e. preset-only rows); rows active in the Host or decided by a condition stay folded under "Host-managed" with no collect action, so a later condition flip cannot register the plugin twice. Rows already declared in the current preset are filtered out too.
 - Package cards show the official Chinese title and description from each package's `locale/zh.json`; non-official packages sort first and official ones last.
 - Titles and descriptions follow the interface language (the in-app language setting or the system language); third-party packages with `locale/*.json` work the same way.
 - The YAML tab previews unsaved drafts (marked as a draft preview) instead of failing for new presets.

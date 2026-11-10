@@ -47,12 +47,15 @@ window.__ModuleLoader__.load({
       yaml: 'YAML',
       packages: '包',
       searchPackages: '搜索包名或行 id',
-      saveCheckHint: '保存前会实际挂载校验；服务类行需放进带 isolate 的组。',
+      saveCheckHint: '保存前会挂载校验；服务类行需 isolate 组。',
+      collectableSection: '可收录',
       hostActive: 'Host 已启用',
-      hostActiveSection: 'Host 已启用 · 不可收录',
-      hostActiveHint: '这些包的行已经挂在 Host 上；收进预设会重复注册，所以只列出、不提供收录。',
+      hostActiveSection: 'Host 管理 · 不可收录',
+      hostActiveHint: '这些包的行已由 Host 启用，或由平台/环境条件决定；收进预设可能重复挂载，因此只列出、不提供收录。',
+      conditionalRow: '条件行',
       collectUsable: '收录可用行',
-      collectNone: '该包的行都在 Host 启用，没有可收录的行。',
+      collectNone: '该包没有可收录的行（都已在 Host 启用，或只是条件行）。',
+      conditionalHint: '条件行由 Host 按平台、环境变量或 profile 状态决定是否挂载；收进预设可能重复挂载，因此不提供收录。',
       filteredHint: '已隐藏当前预设已声明的行。',
       alreadyDeclared: '这些行已经在当前预设里了。',
       emptyPackages: '没有匹配的包。',
@@ -142,12 +145,15 @@ window.__ModuleLoader__.load({
       yaml: 'YAML',
       packages: 'Packages',
       searchPackages: 'Search package or row id',
-      saveCheckHint: 'Every save mounts each preset once; rows that provide services need an isolate group.',
+      saveCheckHint: 'Mounted before save; service rows need an isolate group.',
+      collectableSection: 'Collectable',
       hostActive: 'in host',
-      hostActiveSection: 'Active in host · not collectable',
-      hostActiveHint: 'These packages are already mounted by the Host; collecting them would register twice, so they are listed but not collectable.',
+      hostActiveSection: 'Host-managed · not collectable',
+      hostActiveHint: 'These rows are active in the Host or decided by a platform/environment condition; collecting them could register the same plugin twice, so they are listed but not collectable.',
+      conditionalRow: 'conditional',
       collectUsable: 'Collect available rows',
-      collectNone: 'Every row of this package is active in the Host; nothing to collect.',
+      collectNone: 'No collectable rows (all active in the Host or conditional).',
+      conditionalHint: 'Conditional rows (platform, environment variable or profile context) are decided by the Host; collecting them could register the same plugin twice, so they are not collectable.',
       filteredHint: 'Rows already declared in this preset are hidden.',
       alreadyDeclared: 'Those rows are already declared in this preset.',
       emptyPackages: 'No matching package.',
@@ -209,6 +215,23 @@ window.__ModuleLoader__.load({
 
     const tone = (percent) => `color-mix(in srgb, currentColor ${percent}%, transparent)`
 
+    const STYLE_TEXT = `
+      .ps-root button { transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; }
+      .ps-root button:not(:disabled):hover { background-color: color-mix(in srgb, currentColor 8%, transparent); }
+      .ps-root button:disabled { opacity: 0.45; cursor: default; }
+      .ps-root :focus-visible { outline: 2px solid color-mix(in srgb, currentColor 45%, transparent); outline-offset: 1px; border-radius: 5px; }
+      .ps-root input:focus-visible, .ps-root textarea:focus-visible { outline-offset: 0; }
+      .ps-scroll { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, currentColor 20%, transparent) transparent; }
+      .ps-scroll::-webkit-scrollbar { width: 9px; height: 9px; }
+      .ps-scroll::-webkit-scrollbar-thumb { background: color-mix(in srgb, currentColor 18%, transparent); border-radius: 999px; border: 2px solid transparent; background-clip: padding-box; }
+      .ps-scroll::-webkit-scrollbar-track { background: transparent; }
+      .ps-item-active { box-shadow: inset 2px 0 0 color-mix(in srgb, currentColor 55%, transparent); }
+      .ps-card { transition: border-color 120ms ease; }
+      .ps-card:hover { border-color: color-mix(in srgb, currentColor 24%, transparent); }
+      .ps-row:hover { background-color: color-mix(in srgb, currentColor 8%, transparent); }
+      .ps-sticky { position: sticky; top: 0; z-index: 6; background: var(--dsw-alias-bg-base, Canvas); }
+    `
+
     const styles = {
       root: { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, color: 'inherit', fontSize: 13, boxSizing: 'border-box' },
       topbar: { display: 'flex', alignItems: 'center', gap: 10, padding: '12px 18px 10px', borderBottom: `1px solid ${tone(10)}`, flexWrap: 'wrap' },
@@ -216,11 +239,11 @@ window.__ModuleLoader__.load({
       subtitle: { margin: 0, fontSize: 12, opacity: 0.65, flex: '1 1 240px' },
       body: { display: 'flex', flex: '1 1 auto', minHeight: 0 },
       column: { display: 'flex', flexDirection: 'column', minHeight: 0, overflowY: 'auto', scrollbarGutter: 'stable' },
-      left: { width: 250, flex: '0 0 250px', borderRight: `1px solid ${tone(10)}`, padding: '12px 10px', gap: 10 },
-      middle: { flex: '1 1 auto', padding: '14px 18px', gap: 12 },
-      right: { width: 330, flex: '0 0 330px', borderLeft: `1px solid ${tone(10)}`, padding: '12px 12px', gap: 8 },
+      left: { width: 240, flex: '0 0 240px', borderRight: `1px solid ${tone(10)}`, padding: '12px 8px', gap: 10 },
+      middle: { flex: '1 1 auto', padding: '14px 20px', gap: 10 },
+      right: { width: 360, flex: '0 0 360px', borderLeft: `1px solid ${tone(10)}`, padding: '12px 14px', gap: 8 },
       sectionTitle: { fontSize: 11, letterSpacing: '0.04em', opacity: 0.6, textTransform: 'uppercase', margin: '4px 4px 2px' },
-      presetItem: { display: 'flex', flexDirection: 'column', gap: 2, padding: '7px 9px', borderRadius: 8, border: '1px solid transparent', background: 'transparent', color: 'inherit', textAlign: 'left', cursor: 'pointer', font: 'inherit' },
+      presetItem: { display: 'flex', flexDirection: 'column', gap: 2, padding: '6px 8px', borderRadius: 8, border: '1px solid transparent', background: 'transparent', color: 'inherit', textAlign: 'left', cursor: 'pointer', font: 'inherit' },
       presetItemActive: { background: tone(9), borderColor: tone(18) },
       presetName: { fontWeight: 550, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
       presetMeta: { fontSize: 11, opacity: 0.6 },
@@ -251,7 +274,7 @@ window.__ModuleLoader__.load({
       toolbar: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
       menu: { position: 'absolute', zIndex: 20, marginTop: 4, background: 'var(--dsw-alias-bg-base, Canvas)', border: `1px solid ${tone(18)}`, borderRadius: 9, padding: 6, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 200, boxShadow: '0 8px 24px rgba(0,0,0,0.18)' },
       menuItem: { padding: '5px 8px', borderRadius: 6, border: 'none', background: 'transparent', color: 'inherit', cursor: 'pointer', textAlign: 'left', font: 'inherit', fontSize: 12 },
-      saveBar: { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 9, border: `1px solid ${tone(16)}`, background: tone(5), flexWrap: 'wrap' },
+      saveBar: { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 9, border: `1px solid ${tone(16)}`, background: 'var(--dsw-alias-bg-base, Canvas)', flexWrap: 'wrap', position: 'sticky', top: 0, zIndex: 6 },
       yaml: { margin: 0, padding: '10px 12px', borderRadius: 9, border: `1px solid ${tone(12)}`, background: tone(4), fontSize: 11, lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace', overflow: 'auto', maxHeight: '60vh' },
     }
 
@@ -341,6 +364,16 @@ window.__ModuleLoader__.load({
       return 'enabled'
     }
 
+    /**
+     * A static-disabled host row is preset-only. A conditional row (platform,
+     * environment variable, profile context) is decided by the Host at mount
+     * time, so collecting it could register the same plugin twice once the
+     * condition flips. Keep collection to the static case.
+     */
+    function isCollectableRow(row) {
+      return row.enabled === false && row.disabled?.kind === 'static'
+    }
+
     function presetPayload(preset) {
       return {
         id: preset.id,
@@ -379,6 +412,7 @@ window.__ModuleLoader__.load({
       const active = preset.id === api.selectedId
       return h('button', {
         type: 'button',
+        className: 'ps-hover' + (active ? ' ps-item-active' : ''),
         style: { ...styles.presetItem, ...(active ? styles.presetItemActive : {}) },
         onClick: () => api.selectPreset(preset.id),
       },
@@ -401,7 +435,7 @@ window.__ModuleLoader__.load({
         ...foreign.map((preset) => ({ preset, managed: false })),
       ]
       return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 10 } },
-        h('div', { style: { position: 'relative' } },
+        h('div', { className: 'ps-sticky', style: { position: 'sticky', top: 0, zIndex: 5, paddingBottom: 4, background: 'var(--dsw-alias-bg-base, Canvas)' } },
           h('button', { type: 'button', style: { ...styles.buttonPrimary, width: '100%' }, onClick: () => api.setMenuOpen(!api.menuOpen) }, '+ ' + t('newPreset')),
           api.menuOpen ? h('div', { style: styles.menu },
             h('button', { type: 'button', style: styles.menuItem, onClick: () => api.createBlank() }, t('blank')),
@@ -422,7 +456,7 @@ window.__ModuleLoader__.load({
           ) : null),
         official.length > 0
           ? h('div', { style: { display: 'flex', flexDirection: 'column', gap: 2 } },
-              h('div', { style: styles.sectionTitle }, t('official')),
+              h('div', { style: styles.sectionTitle }, t('official') + ' · ' + official.length),
               official.map((preset) => h(PresetItem, {
                 key: preset.id, api, preset,
                 name: preset.name || preset.id,
@@ -430,7 +464,7 @@ window.__ModuleLoader__.load({
               })))
           : null,
         h('div', { style: { display: 'flex', flexDirection: 'column', gap: 2 } },
-          h('div', { style: styles.sectionTitle }, t('custom')),
+          h('div', { style: styles.sectionTitle }, t('custom') + ' · ' + customItems.length),
           customItems.length === 0 ? h('div', { style: styles.empty }, t('emptyPresets')) : null,
           customItems.map(({ preset }) => {
             const meta = stateById.get(preset.id)
@@ -579,7 +613,7 @@ window.__ModuleLoader__.load({
             : null)
       }
       return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 2 } },
-        h('div', { style: { ...styles.rowLine, marginLeft: depth * 12, opacity: rowState(row) === 'enabled' ? 1 : 0.62 } },
+        h('div', { className: 'ps-row', style: { ...styles.rowLine, marginLeft: depth * 12, opacity: rowState(row) === 'enabled' ? 1 : 0.62 } },
           h('span', { style: { ...styles.dot, opacity: rowState(row) === 'enabled' ? 0.8 : 0.2 } }),
           h('span', { style: styles.rowName }, row.id),
           h('code', { style: styles.code }, row.name),
@@ -721,41 +755,49 @@ window.__ModuleLoader__.load({
         })
       }, [packages, query])
       const listed = ordered.map((pkg) => ({ pkg, rows: pkg.rows.filter((row) => !declared.has(row.moduleName)) }))
-      const usable = listed.filter((entry) => entry.rows.some((row) => !row.enabled))
-      const active = listed.filter((entry) => entry.rows.length > 0 && entry.rows.every((row) => row.enabled))
+      const usable = listed.filter((entry) => entry.rows.some(isCollectableRow))
+      const hostManaged = listed.filter((entry) => entry.rows.length > 0
+        && entry.rows.every((row) => row.enabled || row.disabled?.kind === 'expression'))
       const activeOpen = showActive || query.trim().length > 0
       return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 8, minHeight: 0 } },
-        h('input', { style: styles.search, value: query, placeholder: t('searchPackages'), onChange: (event) => setQuery(event.target.value) }),
-        h('div', { style: { ...styles.muted, lineHeight: 1.4 } }, t('saveCheckHint') + (declared.size > 0 ? ' ' + t('filteredHint') : '')),
+        h('div', { className: 'ps-sticky', style: { display: 'flex', flexDirection: 'column', gap: 8, paddingBottom: 6 } },
+          h('input', { style: styles.search, value: query, placeholder: t('searchPackages'), onChange: (event) => setQuery(event.target.value) }),
+          h('div', { style: { ...styles.muted, lineHeight: 1.4 } }, t('saveCheckHint') + (declared.size > 0 ? ' ' + t('filteredHint') : ''))),
         usable.length === 0
           ? h('div', { style: styles.empty }, t('emptyPackages'))
-          : usable.map((entry) => h(PackageCard, { key: entry.pkg.name, api, pkg: entry.pkg, rows: entry.rows })),
-        active.length > 0
+          : h(React.Fragment, null,
+              h('div', { style: styles.sectionTitle }, t('collectableSection') + ' · ' + usable.length),
+              usable.map((entry) => h(PackageCard, { key: entry.pkg.name, api, pkg: entry.pkg, rows: entry.rows }))),
+        hostManaged.length > 0
           ? h('div', { style: { display: 'flex', flexDirection: 'column', gap: 6, marginTop: 6 } },
               h('button', {
                 type: 'button',
                 style: { ...styles.sectionTitle, background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer', textAlign: 'left', padding: 0 },
                 onClick: () => setShowActive(!showActive),
-              }, (activeOpen ? '▾ ' : '▸ ') + t('hostActiveSection') + ' · ' + active.length),
+              }, (activeOpen ? '▾ ' : '▸ ') + t('hostActiveSection') + ' · ' + hostManaged.length),
               activeOpen ? h('div', { style: { ...styles.muted, lineHeight: 1.4 } }, t('hostActiveHint')) : null,
-              activeOpen ? active.map((entry) => h(PackageCard, { key: entry.pkg.name, api, pkg: entry.pkg, rows: entry.rows })) : null)
+              activeOpen ? hostManaged.map((entry) => h(PackageCard, { key: entry.pkg.name, api, pkg: entry.pkg, rows: entry.rows })) : null)
           : null)
     }
 
     function PackageCard({ api, pkg, rows }) {
       const t = api.t
       const [open, setOpen] = React.useState(false)
-      const collectable = rows.filter((row) => !row.enabled)
+      const collectable = rows.filter(isCollectableRow)
       const mixed = collectable.length > 0 && collectable.length < rows.length
       const title = api.resolveText(pkg.titles) ?? pkg.title ?? pkg.name
       const description = api.resolveText(pkg.descriptions) ?? pkg.description ?? ''
       const displayName = title && title !== pkg.name ? title : pkg.name
-      return h('div', { style: styles.packageCard },
+      return h('div', { className: 'ps-card', style: styles.packageCard },
         h('div', { style: styles.packageHead },
           h('button', { type: 'button', style: styles.buttonGhost, onClick: () => setOpen(!open) }, open ? '▾' : '▸'),
           h('button', { type: 'button', style: styles.packageTitle, title: pkg.name, onClick: () => setOpen(!open) }, displayName),
           h('span', { style: pkg.official ? styles.badge : styles.badgeWarn }, pkg.official ? t('officialTag') : t('thirdParty')),
-          collectable.length === 0 ? h('span', { style: styles.badgeWarn }, t('hostActive')) : null,
+          collectable.length === 0
+            ? rows.some((row) => row.enabled)
+              ? h('span', { style: styles.badgeWarn }, t('hostActive'))
+              : h('span', { style: styles.badgeWarn, title: t('conditionalHint') }, t('conditionalRow'))
+            : null,
           h('span', { style: styles.badge }, rows.length + ' ' + t('rows'))),
         displayName !== pkg.name ? h('div', { style: styles.packageModule, title: pkg.name }, pkg.name) : null,
         description.length > 0 ? h('div', { style: styles.packageDesc, title: description }, description) : null,
@@ -771,8 +813,8 @@ window.__ModuleLoader__.load({
             h('code', { style: { ...styles.code, flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, row.id || row.moduleName),
             row.enabled ? h('span', { style: styles.badgeWarn }, t('hostActive')) : null,
             row.disabled?.kind === 'platform' ? h('span', { style: styles.badgeWarn }, row.disabled.label) : null,
-            row.disabled?.kind === 'expression' ? h('span', { style: styles.badgeWarn }, t('conditional')) : null,
-            row.enabled ? null : h('button', { type: 'button', style: styles.buttonGhost, onClick: () => api.collectPackage(pkg, [row]) }, t('collectRow')))))
+            row.disabled?.kind === 'expression' ? h('span', { style: styles.badgeWarn, title: t('conditionalHint') }, t('conditional')) : null,
+            isCollectableRow(row) ? h('button', { type: 'button', style: styles.buttonGhost, onClick: () => api.collectPackage(pkg, [row]) }, t('collectRow')) : null)))
           : null)
     }
 
@@ -798,21 +840,22 @@ window.__ModuleLoader__.load({
         h('div', { style: styles.card },
           h('div', { style: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' } },
             editable
-              ? h('input', { style: { ...styles.input, maxWidth: 260 }, value: preset.name ?? '', placeholder: t('name'), onChange: (event) => api.updatePreset(preset.id, { name: event.target.value }) })
-              : h('strong', null, preset.name || preset.id),
-            h('code', { style: styles.code }, preset.id),
-            official ? h('span', { style: styles.badge }, t('officialTag')) : null,
-            !official && !managed && !locked ? h('span', { style: styles.badge }, t('foreign')) : null,
-            locked ? h('span', { style: styles.badgeWarn }, t('locked')) : null,
-            preset.broken ? h('span', { style: styles.badgeWarn }, t('broken')) : null,
+              ? h('input', { style: { ...styles.input, flex: '1 1 180px', minWidth: 120 }, value: preset.name ?? '', placeholder: t('name'), onChange: (event) => api.updatePreset(preset.id, { name: event.target.value }) })
+              : h('strong', { style: { flex: '1 1 180px', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, preset.name || preset.id),
             editable
-              ? h('input', { style: { ...styles.input, width: 88 }, type: 'number', value: preset.order ?? '', placeholder: t('order'), onChange: (event) => api.updatePreset(preset.id, { order: event.target.value === '' ? undefined : Number(event.target.value) }) })
+              ? h('input', { style: { ...styles.input, width: 64, flex: '0 0 64px' }, type: 'number', value: preset.order ?? '', placeholder: t('order'), onChange: (event) => api.updatePreset(preset.id, { order: event.target.value === '' ? undefined : Number(event.target.value) }) })
               : preset.order !== undefined ? h('span', { style: styles.badge }, 'order ' + preset.order) : null,
             h('span', { style: { flex: '1 1 auto' } }),
             !official && locked ? h('button', { type: 'button', style: styles.button, onClick: () => api.setLocked(preset.id, false) }, t('unlock')) : null,
             !official && !locked ? h('button', { type: 'button', style: styles.button, onClick: () => api.setLocked(preset.id, true) }, t('lock')) : null,
             !official && !locked ? h('button', { type: 'button', style: styles.button, onClick: () => api.deletePreset(preset.id) }, t('deletePreset')) : null,
             !official && !managed && !locked && preset.canAdopt ? h('button', { type: 'button', style: styles.buttonPrimary, onClick: () => api.adoptPreset(preset.id) }, t('adopt')) : null),
+          h('div', { style: { display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' } },
+            h('code', { style: styles.code }, preset.id),
+            official ? h('span', { style: styles.badge }, t('officialTag')) : null,
+            !official && !managed && !locked ? h('span', { style: styles.badge }, t('foreign')) : null,
+            locked ? h('span', { style: styles.badgeWarn }, t('locked')) : null,
+            preset.broken ? h('span', { style: styles.badgeWarn }, t('broken')) : null),
           editable
             ? h('textarea', { style: { ...styles.input, minHeight: 38, resize: 'vertical' }, value: preset.description ?? '', placeholder: t('description'), onChange: (event) => api.updatePreset(preset.id, { description: event.target.value }) })
             : h('div', { style: styles.muted }, official ? t('officialHint') : locked ? t('lockedHint') : t('foreignHint')),
@@ -1114,7 +1157,7 @@ window.__ModuleLoader__.load({
         }
         const declared = new Set()
         walkRows(target.plugins, (row) => { if (typeof row.name === 'string') declared.add(row.name) })
-        const sourceRows = (onlyRows ?? pkg.rows).filter((row) => !row.enabled && !declared.has(row.moduleName))
+        const sourceRows = (onlyRows ?? pkg.rows).filter((row) => isCollectableRow(row) && !declared.has(row.moduleName))
         if (sourceRows.length === 0) {
           setNotice(t('alreadyDeclared'))
           return
@@ -1128,9 +1171,6 @@ window.__ModuleLoader__.load({
             used.add(id)
             const next = { id, name: row.moduleName }
             if (row.config !== undefined && row.config !== null && Object.keys(row.config).length > 0) next.config = clone(row.config)
-            // A statically disabled host row is preset-only: mount it enabled in
-            // the preset. Platform conditions are part of the row's identity.
-            if (row.disabled?.kind === 'platform' || row.disabled?.kind === 'expression') next.disabled = { __js: row.disabled.text }
             return next
           })
           if (rows.length === 0) return
@@ -1194,7 +1234,7 @@ window.__ModuleLoader__.load({
           h('button', { type: 'button', style: styles.button, onClick: () => void load() }, t('retry')))
       }
 
-      return h('div', { style: styles.root },
+      return h('div', { className: 'ps-root', style: styles.root },
         h('div', { style: styles.topbar },
           h('h1', { style: styles.title }, t('title')),
           h('p', { style: styles.subtitle }, t('subtitle')),
@@ -1202,9 +1242,9 @@ window.__ModuleLoader__.load({
           state?.hmr === false ? h('span', { style: styles.badgeWarn }, 'HMR off') : null,
           h('button', { type: 'button', style: styles.button, onClick: () => void load() }, t('refresh'))),
         h('div', { style: styles.body },
-          h('aside', { style: { ...styles.column, ...styles.left } }, h(PresetColumn, { api })),
-          h('main', { style: { ...styles.column, ...styles.middle } }, h(Editor, { api })),
-          h('aside', { style: { ...styles.column, ...styles.right } },
+          h('aside', { className: 'ps-scroll', style: { ...styles.column, ...styles.left } }, h(PresetColumn, { api })),
+          h('main', { className: 'ps-scroll', style: { ...styles.column, ...styles.middle } }, h(Editor, { api })),
+          h('aside', { className: 'ps-scroll', style: { ...styles.column, ...styles.right } },
             h('div', { style: styles.sectionTitle }, (t('packages') + ' · ' + (state?.packages?.length ?? 0))),
             h(Drawer, { api }))))
     }
@@ -1225,6 +1265,13 @@ window.__ModuleLoader__.load({
 
     async function apply(ctx) {
       ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'preset-studio: dictionaries')
+      ctx.effect(() => {
+        const style = document.createElement('style')
+        style.setAttribute('data-preset-studio', '')
+        style.textContent = STYLE_TEXT
+        document.head.append(style)
+        return () => { style.remove() }
+      }, 'preset-studio: styles')
       const t = ctx.locale.bind(NS)
       const resolveText = (value) => {
         try {

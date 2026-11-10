@@ -1,6 +1,6 @@
 {
   "name": "dsh-preset-studio",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "private": true,
   "type": "module",
   "description": "Build custom Agent presets in the DSH Web UI: collect package rows, edit groups and config, save as ordinary preset declarations.",

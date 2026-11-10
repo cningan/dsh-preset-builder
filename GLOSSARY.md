@@ -35,7 +35,7 @@ _Avoid_: 全局插件、系统插件
 **预设行（preset row）**：预设在会话作用域内挂载的插件行；由 `config.plugins` 声明，随预设启用。
 _Avoid_: 会话插件
 
-**可收录行（collectable row）**：当前在 Host 未启用的行；只有可收录行能进入预设，收录后默认在预设内启用。
+**可收录行（collectable row）**：当前在 Host 被**静态禁用**（`disabled: true`）的行；条件行由 Host 在挂载时决定，不计入可收录行。收录后默认在预设内启用。
 _Avoid_: 可用行、空闲插件
 
 **结构组（composition group）**：`name: cordis:group` 的行，用于组织子行；不设 `isolate` 时只是文件夹，设了才是服务隔离边界。
