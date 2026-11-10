@@ -1,4 +1,4 @@
-# dsh-preset-studio
+# dsh-preset-builder
 
 在 DSH Web 界面里创建和编辑自定义 Agent 预设（Preset）：从已安装的包里收录行、编辑结构组与配置，保存后与官方预设同一套声明。
 

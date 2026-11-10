@@ -1,4 +1,4 @@
-# dsh-preset-studio (Preset Workshop)
+# dsh-preset-builder (Preset Workshop)
 
 A DSH profile plugin that adds a left-sidebar workspace for building custom Agent presets — without writing YAML by hand.
 

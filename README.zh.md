@@ -1,4 +1,4 @@
-# 预设工坊（dsh-preset-studio）
+# 预设工坊（dsh-preset-builder）
 
 一个 DSH profile 插件：在左侧栏提供一个工作台，用 GUI 构建自定义 Agent 预设，不必手写 YAML。
 
