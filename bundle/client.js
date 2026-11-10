@@ -53,6 +53,8 @@ window.__ModuleLoader__.load({
       hostActiveHint: '这些包的行已经挂在 Host 上；收进预设会重复注册，所以只列出、不提供收录。',
       collectUsable: '收录可用行',
       collectNone: '该包的行都在 Host 启用，没有可收录的行。',
+      filteredHint: '已隐藏当前预设已声明的行。',
+      alreadyDeclared: '这些行已经在当前预设里了。',
       emptyPackages: '没有匹配的包。',
       rows: '行',
       noRows: '这个预设还没有任何行。从右侧包抽屉收录开始。',
@@ -145,6 +147,8 @@ window.__ModuleLoader__.load({
       hostActiveHint: 'These packages are already mounted by the Host; collecting them would register twice, so they are listed but not collectable.',
       collectUsable: 'Collect available rows',
       collectNone: 'Every row of this package is active in the Host; nothing to collect.',
+      filteredHint: 'Rows already declared in this preset are hidden.',
+      alreadyDeclared: 'Those rows are already declared in this preset.',
       emptyPackages: 'No matching package.',
       rows: 'rows',
       noRows: 'This preset has no row yet. Start by collecting a package.',
@@ -281,6 +285,7 @@ window.__ModuleLoader__.load({
     }
 
     function walkRows(rows, visit) {
+      if (!Array.isArray(rows)) return
       for (const row of rows) {
         visit(row)
         if (isGroup(row)) walkRows(row.config, visit)
@@ -674,23 +679,34 @@ window.__ModuleLoader__.load({
       const [query, setQuery] = React.useState('')
       const [showActive, setShowActive] = React.useState(false)
       const packages = api.state?.packages ?? []
-      const filtered = React.useMemo(() => {
+      const declared = React.useMemo(() => {
+        const names = new Set()
+        const preset = api.selected
+        if (preset !== null && Array.isArray(preset.plugins)) walkRows(preset.plugins, (row) => { if (typeof row.name === 'string') names.add(row.name) })
+        return names
+      }, [api.selected])
+      const ordered = React.useMemo(() => {
         const needle = query.trim().toLowerCase()
-        if (needle.length === 0) return packages
-        return packages.filter((pkg) => pkg.name.toLowerCase().includes(needle)
+        const matches = needle.length === 0 ? packages : packages.filter((pkg) => pkg.name.toLowerCase().includes(needle)
           || String(pkg.title ?? '').toLowerCase().includes(needle)
+          || String(pkg.description ?? '').toLowerCase().includes(needle)
           || pkg.rows.some((row) => String(row.id).toLowerCase().includes(needle)
             || String(row.moduleName).toLowerCase().includes(needle)))
+        return [...matches].sort((left, right) => {
+          if (left.official !== right.official) return left.official ? 1 : -1
+          return String(left.title || left.name).localeCompare(String(right.title || right.name), 'zh')
+        })
       }, [packages, query])
-      const usable = filtered.filter((pkg) => pkg.rows.some((row) => !row.enabled))
-      const active = filtered.filter((pkg) => pkg.rows.length > 0 && pkg.rows.every((row) => row.enabled))
+      const listed = ordered.map((pkg) => ({ pkg, rows: pkg.rows.filter((row) => !declared.has(row.moduleName)) }))
+      const usable = listed.filter((entry) => entry.rows.some((row) => !row.enabled))
+      const active = listed.filter((entry) => entry.rows.length > 0 && entry.rows.every((row) => row.enabled))
       const activeOpen = showActive || query.trim().length > 0
       return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 8, minHeight: 0 } },
         h('input', { style: styles.search, value: query, placeholder: t('searchPackages'), onChange: (event) => setQuery(event.target.value) }),
-        h('div', { style: { ...styles.muted, lineHeight: 1.4 } }, t('saveCheckHint')),
+        h('div', { style: { ...styles.muted, lineHeight: 1.4 } }, t('saveCheckHint') + (declared.size > 0 ? ' ' + t('filteredHint') : '')),
         usable.length === 0
           ? h('div', { style: styles.empty }, t('emptyPackages'))
-          : usable.map((pkg) => h(PackageCard, { key: pkg.name, api, pkg })),
+          : usable.map((entry) => h(PackageCard, { key: entry.pkg.name, api, pkg: entry.pkg, rows: entry.rows })),
         active.length > 0
           ? h('div', { style: { display: 'flex', flexDirection: 'column', gap: 6, marginTop: 6 } },
               h('button', {
@@ -699,22 +715,24 @@ window.__ModuleLoader__.load({
                 onClick: () => setShowActive(!showActive),
               }, (activeOpen ? '▾ ' : '▸ ') + t('hostActiveSection') + ' · ' + active.length),
               activeOpen ? h('div', { style: { ...styles.muted, lineHeight: 1.4 } }, t('hostActiveHint')) : null,
-              activeOpen ? active.map((pkg) => h(PackageCard, { key: pkg.name, api, pkg })) : null)
+              activeOpen ? active.map((entry) => h(PackageCard, { key: entry.pkg.name, api, pkg: entry.pkg, rows: entry.rows })) : null)
           : null)
     }
 
-    function PackageCard({ api, pkg }) {
+    function PackageCard({ api, pkg, rows }) {
       const t = api.t
       const [open, setOpen] = React.useState(false)
-      const collectable = pkg.rows.filter((row) => !row.enabled)
-      const mixed = collectable.length > 0 && collectable.length < pkg.rows.length
+      const collectable = rows.filter((row) => !row.enabled)
+      const mixed = collectable.length > 0 && collectable.length < rows.length
+      const displayName = pkg.title && pkg.title !== pkg.name ? pkg.title : pkg.name
       return h('div', { style: styles.packageCard },
         h('div', { style: styles.packageHead },
           h('button', { type: 'button', style: styles.buttonGhost, onClick: () => setOpen(!open) }, open ? '▾' : '▸'),
-          h('span', { style: styles.packageName, title: pkg.name }, pkg.title && pkg.title !== pkg.name ? pkg.title : pkg.name),
-          h('span', { style: styles.badge }, pkg.official ? t('officialTag') : t('thirdParty')),
+          h('span', { style: styles.packageName, title: pkg.name }, displayName),
+          h('span', { style: pkg.official ? styles.badge : styles.badgeWarn }, pkg.official ? t('officialTag') : t('thirdParty')),
           collectable.length === 0 ? h('span', { style: styles.badgeWarn }, t('hostActive')) : null,
-          h('span', { style: styles.badge }, pkg.rows.length + ' ' + t('rows'))),
+          h('span', { style: styles.badge }, rows.length + ' ' + t('rows'))),
+        displayName !== pkg.name ? h('div', { style: styles.muted }, pkg.name) : null,
         pkg.description ? h('div', { style: styles.muted }, pkg.description) : null,
         h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap' } },
           collectable.length === 0
@@ -724,7 +742,7 @@ window.__ModuleLoader__.load({
                 onClick: () => api.collectPackage(pkg, mixed ? collectable : undefined),
               }, mixed ? t('collectUsable') : t('collect'))),
         open ? h('div', { style: { display: 'flex', flexDirection: 'column', gap: 4 } },
-          pkg.rows.map((row) => h('div', { key: row.id + ':' + row.moduleName, style: { display: 'flex', gap: 6, alignItems: 'center', fontSize: 11, flexWrap: 'wrap' } },
+          rows.map((row) => h('div', { key: row.id + ':' + row.moduleName, style: { display: 'flex', gap: 6, alignItems: 'center', fontSize: 11, flexWrap: 'wrap' } },
             h('code', { style: { ...styles.code, flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, row.id || row.moduleName),
             row.enabled ? h('span', { style: styles.badgeWarn }, t('hostActive')) : null,
             row.disabled?.kind === 'platform' ? h('span', { style: styles.badgeWarn }, row.disabled.label) : null,
@@ -1069,9 +1087,11 @@ window.__ModuleLoader__.load({
           setNotice(t('noEditablePreset'))
           return
         }
-        const sourceRows = (onlyRows ?? pkg.rows).filter((row) => !row.enabled)
+        const declared = new Set()
+        walkRows(target.plugins, (row) => { if (typeof row.name === 'string') declared.add(row.name) })
+        const sourceRows = (onlyRows ?? pkg.rows).filter((row) => !row.enabled && !declared.has(row.moduleName))
         if (sourceRows.length === 0) {
-          setNotice(t('collectNone'))
+          setNotice(t('alreadyDeclared'))
           return
         }
         mutatePlugins(target.id, (plugins) => {

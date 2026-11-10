@@ -28,6 +28,20 @@ export function describeDisabled(value) {
   return { kind: 'unknown' }
 }
 
+/** Pick display text from a localized map, preferring Chinese. */
+export function pickText(value) {
+  if (typeof value === 'string' && value.trim() !== '') return value
+  if (value === null || typeof value !== 'object') return undefined
+  for (const key of ['zh', 'zh-cn', 'zh-hans', 'en']) {
+    const text = value[key]
+    if (typeof text === 'string' && text.trim() !== '') return text
+  }
+  for (const text of Object.values(value)) {
+    if (typeof text === 'string' && text.trim() !== '') return text
+  }
+  return undefined
+}
+
 function metaOf(ctx, name, base) {
   const packages = ctx.get('pluginPackages')
   if (packages === undefined || typeof packages.metaOf !== 'function') return undefined
@@ -35,8 +49,8 @@ function metaOf(ctx, name, base) {
     const meta = packages.metaOf(name, base)
     if (meta === null || typeof meta !== 'object') return undefined
     return {
-      title: typeof meta.title === 'string' ? meta.title : undefined,
-      description: typeof meta.description === 'string' ? meta.description : undefined,
+      title: pickText(meta.title),
+      description: pickText(meta.description),
       icon: typeof meta.icon === 'string' ? meta.icon : undefined,
     }
   } catch {
@@ -63,7 +77,7 @@ export function buildInventory(ctx) {
     let record = byPackage.get(packageName)
     if (record === undefined) {
       const base = entry?.parent?.tree?.ctx?.baseUrl ?? ctx.baseUrl
-      const meta = metaOf(ctx, moduleName, base)
+      const meta = metaOf(ctx, packageName, base)
       record = {
         name: packageName,
         title: meta?.title || packageName,
