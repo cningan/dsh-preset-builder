@@ -9,7 +9,7 @@
 import { readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import Schema from '@deepseek-ai/schemastery'
-import { buildInventory } from './lib/inventory.mjs'
+import { addPresetOnlyPackages, buildInventory } from './lib/inventory.mjs'
 import {
   AGENT_PRESET,
   ROW_PREFIX,
@@ -388,6 +388,22 @@ async function buildState(ctx, config) {
     return (a.order ?? Infinity) - (b.order ?? Infinity) || a.id.localeCompare(b.id)
   })
   const inventory = buildInventory(ctx)
+  const presetTrees = []
+  for (const preset of presets) {
+    if (Array.isArray(preset.plugins)) presetTrees.push(preset.plugins)
+  }
+  for (const declaration of declarations.values()) {
+    if (Array.isArray(declaration.config?.plugins)) presetTrees.push(declaration.config.plugins)
+  }
+  for (const id of OFFICIAL_PRESETS) {
+    try {
+      const builtIn = await readBuiltInPreset(id)
+      if (builtIn !== null && Array.isArray(builtIn.plugins)) presetTrees.push(builtIn.plugins)
+    } catch {
+      // a missing built-in preset is not fatal; the drawer simply lacks its modules
+    }
+  }
+  addPresetOnlyPackages(ctx, inventory.packages, presetTrees)
   return {
     ok: true,
     profile: profileFacts(ctx),

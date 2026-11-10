@@ -17,7 +17,8 @@ DSH's Web UI can show a preset's configuration (read-only YAML) and make one the
 - The package drawer only offers **statically disabled** rows (`disabled: true`, i.e. preset-only rows); rows active in the Host or decided by a condition stay folded under "Host-managed" with no collect action, so a later condition flip cannot register the plugin twice. Rows already declared in the current preset are filtered out too.
 - Package cards show the official Chinese title and description from each package's `locale/zh.json`; non-official packages sort first and official ones last.
 - Titles and descriptions follow the interface language (the in-app language setting or the system language); third-party packages with `locale/*.json` work the same way.
-- Long string config such as `section` and `prompt` uses a multiline editor; YAML output uses `|` block scalars.
+- Preset-only packages (persona, tool presentation, …) are discovered automatically and collectable with the config from their preset declaration; the search box stays fixed while only the cards scroll.
+- Long string config such as `section`, `prefix`, and `prompt` uses a multiline editor; YAML output uses `|` block scalars.
 - "Add row" inserts a module by hand (with a `persona` template), covering preset-only packages; both collection and manual rows land in the selected group.
 - The YAML tab previews unsaved drafts (marked as a draft preview) instead of failing for new presets.
 - Three row actions: enable, disable (keep the declaration), remove (delete the row).

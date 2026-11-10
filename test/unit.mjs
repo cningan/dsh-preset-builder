@@ -6,7 +6,7 @@ import assert from 'node:assert/strict'
 import { buildBlock, parseBlock, readBlock, replaceBlock, extractBlock, validatePresets, blockRevision } from '../bundle/lib/patch.mjs'
 import { describeDisabledExpression } from '../bundle/lib/platform.mjs'
 import { emitListItem, parseYaml } from '../bundle/lib/yaml.mjs'
-import { pickText, textMap } from '../bundle/lib/inventory.mjs'
+import { addPresetOnlyPackages, pickText, textMap } from '../bundle/lib/inventory.mjs'
 
 let passed = 0
 function test(name, fn) {
@@ -150,6 +150,22 @@ test('multiline strings emit block scalars and round-trip', () => {
   const trailing = emitListItem({ config: { section: 'a\nb\n' } }).join('\n')
   assert.equal(trailing.includes('section: |'), true, trailing)
   assert.equal(parseYaml(trailing)[0].config.section, 'a\nb\n')
+})
+
+test('preset-only modules become collectable packages', () => {
+  const packages = []
+  addPresetOnlyPackages({ get: () => undefined }, packages, [[
+    { id: 'persona', name: '@deepseek-ai/dsh-persona', config: { prefix: 'x' } },
+  ]])
+  assert.equal(packages.length, 1)
+  assert.equal(packages[0].name, '@deepseek-ai/dsh-persona')
+  assert.equal(packages[0].presetOnly, true)
+  assert.equal(packages[0].official, true)
+  assert.deepEqual(packages[0].rows.map((row) => [row.id, row.disabled.kind, row.config.prefix]), [['persona', 'none', 'x']])
+
+  const known = [{ name: '@deepseek-ai/dsh-tool-web', rows: [{ id: 'tool-web', moduleName: '@deepseek-ai/dsh-tool-web' }] }]
+  addPresetOnlyPackages({ get: () => undefined }, known, [[{ id: 'tool-web', name: '@deepseek-ai/dsh-tool-web' }]])
+  assert.equal(known.length, 1)
 })
 
 console.log(`\n${passed} checks passed`)

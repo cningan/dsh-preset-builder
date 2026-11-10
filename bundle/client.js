@@ -49,6 +49,8 @@ window.__ModuleLoader__.load({
       searchPackages: '搜索包名或行 id',
       saveCheckHint: '保存前会挂载校验；服务类行需 isolate 组。',
       collectableSection: '可收录',
+      presetOnly: '仅预设',
+      presetOnlyHint: '该包只被预设使用，不在 Host 装载树里；收录后由预设挂载。',
       hostActive: 'Host 已启用',
       hostActiveSection: 'Host 管理 · 不可收录',
       hostActiveHint: '这些包的行已由 Host 启用，或由平台/环境条件决定；收进预设可能重复挂载，因此只列出、不提供收录。',
@@ -157,6 +159,8 @@ window.__ModuleLoader__.load({
       searchPackages: 'Search package or row id',
       saveCheckHint: 'Mounted before save; service rows need an isolate group.',
       collectableSection: 'Collectable',
+      presetOnly: 'preset-only',
+      presetOnlyHint: 'This package is only mounted by presets (absent from the Host loader); collected rows are mounted by the preset.',
       hostActive: 'in host',
       hostActiveSection: 'Host-managed · not collectable',
       hostActiveHint: 'These rows are active in the Host or decided by a platform/environment condition; collecting them could register the same plugin twice, so they are listed but not collectable.',
@@ -391,7 +395,7 @@ window.__ModuleLoader__.load({
      * condition flips. Keep collection to the static case.
      */
     function isCollectableRow(row) {
-      return row.enabled === false && row.disabled?.kind === 'static'
+      return row.enabled === false && (row.disabled?.kind === 'static' || row.disabled?.kind === 'none')
     }
 
     function presetPayload(preset) {
@@ -523,7 +527,7 @@ window.__ModuleLoader__.load({
           h('button', { type: 'button', style: styles.buttonGhost, onClick: () => api.removeRow(preset.id, row.id) }, t('remove'))))
     }
 
-    const PROSE_KEY = /(section|prompt|instruction|instructions|description|content|text|message|template|role|persona)/i
+    const PROSE_KEY = /(section|prefix|suffix|prompt|instruction|instructions|description|content|text|message|template|role|persona|note)/i
 
     function ConfigEditor({ api, preset, row }) {
       const t = api.t
@@ -787,10 +791,11 @@ window.__ModuleLoader__.load({
       const hostManaged = listed.filter((entry) => entry.rows.length > 0
         && entry.rows.every((row) => row.enabled || row.disabled?.kind === 'expression'))
       const activeOpen = showActive || query.trim().length > 0
-      return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 8, minHeight: 0 } },
-        h('div', { className: 'ps-sticky', style: { display: 'flex', flexDirection: 'column', gap: 8, paddingBottom: 6 } },
+      return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 8, minHeight: 0, flex: '1 1 auto' } },
+        h('div', { style: { display: 'flex', flexDirection: 'column', gap: 8, paddingBottom: 8, borderBottom: `1px solid ${tone(9)}` } },
           h('input', { style: styles.search, value: query, placeholder: t('searchPackages'), onChange: (event) => setQuery(event.target.value) }),
           h('div', { style: { ...styles.muted, lineHeight: 1.4 } }, t('saveCheckHint') + (declared.size > 0 ? ' ' + t('filteredHint') : ''))),
+        h('div', { className: 'ps-scroll', style: { display: 'flex', flexDirection: 'column', gap: 8, minHeight: 0, flex: '1 1 auto', overflowY: 'auto', paddingRight: 6, paddingTop: 4, paddingBottom: 8 } },
         usable.length === 0
           ? h('div', { style: styles.empty }, t('emptyPackages'))
           : h(React.Fragment, null,
@@ -805,7 +810,7 @@ window.__ModuleLoader__.load({
               }, (activeOpen ? '▾ ' : '▸ ') + t('hostActiveSection') + ' · ' + hostManaged.length),
               activeOpen ? h('div', { style: { ...styles.muted, lineHeight: 1.4 } }, t('hostActiveHint')) : null,
               activeOpen ? hostManaged.map((entry) => h(PackageCard, { key: entry.pkg.name, api, pkg: entry.pkg, rows: entry.rows })) : null)
-          : null)
+          : null))
     }
 
     function PackageCard({ api, pkg, rows }) {
@@ -821,6 +826,7 @@ window.__ModuleLoader__.load({
           h('button', { type: 'button', style: styles.buttonGhost, onClick: () => setOpen(!open) }, open ? '▾' : '▸'),
           h('button', { type: 'button', style: styles.packageTitle, title: pkg.name, onClick: () => setOpen(!open) }, displayName),
           h('span', { style: pkg.official ? styles.badge : styles.badgeWarn }, pkg.official ? t('officialTag') : t('thirdParty')),
+          pkg.presetOnly === true ? h('span', { style: styles.badgeWarn, title: t('presetOnlyHint') }, t('presetOnly')) : null,
           collectable.length === 0
             ? rows.some((row) => row.enabled)
               ? h('span', { style: styles.badgeWarn }, t('hostActive'))
@@ -855,7 +861,7 @@ window.__ModuleLoader__.load({
       const fillPersona = () => {
         setName('@deepseek-ai/dsh-persona')
         setId('persona')
-        setConfig(JSON.stringify({ section: '' }, null, 2))
+        setConfig(JSON.stringify({ prefix: '' }, null, 2))
         setError('')
       }
       const submit = () => {
@@ -1354,7 +1360,7 @@ window.__ModuleLoader__.load({
         h('div', { style: styles.body },
           h('aside', { className: 'ps-scroll', style: { ...styles.column, ...styles.left } }, h(PresetColumn, { api })),
           h('main', { className: 'ps-scroll', style: { ...styles.column, ...styles.middle } }, h(Editor, { api })),
-          h('aside', { className: 'ps-scroll', style: { ...styles.column, ...styles.right } },
+          h('aside', { style: { ...styles.right, display: 'flex', flexDirection: 'column', minHeight: 0 } },
             h('div', { style: styles.sectionTitle }, (t('packages') + ' · ' + (state?.packages?.length ?? 0))),
             h(Drawer, { api }))))
     }

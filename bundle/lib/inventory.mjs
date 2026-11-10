@@ -71,6 +71,78 @@ function metaOf(ctx, name, base) {
   }
 }
 
+function slugOf(text) {
+  const tail = String(text).replace(/^@/, '').split('/').pop()
+  return tail.replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'row'
+}
+
+/**
+ * Add packages that are only mounted by presets: their modules never appear in
+ * the Host loader. Rows found in preset trees become collectable, so the drawer
+ * offers persona and friends without hand-typed module names.
+ */
+export function addPresetOnlyPackages(ctx, packages, trees) {
+  const knownModules = new Set()
+  for (const pkg of packages) {
+    for (const row of pkg.rows) knownModules.add(row.moduleName)
+  }
+  const byPackage = new Map(packages.map((pkg) => [pkg.name, pkg]))
+  const walk = (rows) => {
+    for (const row of rows ?? []) {
+      if (row === null || typeof row !== 'object') continue
+      if (row.group === true && Array.isArray(row.config)) {
+        walk(row.config)
+        continue
+      }
+      if (typeof row.name !== 'string' || row.name.length === 0) continue
+      if (row.name.startsWith('cordis:') || knownModules.has(row.name)) continue
+      const packageName = packageNameOf(row.name)
+      let record = byPackage.get(packageName)
+      if (record === undefined) {
+        const meta = metaOf(ctx, packageName, ctx?.baseUrl)
+        record = {
+          name: packageName,
+          title: meta?.title || packageName,
+          titles: meta?.titles,
+          description: meta?.description || '',
+          descriptions: meta?.descriptions,
+          icon: meta?.icon,
+          official: packageName.startsWith('@deepseek-ai/'),
+          presetOnly: true,
+          rows: [],
+        }
+        byPackage.set(packageName, record)
+        packages.push(record)
+      }
+      const id = typeof row.id === 'string' && row.id.length > 0 ? row.id : slugOf(packageName)
+      const existing = record.rows.find((candidate) => candidate.id === id && candidate.moduleName === row.name)
+      if (existing !== undefined) {
+        if (existing.config === undefined && row.config !== null && typeof row.config === 'object') {
+          existing.config = cleanValue(row.config)
+        }
+        continue
+      }
+      const next = {
+        id,
+        moduleName: row.name,
+        enabled: false,
+        disabled: { kind: 'none' },
+        source: 'preset',
+      }
+      if (row.config !== null && typeof row.config === 'object' && Object.keys(row.config).length > 0) {
+        next.config = cleanValue(row.config)
+      }
+      record.rows.push(next)
+    }
+  }
+  for (const tree of trees) walk(tree)
+  for (const record of byPackage.values()) {
+    record.rows.sort((a, b) => a.id.localeCompare(b.id))
+  }
+  packages.sort((a, b) => a.name.localeCompare(b.name))
+  return packages
+}
+
 export function buildInventory(ctx) {
   const byPackage = new Map()
   let entries
