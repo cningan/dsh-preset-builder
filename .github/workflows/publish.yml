@@ -2,6 +2,10 @@ name: Publish to npm
 
 # Trusted publishing (GitHub OIDC): no npm token is stored in this repository.
 #
+# The npm trusted publisher is still pinned to the old repository name
+# (cningan/dsh-preset-studio). Before the next tag, update it to
+# cningan/dsh-preset-builder in the npm package settings (or with npm trust).
+#
 # One-time setup (already done for dsh-preset-builder):
 #
 #   npm trust github dsh-preset-builder \
