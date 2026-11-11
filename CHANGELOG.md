@@ -1,5 +1,12 @@
 # 变更记录
 
+## 0.3.2 — Host 冲突改为按 Loader row id 判断
+
+- 修复误报：同一模块在 Host 和预设里使用不同 row id 是 scoped 用法，不再标红。官方 Standard 的 `skill-filesystem` 与 Host 的 `skill-filesystem-global` 即属此类；Host 的 `skill-filesystem` 行本身是静态禁用。
+- 红色「Host 冲突」现在只在预设行与当前 Host 已启用行 **同 Loader row id** 时出现，并继续列出具体 row id 与模块名；预设里已禁止挂载的行不参与检查。
+- 说明文案与规格同步改为 row id 判据。
+- `bundle/package.json` 增加 `check` / `test` 脚本，CI 改用 `npm run check`、`npm test`；工作区审计不再报缺少脚本。
+
 ## 0.3.1 — 冲突红标、未开 Bundle 黄标
 
 - Host 冲突改为红色警告框，并逐行列出预设 row id 与模块名；对应的预设行加红边和「Host 冲突」徽标，明确是哪一行。

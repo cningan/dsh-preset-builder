@@ -61,9 +61,9 @@ window.__ModuleLoader__.load({
       inactiveCollectNone: '该包在未开 bundle 中没有可安全收录的行（只剩条件行）。',
       inactiveWarning: '{count} 行来自未启用的 bundle（{bundles}）；启用这些 bundle 后会与 Host 重复。建议先启用并确认行状态。',
       inactiveWarningShort: '包含未开 Bundle 的行，启用该 bundle 前请检查冲突。',
-      conflictWarning: '{count} 行已在 Host 启用；预设再声明同一模块会重复注册。请从预设移出，或先禁用 Host 对应行。',
-      conflictWarningShort: '包含 Host 已启用的行，可能与 Host 重复注册。',
-      conflictHint: 'Host 已经在挂载这些模块；预设声明同一模块会重复注册。检查按模块名匹配，条件行以当前 Host 状态为准。',
+      conflictWarning: '{count} 行与 Host 已启用行同 id；预设再声明同一 row id 会重复注册。请从预设移出，或先禁用 Host 对应行。',
+      conflictWarningShort: '有预设行与 Host 已启用行同 id，可能重复注册。',
+      conflictHint: '按 Loader row id 匹配。同一模块用不同 row id（例如官方 Standard 的 skill-filesystem 与 Host 的 skill-filesystem-global）是 scoped 用法，不算冲突；只有同 id 才提示。',
       conflictBadge: 'Host 冲突',
       inactiveBadge: '未开 Bundle',
       designButton: '设计说明',
@@ -208,9 +208,9 @@ window.__ModuleLoader__.load({
       inactiveCollectNone: 'No safe rows in this off bundle (only conditional rows).',
       inactiveWarning: '{count} row(s) come from bundles that are off ({bundles}); enabling them will duplicate the Host. Enable them first and check the row state.',
       inactiveWarningShort: 'Contains rows from a bundle that is off; check for conflicts before enabling it.',
-      conflictWarning: '{count} row(s) are already active in the Host; declaring the same module in a preset registers it twice. Remove them from the preset, or disable the Host rows first.',
-      conflictWarningShort: 'Contains rows that are active in the Host and may be registered twice.',
-      conflictHint: 'The Host already mounts these modules; a preset declaring the same module registers it twice. The check matches by module name; conditional rows use the current Host state.',
+      conflictWarning: '{count} row(s) share an id with an active Host row; declaring the same row id in a preset registers it twice. Remove them from the preset, or disable the Host rows first.',
+      conflictWarningShort: 'A preset row shares an id with an active Host row and may be registered twice.',
+      conflictHint: 'Matched by Loader row id. The same module under different row ids (for example Standard\'s skill-filesystem and the Host\'s skill-filesystem-global) is a scoped use, not a conflict; only a shared id is flagged.',
       conflictBadge: 'Host conflict',
       inactiveBadge: 'bundle off',
       designButton: 'Design notes',
@@ -945,7 +945,7 @@ window.__ModuleLoader__.load({
             : null)
       }
       const offBundle = typeof row.name === 'string' && api.inactiveModules?.has(row.name) === true
-      const hostConflict = typeof row.name === 'string' && row.disabled !== true && api.activeModules?.has(row.name) === true
+      const hostConflict = typeof row.id === 'string' && row.id.length > 0 && row.disabled !== true && api.activeRowIds?.has(row.id) === true
       const flagged = hostConflict
         ? { borderColor: 'color-mix(in srgb, #dc2626 60%, transparent)', background: 'color-mix(in srgb, #dc2626 6%, Canvas)', boxShadow: 'inset 2px 0 0 #dc2626' }
         : offBundle
@@ -1786,12 +1786,12 @@ window.__ModuleLoader__.load({
         return map
       }, [state])
 
-      const activeModules = React.useMemo(() => {
+      const activeRowIds = React.useMemo(() => {
         const map = new Map()
         for (const pkg of state?.packages ?? []) {
           for (const row of pkg.rows ?? []) {
-            if (row.bundleActive !== false && row.enabled === true && !map.has(row.moduleName)) {
-              map.set(row.moduleName, { packageName: pkg.name })
+            if (row.bundleActive !== false && row.enabled === true && typeof row.id === 'string' && row.id.length > 0 && !map.has(row.id)) {
+              map.set(row.id, { moduleName: row.moduleName, packageName: pkg.name })
             }
           }
         }
@@ -1813,13 +1813,13 @@ window.__ModuleLoader__.load({
         const found = []
         const seen = new Set()
         walkRows(preset.plugins, (row) => {
-          if (row.disabled === true) return
-          const hit = activeModules.get(row.name)
+          if (row.disabled === true || typeof row.id !== 'string' || row.id.length === 0) return
+          const hit = activeRowIds.get(row.id)
           if (hit === undefined) return
-          const key = String(row.id ?? '') + '|' + row.name
+          const key = row.id + '|' + row.name
           if (seen.has(key)) return
           seen.add(key)
-          found.push({ id: typeof row.id === 'string' ? row.id : '', name: row.name, packageName: hit.packageName })
+          found.push({ id: row.id, name: row.name, hostModule: hit.moduleName, packageName: hit.packageName })
         })
         return found
       }
@@ -1840,12 +1840,12 @@ window.__ModuleLoader__.load({
           if (conflictUsage(preset).length > 0) issues.push(preset.id + ': ' + t('conflictWarningShort'))
         }
         return issues
-      }, [draft, state, inactiveModules, activeModules])
+      }, [draft, state, inactiveModules, activeRowIds])
 
       const api = {
         t, state, draft, selectedId, selected, dirty, saving, notice, status,
         resolveText,
-        inactiveModules, inactiveUsage, activeModules, conflictUsage,
+        inactiveModules, inactiveUsage, activeRowIds, conflictUsage,
         view, tab, menuOpen, collapsed, configEditorId, isolateEditorId, selectedGroupId, warnings, baseRevision,
         officialPresets, foreignPresets,
         setMenuOpen, setView, setTab, setNotice,

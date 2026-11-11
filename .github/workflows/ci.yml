@@ -28,13 +28,13 @@ jobs:
         working-directory: bundle
         run: npm install --no-audit --no-fund
 
-      - name: Syntax check
-        run: |
-          node --check bundle/client.js
-          node --check bundle/index.js
+      - name: Check
+        working-directory: bundle
+        run: npm run check
 
       - name: Unit tests
-        run: node test/unit.mjs
+        working-directory: bundle
+        run: npm test
 
       - name: Package contents
         working-directory: bundle
