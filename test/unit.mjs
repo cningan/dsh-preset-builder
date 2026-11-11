@@ -3,13 +3,10 @@
  * from the repository root; it needs the bundle's local dependencies.
  */
 import assert from 'node:assert/strict'
-import { mkdir, mkdtemp, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
 import { buildBlock, parseBlock, readBlock, replaceBlock, extractBlock, validatePresets, blockRevision } from '../bundle/lib/patch.mjs'
 import { describeDisabledExpression } from '../bundle/lib/platform.mjs'
 import { emitListItem, parseYaml } from '../bundle/lib/yaml.mjs'
-import { addInactiveBundlePackages, addPresetOnlyPackages, pickText, textMap } from '../bundle/lib/inventory.mjs'
+import { addPresetOnlyPackages, pickText, textMap } from '../bundle/lib/inventory.mjs'
 
 let passed = 0
 function test(name, fn) {
@@ -170,36 +167,5 @@ test('preset-only modules become collectable packages', () => {
   addPresetOnlyPackages({ get: () => undefined }, known, [[{ id: 'tool-web', name: '@deepseek-ai/dsh-tool-web' }]])
   assert.equal(known.length, 1)
 })
-
-{
-  const dir = await mkdtemp(join(tmpdir(), 'dsh-preset-builder-'))
-  const pkgDir = join(dir, 'node_modules', 'dsh-fake-bundle')
-  await mkdir(pkgDir, { recursive: true })
-  await writeFile(join(dir, 'package.json'), JSON.stringify({ dependencies: { 'dsh-fake-bundle': '1.0.0' } }))
-  await writeFile(join(pkgDir, 'package.json'), JSON.stringify({
-    name: 'dsh-fake-bundle',
-    dsh: { bundle: { patch: './cordis.patch.yml' } },
-  }))
-  await writeFile(join(pkgDir, 'cordis.patch.yml'), [
-    '- insert:',
-    '    - id: fake-tool',
-    '      name: dsh-fake-bundle',
-    '      config:',
-    '        label: hi',
-    '    - id: conditional',
-    '      name: dsh-fake-bundle',
-    "      disabled: !!js process.platform === 'win32'",
-    '',
-  ].join('\n'))
-  const packages = []
-  await addInactiveBundlePackages({ get: () => undefined }, packages, dir)
-  const fake = packages.find((pkg) => pkg.name === 'dsh-fake-bundle')
-  assert.ok(fake, 'installed bundle should be discovered')
-  assert.equal(fake.inactiveBundle, true)
-  assert.equal(fake.presetOnly, true)
-  assert.deepEqual(fake.rows.map((row) => [row.id, row.disabled.kind, row.config?.label]), [['fake-tool', 'none', 'hi']])
-  passed += 1
-  console.log(`ok ${passed} - inactive installed bundles become collectable packages`)
-}
 
 console.log(`\n${passed} checks passed`)

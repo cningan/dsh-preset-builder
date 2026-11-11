@@ -9,7 +9,7 @@
 import { readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import Schema from '@deepseek-ai/schemastery'
-import { addInactiveBundlePackages, addPresetOnlyPackages, buildInventory } from './lib/inventory.mjs'
+import { addPresetOnlyPackages, buildInventory } from './lib/inventory.mjs'
 import {
   AGENT_PRESET,
   ROW_PREFIX,
@@ -404,7 +404,6 @@ async function buildState(ctx, config) {
     }
   }
   addPresetOnlyPackages(ctx, inventory.packages, presetTrees)
-  await addInactiveBundlePackages(ctx, inventory.packages, profileFacts(ctx).dir)
   return {
     ok: true,
     profile: profileFacts(ctx),

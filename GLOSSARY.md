@@ -35,8 +35,11 @@ _Avoid_: 全局插件、系统插件
 **预设行（preset row）**：预设在会话作用域内挂载的插件行；由 `config.plugins` 声明，随预设启用。
 _Avoid_: 会话插件
 
-**可收录行（collectable row）**：当前在 Host 被**静态禁用**（`disabled: true`）的行；条件行由 Host 在挂载时决定，不计入可收录行。收录后默认在预设内启用。
+**可收录行（collectable row）**：所属 bundle 已启用装配、且当前在 Host 被**静态禁用**（`disabled: true`）的行；未启用 bundle 的补丁行、条件行都不计入。收录后默认在预设内启用。
 _Avoid_: 可用行、空闲插件
+
+**未启用 bundle（inactive bundle）**：已安装、但不在 Host 装载树里的 bundle。它不是「仅预设包」；它的补丁行不参与收录，因为它可能在之后的启动被启用为 Host 使用，预设再声明同一行会重复挂载。
+_Avoid_: 禁用插件、未安装插件
 
 **仅预设包（preset-only package）**：只被预设声明挂载、不在 Host 装载树里的包（如 persona）。包抽屉会从预设声明里自动发现它并标「仅预设」；「添加行」仍可手动加入任意模块。
 _Avoid_: 未安装包

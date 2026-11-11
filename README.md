@@ -18,7 +18,8 @@ DSH's Web UI can show a preset's configuration (read-only YAML) and make one the
 - The package drawer only offers **statically disabled** rows (`disabled: true`, i.e. preset-only rows); rows active in the Host or decided by a condition stay folded under "Host-managed" with no collect action, so a later condition flip cannot register the plugin twice. Rows already declared in the current preset are filtered out too.
 - Package cards show the official Chinese title and description from each package's `locale/zh.json`; non-official packages sort first and official ones last.
 - Titles and descriptions follow the interface language (the in-app language setting or the system language); third-party packages with `locale/*.json` work the same way.
-- Preset-only packages (persona, tool presentation, …) are discovered automatically and collectable with the config from their preset declaration; installed-but-inactive third-party bundles are discovered from their `cordis.patch.yml` as "inactive" collectable packages too. The search box stays fixed while only the cards scroll.
+- Preset-only packages (persona, tool presentation, …) are discovered automatically and collectable with the config from their preset declaration; the search box stays fixed while only the cards scroll.
+- Installed-but-inactive third-party bundles are not collectable: the bundle may later be enabled for Host use, and a preset declaring the same row would register it twice; the UI also does not synthesize rows from its patch.
 - Long string config such as `section`, `prefix`, and `prompt` uses a multiline editor; YAML output uses `|` block scalars.
 - "Add row" inserts a module by hand (with a `persona` template), covering preset-only packages; both collection and manual rows land in the selected group.
 - The YAML tab previews unsaved drafts (marked as a draft preview) instead of failing for new presets.
@@ -53,7 +54,7 @@ Install this repository's `bundle/` as a bundle through DSH's `plugin_manager` (
 
 ## Status
 
-v0.2.9 installable. Verified in an **isolated DSH instance** (separate `DSH_HOME` and a temporary profile) through the UI: sidebar entry, three-column layout, blank-preset creation, id rename, package collection, save, lock/unlock, immediate deletion, automatic preset-only/inactive-bundle discovery (persona, disabled third-party bundles), and the YAML draft preview. A manually inserted foreign declaration in that profile also verified adoption → edit → delete-with-tombstone. Pre-save mount validation, acceptance of the official Standard composition, rejection of host-service conflicts, and 14 unit checks all pass.
+v0.2.10 installable. Verified in an **isolated DSH instance** (separate `DSH_HOME` and a temporary profile) through the UI: sidebar entry, three-column layout, blank-preset creation, id rename, package collection, save, lock/unlock, immediate deletion, automatic preset-only package discovery (persona), and the YAML draft preview. A manually inserted foreign declaration in that profile also verified adoption → edit → delete-with-tombstone. Pre-save mount validation, acceptance of the official Standard composition, rejection of host-service conflicts, and 13 unit checks all pass.
 
 ## Verification
 
@@ -64,7 +65,7 @@ v0.2.9 installable. Verified in an **isolated DSH instance** (separate `DSH_HOME
 
 Day-to-day releases run in GitHub Actions; do not publish by hand:
 
-- `ci.yml`: install, syntax checks, 14 unit checks, and `npm pack --dry-run` on push/PR.
+- `ci.yml`: install, syntax checks, 13 unit checks, and `npm pack --dry-run` on push/PR.
 - `publish.yml`: a `v*` tag publishes through GitHub OIDC (Trusted Publishing) and opens a GitHub Release with the tgz; the tag must equal `bundle/package.json`'s version or the run fails first.
 - Release flow: change code → `npm version patch|minor|major` inside `bundle/` → `git push --follow-tags`.
 - Only the very first publish of a new package is allowed to run `npm publish` manually.
