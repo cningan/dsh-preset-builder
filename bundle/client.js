@@ -56,7 +56,7 @@ window.__ModuleLoader__.load({
       designHost: 'Host 与预设是两层：Host 已启用的行不会进入可收录，因为预设再声明会重复注册。',
       designBundle: '未在 Host 启用的 bundle 也不收：它可能在以后被启用；工坊不改变 Host 的启用状态。',
       designCollect: '可收录只包含：已启用 bundle 中静态禁用、留给预设挂载的行，或仅预设包。',
-      designThird: '第三方包只列出其中尚未启用的行；整包都已启用时不显示，因为 Host 已经挂载，再收会重复。',
+      designRows: '可收录性只看行：包里还有未启用的行，就只列出并收录这些行；整包都已启用时不显示，官方和第三方一样。',
       helpHighlight: '彩色词提示：Tool 工具、Skill 技能、Persona 人设。',
       helpCollect: '可收录：Host 已启用 bundle 里静态禁用、留给预设挂载的行。',
       helpOfficialHost: '官方 Host 行：只读，展开可看。',
@@ -187,7 +187,7 @@ window.__ModuleLoader__.load({
       designHost: 'Host and presets are two layers: rows active in the Host are not collectable, because a preset declaring them would register the same plugin twice.',
       designBundle: 'A bundle that is not active in the Host is not collectable either: it may be enabled later, and the workshop never changes Host activation.',
       designCollect: 'Collectable means: a statically disabled row inside an active bundle, or a preset-only package.',
-      designThird: 'Third-party packages only list rows that are not active; a package whose rows are all active is not shown at all — the Host already mounts it, and collecting it would duplicate.',
+      designRows: 'Collectability is row-level, not source-level: if a package still has inactive rows, only those rows are listed and collectable; a package whose rows are all active is not shown, for official and third-party packages alike.',
       helpHighlight: 'Colour cues: Tool, Skill, Persona.',
       helpCollect: 'Collectable: rows statically disabled in an active Host bundle, left for presets to mount.',
       helpOfficialHost: 'Official Host rows are read-only; expand to inspect them.',
@@ -641,7 +641,7 @@ window.__ModuleLoader__.load({
           h('div', null, '• ', termNodes(t('designHost'))),
           h('div', null, '• ', termNodes(t('designBundle'))),
           h('div', null, '• ', termNodes(t('designCollect'))),
-          h('div', null, '• ', termNodes(t('designThird'))),
+          h('div', null, '• ', termNodes(t('designRows'))),
           h('div', { style: { ...styles.muted, marginTop: 4 } }, termNodes(t('helpHighlight')))),
       })
     }
@@ -1063,7 +1063,7 @@ window.__ModuleLoader__.load({
             h('span', { style: { ...styles.sectionTitle, margin: 0 } }, t('packages')),
             h('span', { style: styles.badge }, packages.length),
             h('span', { style: { flex: '1 1 auto' } }),
-            h(Help, { api, title: t('designHelp'), text: t('designThird') })),
+            h(Help, { api, title: t('designHelp'), text: t('designRows') })),
           h('div', { className: 'ps-search-wrap' },
             h(Icon, { name: 'search', size: 13 }),
             h('input', {

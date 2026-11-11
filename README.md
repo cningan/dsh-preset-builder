@@ -15,7 +15,7 @@ DSH's Web UI can show a preset's configuration (read-only YAML) and make one the
 - Presets declared by other bundles can be **adopted** and then edited like your own; any custom preset can be **locked** to opt out of management.
 - Deleting a custom preset takes effect immediately; adopted/foreign declarations leave a disabled tombstone so a bundle update cannot resurrect them.
 - Collect packages and their rows into the preset, with automatic package groups for multi-row packages.
-- The package drawer only offers **statically disabled** rows (`disabled: true`, i.e. preset-only rows); rows active in the Host or decided by a condition stay uncollectable so a later condition flip cannot register the plugin twice. **A third-party package whose rows are all active is not shown at all** (see Design notes); official rows active in the Host remain folded under "Host-managed". Rows already declared in the current preset are filtered out too.
+- The package drawer only offers **statically disabled** rows (`disabled: true`, i.e. preset-only rows); rows active in the Host or decided by a condition stay uncollectable so a later condition flip cannot register the plugin twice. **A package whose rows are all active is not shown at all** (official and third-party alike; see Design notes); official rows active in the Host remain folded under "Host-managed". Rows already declared in the current preset are filtered out too.
 - Package cards show the official Chinese title and description from each package's `locale/zh.json`; non-official packages sort first and official ones last.
 - Explanations appear on demand: section headers, order, preset id and save validation use `?` popovers (hover to peek, click to pin); the top-bar "Design notes" explains the Host/preset split and why a third-party package may be absent.
 - Only Tool, Skill and Persona keywords are highlighted (including their Chinese labels), so row/package purpose is quick to spot; no full-page colouring.
@@ -57,7 +57,7 @@ Install this repository's `bundle/` as a bundle through DSH's `plugin_manager` (
 
 ## Status
 
-v0.2.12 installable. Verified in an **isolated DSH instance** (separate `DSH_HOME` and a temporary profile) through the UI: sidebar entry, three-column layout, blank-preset creation, id rename, package collection, save, lock/unlock, immediate deletion, automatic preset-only package discovery (persona), and the YAML draft preview. A manually inserted foreign declaration in that profile also verified adoption → edit → delete-with-tombstone. Pre-save mount validation, acceptance of the official Standard composition, rejection of host-service conflicts, and 13 unit checks all pass.
+v0.2.13 installable. Verified in an **isolated DSH instance** (separate `DSH_HOME` and a temporary profile) through the UI: sidebar entry, three-column layout, blank-preset creation, id rename, package collection, save, lock/unlock, immediate deletion, automatic preset-only package discovery (persona), and the YAML draft preview. A manually inserted foreign declaration in that profile also verified adoption → edit → delete-with-tombstone. Pre-save mount validation, acceptance of the official Standard composition, rejection of host-service conflicts, and 13 unit checks all pass.
 
 ## Verification
 
