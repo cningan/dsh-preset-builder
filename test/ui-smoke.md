@@ -5,7 +5,7 @@ CI 只跑纯函数和 HTTP 契约；界面行为用手动隔离实例验证，�
 ## 准备隔离 profile
 
 ```powershell
-$dshHome = Join-Path $env:TEMP 'dsh-preset-studio-smoke'
+$dshHome = Join-Path $env:TEMP 'dsh-preset-builder-smoke'
 Remove-Item -Recurse -Force $dshHome -ErrorAction SilentlyContinue
 
 $env:DSH_HOME = $dshHome
@@ -17,7 +17,7 @@ $profileDir = Join-Path $dshHome 'profiles\verify'
   "name": "dsh-profile-verify",
   "private": true,
   "dependencies": {
-    "dsh-preset-builder": "link:D:/Work/Plugin-DSH/dsh-preset-studio/bundle"
+    "dsh-preset-builder": "link:D:/Work/Plugin-DSH/dsh-preset-builder/bundle"
   },
   "dsh": {
     "profile": {
@@ -49,9 +49,10 @@ dsh --profile verify --host 127.0.0.1 --port 57390 --no-open
    - 保存不阻断，但刷新后再次显示黄色提示。
 4. 窄窗口/小屏：警告框、列表、按钮换行不溢出；`?` 气泡不被抽屉裁切。
 5. 深浅色：红/黄警告的正文、徽标仍可读；宿主 token 缺失时回退色仍可读。
-6. 顶栏三页胶囊导航「简易 / 标准 / 对比」可切换，副标题随页变化；简易页只显示预留占位；切回标准页后未保存草稿仍在。
-7. 对比页选 A=standard、B=ptc：默认只看差异，出现「只在 B」「启停不同」分组；勾掉「只看差异」后出现「相同」并可展开；分组路径只在非根行显示（如 `delegation`）。
-8. 从官方 PTC 复制一个副本并禁用一行，再进对比页：A 侧标「含未保存草稿」，「启停不同」出现该行且 A 为禁用；切回标准页可继续编辑。
+6. 顶栏三页胶囊导航「简易 / 标准 / 对比」居中，副标题随页变化且放不下时省略；左侧预设项的排序数字 `#n` 右对齐。
+7. 简易页：选 official standard →「复制并编辑」生成副本；改名称与人设 → 保存 → `/preset-source?id=<副本>` 的 persona `prefix` 与输入一致，刷新后仍在；放弃副本后选择框回到可用状态。
+8. 对比页选 A=standard、B=ptc：左右并排、默认全部行；相同行不铺底色、标记列为绿色 `=`；`tool-schedule` 为仅右侧绿色并在末尾；状态差异为琥珀色。
+9. 简易页复制 Standard 并改 persona 后进对比页：A 侧标「含未保存草稿」，配置行显示蓝色 `Δ` 与「1 项配置不同」，展开后按 `prefix` 显示 A/B 值；勾选「只看差异」只剩差异行；交换 A/B 后左右互换。
 
 ## 清理
 

@@ -12,7 +12,7 @@ import { describeDisabledExpression } from '../bundle/lib/platform.mjs'
 import { emitListItem, parseYaml } from '../bundle/lib/yaml.mjs'
 import { addInactiveBundlePackages, addPresetOnlyPackages, pickText, textMap } from '../bundle/lib/inventory.mjs'
 import { conflictUsage, inactiveUsage, isCollectableRow } from '../bundle/lib/rules.mjs'
-import { canonicalConfig, diffPresetRows, flattenPresetRows } from '../bundle/lib/diff.mjs'
+import { canonicalConfig, configFieldDiff, configFields, diffPresetRows, flattenPresetRows } from '../bundle/lib/diff.mjs'
 
 let passed = 0
 function test(name, fn) {
@@ -206,6 +206,22 @@ test('duplicate row ids keep both rows and config comparison is key-order indepe
   assert.deepEqual(duplicated.items.map((item) => item.key), ['x', 'x#2'])
   assert.equal(canonicalConfig({ a: 1, b: [2, { d: 3, c: 4 }] }), canonicalConfig({ b: [2, { c: 4, d: 3 }], a: 1 }))
   assert.notEqual(canonicalConfig({ a: 1 }), canonicalConfig({ a: '1' }))
+})
+
+test('config fields flatten and report field-level differences', () => {
+  const fields = configFields({ mode: 'ptc', nested: { a: [1, { b: true }] }, empty: {} })
+  assert.deepEqual(fields.map((field) => field.path), ['empty', 'mode', 'nested.a[0]', 'nested.a[1].b'])
+  const diff = configFieldDiff(
+    { mode: 'native', timeout: 1000, list: [1, 2], keep: 'x' },
+    { mode: 'ptc', timeout: 1000, list: [1, 3], added: true, keep: 'x' },
+  )
+  const byPath = new Map(diff.map((field) => [field.path, field]))
+  assert.equal(byPath.get('mode').kind, 'changed')
+  assert.equal(byPath.get('list[1]').kind, 'changed')
+  assert.equal(byPath.get('added').kind, 'added')
+  assert.equal(byPath.has('timeout'), false)
+  assert.equal(byPath.has('keep'), false)
+  assert.deepEqual(configFieldDiff({ a: 1 }, { a: 1 }), [])
 })
 
 test('invalid presets are reported, not silently repaired', () => {

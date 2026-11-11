@@ -40,6 +40,63 @@ export function canonicalConfig(value) {
 }
 
 /**
+ * Flatten a config object into leaf fields (`a.b[0].c`), so two rows can be
+ * compared field by field rather than as one opaque blob.
+ */
+export function configFields(value, prefix = '', out = []) {
+  if (value === null || value === undefined) {
+    out.push({ path: prefix, value: null })
+    return out
+  }
+  if (typeof value !== 'object') {
+    out.push({ path: prefix, value })
+    return out
+  }
+  if (Array.isArray(value)) {
+    if (value.length === 0) {
+      out.push({ path: prefix, value: [] })
+      return out
+    }
+    value.forEach((item, index) => configFields(item, prefix + '[' + index + ']', out))
+    return out
+  }
+  const keys = Object.keys(value).sort()
+  if (keys.length === 0) {
+    out.push({ path: prefix, value: {} })
+    return out
+  }
+  for (const key of keys) {
+    configFields(value[key], prefix.length === 0 ? key : prefix + '.' + key, out)
+  }
+  return out
+}
+
+/**
+ * Field-level differences between two configs. Each entry is `added`,
+ * `removed` or `changed`; equal fields are omitted.
+ */
+export function configFieldDiff(left, right) {
+  const leftFields = new Map(configFields(left).map((field) => [field.path, field.value]))
+  const rightFields = new Map(configFields(right).map((field) => [field.path, field.value]))
+  const paths = [...new Set([...leftFields.keys(), ...rightFields.keys()])].sort()
+  const diff = []
+  for (const path of paths) {
+    const hasLeft = leftFields.has(path)
+    const hasRight = rightFields.has(path)
+    const leftValue = leftFields.get(path)
+    const rightValue = rightFields.get(path)
+    if (hasLeft && hasRight && canonicalConfig(leftValue) === canonicalConfig(rightValue)) continue
+    diff.push({
+      path,
+      left: hasLeft ? leftValue : undefined,
+      right: hasRight ? rightValue : undefined,
+      kind: !hasLeft ? 'added' : !hasRight ? 'removed' : 'changed',
+    })
+  }
+  return diff
+}
+
+/**
  * Flatten a preset composition into leaf rows.
  *
  * @param {unknown} rows `config.plugins` of a preset declaration.
@@ -65,7 +122,8 @@ export function flattenPresetRows(rows) {
         path: [...path],
         state: combineRowState(inherited, ownRowState(row)),
         declared: ownRowState(row),
-        config: canonicalConfig(row.config),
+        config: row.config === undefined ? null : row.config,
+        configKey: canonicalConfig(row.config),
       })
     }
   }
@@ -152,7 +210,7 @@ export function diffPresetRows(leftRows, rightRows) {
       item.status = 'only-left'
     } else {
       item.stateDiff = a.state !== b.state
-      item.configDiff = a.config !== b.config
+      item.configDiff = a.configKey !== b.configKey
       item.pathDiff = !samePath(a.path, b.path)
       if (item.stateDiff) item.status = 'state'
       else if (item.configDiff) item.status = 'config'

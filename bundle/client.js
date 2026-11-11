@@ -166,9 +166,8 @@ window.__ModuleLoader__.load({
       pageSimple: '简易',
       pageStandard: '标准',
       pageCompare: '对比',
-      simpleSubtitle: '简化的预设入口，暂时留空。',
-      simplePlaceholder: '简易页先留空，后续放更轻量的预设入口。',
-      compareSubtitle: '按 Loader 行 id 对齐两个预设，查看声明、启停与配置差异。',
+      simpleSubtitle: '只改名称和人设的轻量配置。',
+      compareSubtitle: '左右并排两个预设，按 Loader 行 id 对齐，查看声明、启停与字段级配置差异。',
       compareTitle: '预设对比',
       comparePickA: '预设 A',
       comparePickB: '预设 B',
@@ -196,6 +195,38 @@ window.__ModuleLoader__.load({
       compareNoDiff: '没有差异。',
       compareHelp: '按 Loader 行 id 对齐：同 id 才视为同一行。状态取有效值，组被禁用时其子行也按禁用比较；条件行单列，不与启用合并。',
       compareRules: '对齐规则',
+      simpleTitle: '简易配置',
+      simpleIntro: '选一个预设，改名字和人设提示词，保存即可。',
+      simplePickBase: '基础预设',
+      simpleReadonly: '官方预设只读，会先复制一个自定义副本。',
+      simpleCopyEdit: '复制并编辑',
+      simpleName: '预设名称',
+      simplePersona: '人设提示词',
+      simplePersonaHint: '写清这个 Agent 是谁、该怎么做事；会写入 persona 的 prefix，保存后对新会话生效。',
+      simplePersonaPlaceholder: '例如：你是一名谨慎的代码审阅者，先读代码再给结论……',
+      simpleNoPersona: '这个预设没有 persona 行；请到标准页添加后再来。',
+      simpleMore: '更多设置（标准页）',
+      simpleSuffix: ' 简易版',
+      simpleEditing: '正在编辑',
+      simpleLocked: '这个预设已锁定，解锁后才能在简易页修改。',
+      simpleEmpty: '没有可编辑的自定义预设；先从官方预设复制一个，或去标准页新建。',
+      simpleDraftNote: '简易页只改名称与人设，其余行、组与配置请在标准页处理。',
+      simpleSavedElsewhere: '保存会同时提交工作台里的其它未保存改动。',
+      simpleCopyFailed: '复制失败',
+      compareFieldDiff: '字段级差异',
+      compareFieldDiffHint: '按 config 的叶子路径逐项比较；对象按键、数组按下标展开，相同字段不列出。',
+      compareFieldsCount: '{count} 项配置不同',
+      compareLegendSame: '相同',
+      compareLegendLeft: '仅左侧',
+      compareLegendRight: '仅右侧',
+      compareLegendState: '启停不同',
+      compareLegendConfig: '配置不同',
+      compareLegendPath: '分组不同',
+      compareRowsShort: '{rows} 行 · {enabled} 启用',
+      compareNoRowsSide: '没有行',
+      compareGhost: '未声明',
+      compareDiffCount: '差异 {count} 处',
+      compareValueEmpty: '空',
     }
 
     const en = {
@@ -347,9 +378,8 @@ window.__ModuleLoader__.load({
       pageSimple: 'Simple',
       pageStandard: 'Standard',
       pageCompare: 'Compare',
-      simpleSubtitle: 'A lighter preset entry, intentionally empty for now.',
-      simplePlaceholder: 'The Simple page is reserved for a lighter preset workflow.',
-      compareSubtitle: 'Align two presets by Loader row id to see declarations, enablement and config differences.',
+      simpleSubtitle: 'A lightweight setup for name and persona only.',
+      compareSubtitle: 'Put two presets side by side, aligned by Loader row id, with state and field-level config differences.',
       compareTitle: 'Preset comparison',
       comparePickA: 'Preset A',
       comparePickB: 'Preset B',
@@ -377,6 +407,38 @@ window.__ModuleLoader__.load({
       compareNoDiff: 'No differences.',
       compareHelp: 'Aligned by Loader row id: only the same id counts as the same row. States are effective, so a row inside a disabled group is compared as disabled; conditional rows stay separate from enabled ones.',
       compareRules: 'Alignment rules',
+      simpleTitle: 'Simple setup',
+      simpleIntro: 'Pick a preset, change its name and persona prompt, then save.',
+      simplePickBase: 'Base preset',
+      simpleReadonly: 'Official presets are read-only; a custom copy is created first.',
+      simpleCopyEdit: 'Copy and edit',
+      simpleName: 'Preset name',
+      simplePersona: 'Persona prompt',
+      simplePersonaHint: 'Describe who this Agent is and how it should work; it becomes the persona prefix and applies to new sessions after saving.',
+      simplePersonaPlaceholder: 'e.g. You are a careful code reviewer: read the code first, then give conclusions…',
+      simpleNoPersona: 'This preset has no persona row; add one on the Standard page first.',
+      simpleMore: 'More settings (Standard page)',
+      simpleSuffix: ' simple',
+      simpleEditing: 'Editing',
+      simpleLocked: 'This preset is locked; unlock it before editing here.',
+      simpleEmpty: 'No editable custom preset yet; copy an official one or create one on the Standard page.',
+      simpleDraftNote: 'The Simple page only changes the name and persona; rows, groups and config stay on the Standard page.',
+      simpleSavedElsewhere: 'Saving also submits other pending changes from the workbench.',
+      simpleCopyFailed: 'Copy failed',
+      compareFieldDiff: 'Field-level differences',
+      compareFieldDiffHint: 'Compares config leaf paths field by field; objects expand by key and arrays by index, and equal fields are omitted.',
+      compareFieldsCount: '{count} config field(s) differ',
+      compareLegendSame: 'Same',
+      compareLegendLeft: 'Only left',
+      compareLegendRight: 'Only right',
+      compareLegendState: 'State differs',
+      compareLegendConfig: 'Config differs',
+      compareLegendPath: 'Group differs',
+      compareRowsShort: '{rows} rows · {enabled} enabled',
+      compareNoRowsSide: 'No rows',
+      compareGhost: 'not declared',
+      compareDiffCount: '{count} difference(s)',
+      compareValueEmpty: 'empty',
     }
 
     const tone = (percent) => `color-mix(in srgb, currentColor ${percent}%, transparent)`
@@ -404,7 +466,16 @@ window.__ModuleLoader__.load({
       .ps-card:hover { border-color: color-mix(in srgb, currentColor 24%, transparent); box-shadow: 0 8px 22px color-mix(in srgb, currentColor 7%, transparent); }
       .ps-row:hover { background-color: color-mix(in srgb, currentColor 8%, transparent); }
       .ps-sticky { position: sticky; top: 0; z-index: 6; background: var(--dsw-alias-bg-base, Canvas); }
-      .ps-topbar { background: color-mix(in srgb, var(--dsw-alias-bg-base, Canvas) 94%, transparent); }
+      .ps-topbar { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px; background: color-mix(in srgb, var(--dsw-alias-bg-base, Canvas) 94%, transparent); }
+      .ps-brand { min-width: 0; }
+      .ps-brand .ps-subtitle { max-width: min(300px, 26vw); }
+      .ps-topnav { justify-self: center; min-width: 0; }
+      .ps-actions { justify-self: end; display: flex; align-items: center; justify-content: flex-end; gap: 8px; min-width: 0; flex-wrap: wrap; }
+      @media (max-width: 1040px) {
+        .ps-topbar { grid-template-columns: minmax(0, 1fr) auto; }
+        .ps-topnav { grid-column: 1 / -1; grid-row: 2; }
+        .ps-brand .ps-subtitle { max-width: 52vw; }
+      }
       .ps-new { background: #4f7cff !important; color: #fff !important; border-color: transparent !important; }
       .ps-new:hover { background: #5d88ff !important; transform: translateY(-1px); }
       .ps-package { background: color-mix(in srgb, currentColor 2.2%, transparent); transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease; }
@@ -430,16 +501,59 @@ window.__ModuleLoader__.load({
       .ps-search-wrap { position: relative; display: flex; align-items: center; width: 100%; }
       .ps-search-wrap svg { position: absolute; left: 9px; opacity: 0.5; pointer-events: none; }
       .ps-search { padding-left: 30px !important; }
-      .ps-compare-row { border: 1px solid transparent; border-radius: 8px; }
-      .ps-compare-row:hover { background: color-mix(in srgb, currentColor 6%, transparent); border-color: color-mix(in srgb, currentColor 10%, transparent); }
-      .ps-compare-head { position: sticky; top: 0; z-index: 4; background: var(--dsw-alias-bg-base, Canvas); }
-      .ps-compare-pick { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
-      .ps-compare-pick select { max-width: 260px; }
+      .ps-simple { width: 100%; max-width: 660px; margin: 0 auto; padding: 20px 18px 48px; display: flex; flex-direction: column; gap: 12px; }
+      .ps-simple-title { margin: 0 0 2px; font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
+      .ps-simple-intro { margin: 0; font-size: 12px; opacity: 0.62; line-height: 1.55; }
+      .ps-simple-persona { min-height: 190px !important; font-family: inherit !important; font-size: 13px !important; line-height: 1.6 !important; padding: 10px 12px !important; }
+      .ps-simple-foot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 11px; opacity: 0.62; }
+      .ps-cmp { display: flex; flex-direction: column; width: 100%; max-width: 1180px; margin: 0 auto; padding: 14px 18px 40px; gap: 8px; }
+      .ps-cmp-head { position: sticky; top: 0; z-index: 7; display: grid; grid-template-columns: minmax(0, 1fr) 36px minmax(0, 1fr); align-items: stretch; border: 1px solid color-mix(in srgb, currentColor 12%, transparent); border-radius: 12px; background: var(--dsw-alias-bg-base, Canvas); overflow: hidden; }
+      .ps-cmp-headcell { padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+      .ps-cmp-headcell + .ps-cmp-headcell { border-left: 1px solid color-mix(in srgb, currentColor 8%, transparent); }
+      .ps-cmp-kicker { font-size: 10px; letter-spacing: 0.04em; font-weight: 650; opacity: 0.55; }
+      .ps-cmp-select { width: 100% !important; max-width: none !important; font-size: 12px !important; padding: 4px 7px !important; }
+      .ps-cmp-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 10.5px; opacity: 0.6; }
+      .ps-cmp-swap { align-self: center; justify-self: center; }
+      .ps-cmp-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 0 2px 2px; }
+      .ps-cmp-legend { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 10.5px; opacity: 0.78; }
+      .ps-legend-item { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+      .ps-legend-swatch { width: 9px; height: 9px; border-radius: 3px; border: 1px solid color-mix(in srgb, currentColor 14%, transparent); }
+      .ps-cmp-body { display: flex; flex-direction: column; border: 1px solid color-mix(in srgb, currentColor 10%, transparent); border-radius: 12px; overflow: hidden; }
+      .ps-cmp-row { display: grid; grid-template-columns: minmax(0, 1fr) 36px minmax(0, 1fr); border-top: 1px solid color-mix(in srgb, currentColor 6%, transparent); }
+      .ps-cmp-row:first-child { border-top: none; }
+      .ps-cmp-row:hover { background: color-mix(in srgb, currentColor 3.5%, transparent); }
+      .ps-cmp-cell { padding: 6px 10px; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+      .ps-cmp-cell.del { background: color-mix(in srgb, var(--ps-danger) 8%, transparent); box-shadow: inset 2px 0 0 color-mix(in srgb, var(--ps-danger) 55%, transparent); }
+      .ps-cmp-cell.add { background: color-mix(in srgb, var(--ps-ok) 9%, transparent); box-shadow: inset 2px 0 0 color-mix(in srgb, var(--ps-ok) 60%, transparent); }
+      .ps-cmp-cell.mod { background: color-mix(in srgb, var(--ps-warn) 7%, transparent); box-shadow: inset 2px 0 0 color-mix(in srgb, var(--ps-warn) 45%, transparent); }
+      .ps-cmp-cell.modconfig { background: color-mix(in srgb, #4f7cff 6%, transparent); box-shadow: inset 2px 0 0 color-mix(in srgb, #4f7cff 45%, transparent); }
+      .ps-cmp-cell.modpath { background: color-mix(in srgb, currentColor 3.5%, transparent); box-shadow: inset 2px 0 0 color-mix(in srgb, currentColor 20%, transparent); }
+      .ps-cmp-cell.ghost { background: repeating-linear-gradient(135deg, color-mix(in srgb, currentColor 3%, transparent) 0 6px, transparent 6px 12px); }
+      .ps-cmp-gutter { display: flex; align-items: flex-start; justify-content: center; padding-top: 7px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 12px; font-weight: 700; }
+      .ps-cmp-line1 { display: flex; align-items: center; gap: 6px; min-width: 0; flex-wrap: wrap; }
+      .ps-cmp-id { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 11px; font-weight: 650; opacity: 0.9; }
+      .ps-cmp-mod { font-size: 10.5px; opacity: 0.55; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+      .ps-cmp-path { font-size: 10px; opacity: 0.45; }
+      .ps-cmp-state { display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; white-space: nowrap; }
+      .ps-cmp-dot { width: 6px; height: 6px; border-radius: 999px; flex: 0 0 auto; }
+      .ps-cmp-ghost { font-size: 10.5px; opacity: 0.35; font-style: italic; }
+      .ps-cmp-fields { grid-column: 1 / -1; margin: 0 10px 8px; border: 1px solid color-mix(in srgb, currentColor 12%, transparent); border-radius: 9px; overflow: hidden; background: color-mix(in srgb, currentColor 1.5%, transparent); }
+      .ps-cmp-field { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr); gap: 8px; padding: 3px 9px; font-size: 10.5px; line-height: 1.45; }
+      .ps-cmp-field + .ps-cmp-field { border-top: 1px solid color-mix(in srgb, currentColor 6%, transparent); }
+      .ps-cmp-fieldpath { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; opacity: 0.72; word-break: break-all; }
+      .ps-cmp-fieldval { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; white-space: pre-wrap; word-break: break-word; min-width: 0; }
+      .ps-cmp-fieldval.del { color: color-mix(in srgb, var(--ps-danger) 78%, currentColor); }
+      .ps-cmp-fieldval.add { color: color-mix(in srgb, var(--ps-ok) 72%, currentColor); }
+      .ps-cmp-fieldhead { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr); gap: 8px; padding: 4px 9px; font-size: 10px; letter-spacing: 0.03em; opacity: 0.55; border-bottom: 1px solid color-mix(in srgb, currentColor 8%, transparent); }
+      @media (max-width: 760px) {
+        .ps-cmp-head, .ps-cmp-row { grid-template-columns: minmax(0, 1fr) 26px minmax(0, 1fr); }
+        .ps-cmp-field, .ps-cmp-fieldhead { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+      }
     `
 
     const styles = {
       root: { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, color: 'inherit', fontSize: 13, boxSizing: 'border-box', position: 'relative' },
-      topbar: { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px 9px', borderBottom: `1px solid ${tone(10)}`, flexWrap: 'wrap' },
+      topbar: { padding: '10px 16px 9px', borderBottom: `1px solid ${tone(10)}` },
       brand: { display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 },
       logo: { width: 28, height: 28, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#4f7cff', color: '#fff', flex: '0 0 auto' },
       title: { margin: 0, fontSize: 15, fontWeight: 700, letterSpacing: '-0.01em' },
@@ -555,6 +669,19 @@ window.__ModuleLoader__.load({
       return undefined
     }
 
+    function findPersonaRow(rows) {
+      let found
+      walkRows(rows, (row) => {
+        if (found === undefined && !isGroup(row) && (row.id === 'persona' || row.name === '@deepseek-ai/dsh-persona')) found = row
+      })
+      return found
+    }
+
+    function presetChoiceLabel(choice, nameCounts) {
+      const name = String(choice.name || choice.id)
+      return (nameCounts.get(name) ?? 0) > 1 ? name + ' · ' + choice.id : name
+    }
+
     function platformLabel(text) {
       const source = String(text ?? '')
       const names = { win32: 'Windows', darwin: 'macOS', linux: 'Linux', freebsd: 'FreeBSD', android: 'Android' }
@@ -623,6 +750,55 @@ window.__ModuleLoader__.load({
       return 'enabled'
     }
 
+    function configFields(value, prefix = '', out = []) {
+      if (value === null || value === undefined) {
+        out.push({ path: prefix, value: null })
+        return out
+      }
+      if (typeof value !== 'object') {
+        out.push({ path: prefix, value })
+        return out
+      }
+      if (Array.isArray(value)) {
+        if (value.length === 0) {
+          out.push({ path: prefix, value: [] })
+          return out
+        }
+        value.forEach((item, index) => configFields(item, prefix + '[' + index + ']', out))
+        return out
+      }
+      const keys = Object.keys(value).sort()
+      if (keys.length === 0) {
+        out.push({ path: prefix, value: {} })
+        return out
+      }
+      for (const key of keys) {
+        configFields(value[key], prefix.length === 0 ? key : prefix + '.' + key, out)
+      }
+      return out
+    }
+
+    function configFieldDiff(left, right) {
+      const leftFields = new Map(configFields(left).map((field) => [field.path, field.value]))
+      const rightFields = new Map(configFields(right).map((field) => [field.path, field.value]))
+      const paths = [...new Set([...leftFields.keys(), ...rightFields.keys()])].sort()
+      const diff = []
+      for (const path of paths) {
+        const hasLeft = leftFields.has(path)
+        const hasRight = rightFields.has(path)
+        const leftValue = leftFields.get(path)
+        const rightValue = rightFields.get(path)
+        if (hasLeft && hasRight && canonicalConfig(leftValue) === canonicalConfig(rightValue)) continue
+        diff.push({
+          path,
+          left: hasLeft ? leftValue : undefined,
+          right: hasRight ? rightValue : undefined,
+          kind: !hasLeft ? 'added' : !hasRight ? 'removed' : 'changed',
+        })
+      }
+      return diff
+    }
+
     /** Flatten a composition into leaf rows with effective state and group path. */
     function flattenPresetRows(rows) {
       const leaves = []
@@ -641,7 +817,8 @@ window.__ModuleLoader__.load({
             path: [...path],
             state: combineRowState(inherited, rowState(row)),
             declared: rowState(row),
-            config: canonicalConfig(row.config),
+            config: row.config === undefined ? null : row.config,
+            configKey: canonicalConfig(row.config),
           })
         }
       }
@@ -712,7 +889,7 @@ window.__ModuleLoader__.load({
           item.status = 'only-left'
         } else {
           item.stateDiff = a.state !== b.state
-          item.configDiff = a.config !== b.config
+          item.configDiff = a.configKey !== b.configKey
           item.pathDiff = !samePath(a.path, b.path)
           if (item.stateDiff) item.status = 'state'
           else if (item.configDiff) item.status = 'config'
@@ -946,9 +1123,14 @@ window.__ModuleLoader__.load({
               api.presetDirty(preset)
                 ? h('span', { style: styles.badgeWarn, title: t('unsaved') }, t('unsavedHere'))
                 : null),
-            h('span', { style: styles.presetMeta },
-              h('code', { style: styles.code }, preset.id),
-              preset.order !== undefined ? ' · ' + preset.order : ''))))
+            h('span', { style: { ...styles.presetMeta, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 } },
+              h('code', { style: { ...styles.code, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' } }, preset.id),
+              preset.order !== undefined
+                ? h('span', {
+                    title: t('order') + ' ' + preset.order,
+                    style: { marginLeft: 'auto', flex: '0 0 auto', fontSize: 10, opacity: 0.62, fontVariantNumeric: 'tabular-nums', letterSpacing: '0.02em' },
+                  }, '#' + preset.order)
+                : null))))
     }
 
     function PresetColumn({ api }) {
@@ -1653,11 +1835,131 @@ window.__ModuleLoader__.load({
 
     function SimplePage({ api }) {
       const t = api.t
-      return h('div', { style: { flex: '1 1 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '28px 20px' } },
-        h('div', { style: { ...styles.card, maxWidth: 420, alignItems: 'center', textAlign: 'center', gap: 8 } },
-          h(Icon, { name: 'spark', size: 22, style: { opacity: 0.4 } }),
-          h('div', { style: { fontWeight: 650 } }, t('pageSimple')),
-          h('div', { style: styles.muted }, t('simplePlaceholder'))))
+      const initialManaged = api.selected?.kind === 'managed'
+        ? api.selected.id
+        : (api.draft.find((preset) => preset.locked !== true)?.id ?? null)
+      const [workingId, setWorkingId] = React.useState(initialManaged)
+      const [baseId, setBaseId] = React.useState(initialManaged ?? api.selectedId ?? api.presetChoices[0]?.id ?? null)
+      const [notice, setNotice] = React.useState(null)
+      const [copying, setCopying] = React.useState(false)
+
+      React.useEffect(() => {
+        if (workingId !== null && api.localPreset(workingId) === null) setWorkingId(null)
+      }, [workingId, api.draft])
+
+      const working = workingId === null ? null : api.localPreset(workingId)
+      const base = baseId === null ? null : (api.localPreset(baseId) ?? (api.state?.presets ?? []).find((preset) => preset.id === baseId) ?? null)
+      const persona = working === null ? null : findPersonaRow(working.plugins)
+      const locked = working?.locked === true
+
+      React.useEffect(() => {
+        if (base !== null || api.presetChoices.length === 0) return
+        const next = api.draft.find((preset) => preset.locked !== true)?.id ?? api.presetChoices[0].id
+        setBaseId(next)
+        setWorkingId(api.localPreset(next) !== null ? next : null)
+      }, [base, api.presetChoices, api.draft])
+
+      const pick = (id) => {
+        setNotice(null)
+        setBaseId(id)
+        setWorkingId(api.localPreset(id) !== null ? id : null)
+      }
+      const copyAndEdit = async () => {
+        if (base === null) return
+        setCopying(true)
+        setNotice(null)
+        try {
+          const id = await api.simpleCopy(base)
+          if (id !== null) {
+            setWorkingId(id)
+            setBaseId(id)
+          } else {
+            setNotice(t('simpleCopyFailed'))
+          }
+        } finally {
+          setCopying(false)
+        }
+      }
+      const options = api.presetChoices
+      const nameCounts = new Map()
+      for (const choice of options) {
+        const name = String(choice.name || choice.id)
+        nameCounts.set(name, (nameCounts.get(name) ?? 0) + 1)
+      }
+      const optionGroups = [
+        { label: t('official'), items: options.filter((choice) => choice.kind === 'official') },
+        { label: t('custom'), items: options.filter((choice) => choice.kind !== 'official') },
+      ]
+      const baseSelect = h('select', {
+        style: { ...styles.input, fontSize: 12.5, padding: '6px 8px' },
+        value: workingId ?? baseId ?? '',
+        'aria-label': t('simplePickBase'),
+        onChange: (event) => pick(event.target.value),
+      }, optionGroups.map((group) => group.items.length === 0 ? null : h('optgroup', { key: group.label, label: group.label },
+        group.items.map((choice) => h('option', { key: choice.id, value: choice.id }, presetChoiceLabel(choice, nameCounts))))))
+
+      return h('div', { className: 'ps-simple' },
+        h('div', null,
+          h('h2', { className: 'ps-simple-title' }, t('simpleTitle')),
+          h('p', { className: 'ps-simple-intro' }, t('simpleIntro'))),
+        h('div', { style: styles.card },
+          h('div', { style: styles.sectionTitle }, t('simplePickBase')),
+          baseSelect,
+          working === null && base !== null && api.localPreset(base.id) === null
+            ? h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 4 } },
+                h('span', { style: { ...styles.muted, fontSize: 11.5 } }, t('simpleReadonly')),
+                h('button', { type: 'button', style: styles.buttonPrimary, disabled: copying, onClick: () => void copyAndEdit() }, copying ? t('loading') : t('simpleCopyEdit')))
+            : null,
+          working === null && base !== null && api.localPreset(base.id) !== null && base.locked === true
+            ? h('div', { style: { ...styles.muted, fontSize: 11.5, marginTop: 4 } }, t('simpleLocked'))
+            : null,
+          working !== null
+            ? h('div', { style: { display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, fontSize: 11, opacity: 0.62 } },
+                h('span', { style: { ...styles.dot, background: 'var(--ps-ok)' } }),
+                h('span', null, t('simpleEditing') + ' · ' + (working.name || working.id)))
+            : null),
+        working === null
+          ? (base === null ? h('div', { style: styles.empty }, t('simpleEmpty')) : null)
+          : h(React.Fragment, null,
+              h('div', { style: styles.card },
+                h('label', { htmlFor: 'ps-simple-name', style: styles.sectionTitle }, t('simpleName')),
+                h('input', {
+                  id: 'ps-simple-name',
+                  style: { ...styles.input, fontSize: 14, fontWeight: 600, padding: '7px 9px' },
+                  value: String(working.name ?? ''),
+                  disabled: locked,
+                  onChange: (event) => api.updatePreset(working.id, { name: event.target.value }),
+                })),
+              h('div', { style: styles.card },
+                h('div', { style: { display: 'flex', alignItems: 'center', gap: 6 } },
+                  h('label', { htmlFor: 'ps-simple-persona', style: styles.sectionTitle }, t('simplePersona')),
+                  h(Help, { api, title: t('simplePersona'), text: t('simplePersonaHint') })),
+                persona === null
+                  ? h('div', { style: styles.muted }, t('simpleNoPersona'))
+                  : h('textarea', {
+                      id: 'ps-simple-persona',
+                      className: 'ps-simple-persona',
+                      style: { ...styles.textarea, resize: 'vertical' },
+                      value: String(persona.config?.prefix ?? ''),
+                      placeholder: t('simplePersonaPlaceholder'),
+                      disabled: locked,
+                      onChange: (event) => api.setPersona(working.id, event.target.value),
+                    }),
+                h('div', { style: { ...styles.muted, fontSize: 11 } }, t('simplePersonaHint'))),
+              locked ? h('div', { style: styles.badgeWarn }, t('simpleLocked')) : null,
+              h('div', { style: styles.saveBar },
+                h('span', { style: { ...styles.dot, background: api.dirty ? 'var(--ps-warn)' : 'var(--ps-ok)' } }),
+                h('span', { style: api.dirty ? styles.badgeWarn : styles.badge }, api.dirty ? t('unsaved') : t('saved')),
+                h('span', { style: { flex: '1 1 auto' } }),
+                h('button', { type: 'button', style: styles.button, disabled: !api.dirty || api.saving, onClick: () => api.discard() }, t('discard')),
+                h('button', { type: 'button', style: styles.buttonPrimary, disabled: !api.dirty || api.saving, onClick: () => api.save() }, api.saving ? t('saving') : t('save'))),
+              api.notice !== null ? h('div', { style: styles.errorBox }, api.notice) : null,
+              notice !== null ? h('div', { style: styles.errorBox }, notice) : null,
+              h('div', { className: 'ps-simple-foot' },
+                h('span', null, t('simpleDraftNote')),
+                h('span', null, t('simpleSavedElsewhere')),
+                h('span', { style: { flex: '1 1 auto' } }),
+                h('button', { type: 'button', style: styles.button, onClick: () => api.setPage('standard') }, t('simpleMore')))))
     }
 
     function compareStateLabel(t, state) {
@@ -1666,48 +1968,93 @@ window.__ModuleLoader__.load({
       return t('compareConditional')
     }
 
-    function CompareStateCell({ t, entry }) {
-      if (entry === undefined || entry.present !== true) {
-        return h('span', { style: { ...styles.muted, fontSize: 11.5 } }, '—')
-      }
-      const color = entry.state === 'enabled' ? 'var(--ps-ok)' : entry.state === 'conditional' ? 'var(--ps-warn)' : tone(24)
-      return h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11.5, opacity: entry.state === 'disabled' ? 0.62 : 1 } },
-        h('span', { style: { width: 6, height: 6, borderRadius: 999, background: color, flex: '0 0 auto' } }),
-        compareStateLabel(t, entry.state))
+    function compareStateColor(state) {
+      if (state === 'enabled') return 'var(--ps-ok)'
+      if (state === 'conditional') return 'var(--ps-warn)'
+      return 'color-mix(in srgb, currentColor 32%, transparent)'
     }
 
-    function CompareRow({ t, item }) {
-      const markers = []
-      if (item.configDiff) {
-        markers.push(h('span', { key: 'config', style: styles.badge, title: t('compareConfigMismatch') }, t('compareConfigDiff')))
+    function compareStatusMeta(t, status) {
+      if (status === 'only-left') return { glyph: '−', color: 'var(--ps-danger)', label: t('compareLegendLeft') }
+      if (status === 'only-right') return { glyph: '+', color: 'var(--ps-ok)', label: t('compareLegendRight') }
+      if (status === 'state') return { glyph: '~', color: 'var(--ps-warn)', label: t('compareLegendState') }
+      if (status === 'config') return { glyph: 'Δ', color: '#4f7cff', label: t('compareLegendConfig') }
+      if (status === 'path') return { glyph: '↔', color: 'currentColor', label: t('compareLegendPath') }
+      return { glyph: '=', color: 'var(--ps-ok)', label: t('compareLegendSame') }
+    }
+
+    function compareCellClass(status, side) {
+      if (status === 'only-left') return side === 'left' ? 'del' : 'ghost'
+      if (status === 'only-right') return side === 'right' ? 'add' : 'ghost'
+      if (status === 'state') return 'mod'
+      if (status === 'config') return 'modconfig'
+      if (status === 'path') return 'modpath'
+      return ''
+    }
+
+    function formatConfigValue(value, t) {
+      if (value === undefined) return t('compareGhost')
+      if (value === null) return 'null'
+      if (typeof value === 'string') return value.length > 240 ? value.slice(0, 240) + '…' : value
+      if (typeof value === 'object') {
+        const text = JSON.stringify(value)
+        return text.length > 240 ? text.slice(0, 240) + '…' : text
       }
-      if (item.pathDiff) {
-        markers.push(h('span', { key: 'path', style: styles.badge, title: t('comparePathMismatch') }, t('comparePathDiff')))
+      return String(value)
+    }
+
+    function presetStatsOf(rows) {
+      const leaves = flattenPresetRows(rows)
+      return { rows: leaves.length, enabled: leaves.filter((leaf) => leaf.state === 'enabled').length }
+    }
+
+    function CompareCell({ t, item, side }) {
+      const entry = side === 'left' ? item.left : item.right
+      const className = 'ps-cmp-cell ' + compareCellClass(item.status, side)
+      if (entry.present !== true) {
+        return h('div', { className },
+          h('div', { className: 'ps-cmp-ghost' }, t('compareGhost')))
       }
-      const labelPath = (path) => path.length > 0 ? path.join(' › ') : t('compareRoot')
-      let pathText = ''
-      if (item.left.present && item.right.present) {
-        if (item.pathDiff) pathText = labelPath(item.left.path) + ' → ' + labelPath(item.right.path)
-        else if (item.left.path.length > 0) pathText = labelPath(item.left.path)
-      } else if (item.left.present && item.left.path.length > 0) {
-        pathText = labelPath(item.left.path)
-      } else if (item.right.present && item.right.path.length > 0) {
-        pathText = labelPath(item.right.path)
-      }
-      return h('div', {
-        className: 'ps-compare-row',
-        style: { display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 96px 96px', gap: 8, alignItems: 'center', padding: '5px 8px' },
-      },
-        h('div', { style: { display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 } },
-          h('div', { style: { display: 'flex', gap: 6, alignItems: 'baseline', minWidth: 0, flexWrap: 'wrap' } },
-            h('code', { style: { ...styles.code, fontWeight: 650, opacity: 0.88 } }, item.id || item.key),
-            h('span', { style: { ...styles.code, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, item.name),
-            ...markers),
-          pathText.length > 0
-            ? h('div', { style: { fontSize: 10.5, opacity: 0.5, display: 'flex', gap: 4, flexWrap: 'wrap' } }, h('span', null, pathText))
-            : null),
-        h(CompareStateCell, { t, entry: item.left }),
-        h(CompareStateCell, { t, entry: item.right }))
+      return h('div', { className },
+        h('div', { className: 'ps-cmp-line1' },
+          h('span', { className: 'ps-cmp-state', style: { opacity: entry.state === 'disabled' ? 0.6 : 1 } },
+            h('span', { className: 'ps-cmp-dot', style: { background: compareStateColor(entry.state) } }),
+            compareStateLabel(t, entry.state)),
+          h('code', { className: 'ps-cmp-id' }, item.id || item.key)),
+        h('div', { className: 'ps-cmp-mod' }, item.name),
+        entry.path.length > 0 ? h('div', { className: 'ps-cmp-path' }, entry.path.join(' › ')) : null)
+    }
+
+    function FieldDiffPanel({ t, fields }) {
+      return h('div', { className: 'ps-cmp-fields' },
+        h('div', { className: 'ps-cmp-fieldhead' },
+          h('span', null, t('compareFieldDiff')),
+          h('span', null, 'A'),
+          h('span', null, 'B')),
+        fields.map((field) => h('div', { key: field.path, className: 'ps-cmp-field' },
+          h('code', { className: 'ps-cmp-fieldpath' }, field.path || t('compareValueEmpty')),
+          h('code', { className: 'ps-cmp-fieldval' + (field.kind === 'added' ? '' : ' del') }, formatConfigValue(field.left, t)),
+          h('code', { className: 'ps-cmp-fieldval' + (field.kind === 'removed' ? '' : ' add') }, formatConfigValue(field.right, t)))))
+    }
+
+    function CompareRow({ t, item, expanded, onToggle }) {
+      const meta = compareStatusMeta(t, item.status)
+      const fields = item.configDiff && item.left.present && item.right.present
+        ? configFieldDiff(item.left.config, item.right.config)
+        : []
+      return h('div', { className: 'ps-cmp-row' },
+        h(CompareCell, { t, item, side: 'left' }),
+        h('div', { className: 'ps-cmp-gutter', style: { color: meta.color }, title: meta.label }, meta.glyph),
+        h(CompareCell, { t, item, side: 'right' }),
+        fields.length > 0
+          ? h('div', { style: { gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-start', padding: '0 10px 6px' } },
+              h('button', {
+                type: 'button',
+                style: { ...styles.buttonGhost, fontSize: 10.5 },
+                onClick: onToggle,
+              }, (expanded ? '▾ ' : '▸ ') + t('compareFieldsCount', { count: fields.length })))
+          : null,
+        expanded && fields.length > 0 ? h(FieldDiffPanel, { t, fields }) : null)
     }
 
     function ComparePage({ api }) {
@@ -1722,8 +2069,8 @@ window.__ModuleLoader__.load({
       const initialLeft = api.selectedId ?? choices[0]?.id ?? null
       const [leftId, setLeftId] = React.useState(initialLeft)
       const [rightId, setRightId] = React.useState(() => preferredRight(initialLeft))
-      const [onlyDiff, setOnlyDiff] = React.useState(true)
-      const [collapsed, setCollapsed] = React.useState({})
+      const [onlyDiff, setOnlyDiff] = React.useState(false)
+      const [expanded, setExpanded] = React.useState({})
       const [reload, setReload] = React.useState(0)
       const [remoteLeft, setRemoteLeft] = React.useState({ status: 'idle' })
       const [remoteRight, setRemoteRight] = React.useState({ status: 'idle' })
@@ -1733,6 +2080,8 @@ window.__ModuleLoader__.load({
         if (leftId !== null && !ids.has(leftId)) setLeftId(choices[0]?.id ?? null)
         if (rightId !== null && !ids.has(rightId)) setRightId(preferredRight(leftId))
       }, [choices, leftId, rightId])
+
+      React.useEffect(() => { setExpanded({}) }, [leftId, rightId])
 
       React.useEffect(() => {
         if (leftId === null || api.localPreset(leftId) !== null) {
@@ -1773,89 +2122,85 @@ window.__ModuleLoader__.load({
       const compare = left.status === 'ready' && right.status === 'ready' ? diffPresetRows(left.rows, right.rows) : null
       const totalDiff = compare === null ? 0
         : compare.summary.onlyLeft + compare.summary.onlyRight + compare.summary.stateDiff + compare.summary.configDiff + compare.summary.pathDiff
-      const sections = compare === null ? [] : [
-        ['only-left', t('compareOnlyLeft'), compare.summary.onlyLeft],
-        ['only-right', t('compareOnlyRight'), compare.summary.onlyRight],
-        ['state', t('compareStateDiff'), compare.summary.stateDiff],
-        ['config', t('compareConfigDiff'), compare.summary.configDiff],
-        ['path', t('comparePathDiff'), compare.summary.pathDiff],
-        ['same', t('compareSame'), compare.summary.same],
-      ]
-      const visible = sections.filter(([key, , count]) => count > 0 && !(onlyDiff && key === 'same'))
+      const items = compare === null ? [] : (onlyDiff ? compare.items.filter((item) => item.status !== 'same') : compare.items)
+      const leftStats = left.status === 'ready' ? presetStatsOf(left.rows) : null
+      const rightStats = right.status === 'ready' ? presetStatsOf(right.rows) : null
       const optionGroups = [
         { label: t('official'), items: choices.filter((choice) => choice.kind === 'official') },
         { label: t('custom'), items: choices.filter((choice) => choice.kind !== 'official') },
       ]
-      const picker = (value, setValue, label) => h('label', { className: 'ps-compare-pick' },
-        h('span', { style: { ...styles.muted, fontSize: 11 } }, label),
-        h('select', {
-          style: { ...styles.input, width: 'auto', maxWidth: 260, fontSize: 11.5 },
-          value: value ?? '',
-          'aria-label': label,
-          onChange: (event) => setValue(event.target.value),
-        }, optionGroups.map((group) => group.items.length === 0 ? null : h('optgroup', { key: group.label, label: group.label },
-          group.items.map((choice) => h('option', { key: choice.id, value: choice.id }, (choice.name || choice.id) + ' · ' + choice.id))))))
+      const nameCounts = new Map()
+      for (const choice of choices) {
+        const name = String(choice.name || choice.id)
+        nameCounts.set(name, (nameCounts.get(name) ?? 0) + 1)
+      }
+      const picker = (value, setValue, label) => h('select', {
+        className: 'ps-cmp-select',
+        style: styles.input,
+        value: value ?? '',
+        'aria-label': label,
+        onChange: (event) => setValue(event.target.value),
+      }, optionGroups.map((group) => group.items.length === 0 ? null : h('optgroup', { key: group.label, label: group.label },
+        group.items.map((choice) => h('option', { key: choice.id, value: choice.id }, presetChoiceLabel(choice, nameCounts))))))
+      const headerCell = (side, id, source, stats, setter) => h('div', { className: 'ps-cmp-headcell' },
+        h('span', { className: 'ps-cmp-kicker' }, side === 'left' ? t('comparePickA') : t('comparePickB')),
+        picker(id, setter, side === 'left' ? t('comparePickA') : t('comparePickB')),
+        h('div', { className: 'ps-cmp-meta' },
+          source.status === 'ready' && stats !== null
+            ? h('span', null, t('compareRowsShort', { rows: stats.rows, enabled: stats.enabled }))
+            : source.status === 'error' ? h('span', null, t('error')) : h('span', null, t('compareLoading')),
+          source.draft ? h('span', { style: styles.badgeWarn }, t('compareDraft')) : null))
       const swap = () => {
         setLeftId(rightId)
         setRightId(leftId)
       }
-      const statusOrProblems = left.status === 'error' || right.status === 'error'
+      const legend = [
+        [t('compareLegendSame'), 'transparent'],
+        [t('compareLegendLeft'), 'color-mix(in srgb, var(--ps-danger) 35%, transparent)'],
+        [t('compareLegendRight'), 'color-mix(in srgb, var(--ps-ok) 35%, transparent)'],
+        [t('compareLegendState'), 'color-mix(in srgb, var(--ps-warn) 35%, transparent)'],
+        [t('compareLegendConfig'), 'color-mix(in srgb, #4f7cff 35%, transparent)'],
+        [t('compareLegendPath'), 'color-mix(in srgb, currentColor 18%, transparent)'],
+      ]
+      const problems = left.status === 'error' || right.status === 'error'
         ? h('div', { style: styles.errorBox },
             t('compareLoadFailed') + ': ' + (left.status === 'error' ? left.error : right.error),
-            h('button', { type: 'button', style: { ...styles.button, marginLeft: 8 }, onClick: () => setReload(reload + 1) }, t('retry')))
-        : left.status === 'loading' || right.status === 'loading'
+            h('button', { type: 'button', style: { ...styles.button, marginLeft: 8 }, onClick: () => { api.clearCompareCache?.(); setReload(reload + 1) } }, t('retry')))
+        : null
+      return h('div', { className: 'ps-cmp' },
+        h('div', { className: 'ps-cmp-head' },
+          headerCell('left', leftId, left, leftStats, setLeftId),
+          h('div', { className: 'ps-cmp-headcell', style: { padding: 0, alignItems: 'center', justifyContent: 'center' } },
+            h('button', { type: 'button', style: { ...styles.buttonGhost, fontSize: 14, alignSelf: 'center' }, title: t('compareSwap'), 'aria-label': t('compareSwap'), onClick: swap }, '⇄')),
+          headerCell('right', rightId, right, rightStats, setRightId)),
+        h('div', { className: 'ps-cmp-toolbar' },
+          h('div', { className: 'ps-cmp-legend' }, legend.map(([label, color]) => h('span', { key: label, className: 'ps-legend-item' },
+            h('span', { className: 'ps-legend-swatch', style: { background: color } }), label))),
+          h(Help, { api, title: t('compareFieldDiff'), text: t('compareFieldDiffHint') }),
+          h('span', { style: { flex: '1 1 auto' } }),
+          compare !== null ? h('span', { style: { ...styles.muted, fontSize: 11 } }, t('compareDiffCount', { count: totalDiff })) : null,
+          h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11.5, opacity: 0.8 } },
+            h('input', { type: 'checkbox', checked: onlyDiff, onChange: (event) => setOnlyDiff(event.target.checked) }),
+            t('compareOnlyDiff')),
+          h('button', { type: 'button', style: styles.buttonGhost, onClick: () => { api.clearCompareCache?.(); setReload(reload + 1) } }, t('refresh'))),
+        leftId === rightId ? h('div', { style: { ...styles.muted, fontSize: 11 } }, t('compareSelf')) : null,
+        problems,
+        left.status === 'loading' || right.status === 'loading' || left.status === 'idle' || right.status === 'idle'
           ? h('div', { style: styles.empty }, t('compareLoading'))
-          : null
-      return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 1080, margin: '0 auto' } },
-        h('div', { style: styles.card },
-          h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' } },
-            h('span', { style: { fontWeight: 650, fontSize: 13.5 } }, t('compareTitle')),
-            h(Help, { api, title: t('compareRules'), text: t('compareHelp') }),
-            h('span', { style: { flex: '1 1 auto' } }),
-            h('button', { type: 'button', style: styles.button, onClick: () => { api.clearCompareCache?.(); setReload(reload + 1) } }, t('refresh'))),
-          h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 8 } },
-            picker(leftId, setLeftId, t('comparePickA')),
-            h('button', { type: 'button', style: styles.buttonGhost, title: t('compareSwap'), 'aria-label': t('compareSwap'), onClick: swap }, '⇄'),
-            picker(rightId, setRightId, t('comparePickB')),
-            h('span', { style: { flex: '1 1 auto' } }),
-            h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11.5, opacity: 0.8 } },
-              h('input', { type: 'checkbox', checked: onlyDiff, onChange: (event) => setOnlyDiff(event.target.checked) }),
-              t('compareOnlyDiff'))),
-          leftId === rightId ? h('div', { style: { ...styles.muted, marginTop: 6 } }, t('compareSelf')) : null),
-        statusOrProblems,
-        compare === null ? null : h('div', { style: styles.card },
-          h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 12 } },
-            h('span', { style: styles.badge, title: left.draft ? t('compareDraft') : undefined }, 'A · ' + (left.name || leftId)),
-            left.draft ? h('span', { style: styles.badgeWarn }, t('compareDraft')) : null,
-            h('span', { style: { opacity: 0.5 } }, '×'),
-            h('span', { style: styles.badge, title: right.draft ? t('compareDraft') : undefined }, 'B · ' + (right.name || rightId)),
-            right.draft ? h('span', { style: styles.badgeWarn }, t('compareDraft')) : null,
-            h('span', { style: { flex: '1 1 auto' } }),
-            h('span', { style: { opacity: 0.75 } }, t('compareSummary', { a: compare.summary.leftEnabled, b: compare.summary.rightEnabled, diff: totalDiff })))),
-        compare === null ? null : compare.items.length === 0
-          ? h('div', { style: styles.empty }, t('compareEmpty'))
-          : visible.length === 0
-            ? h('div', { style: styles.empty }, t('compareNoDiff'))
-            : visible.map(([key, label, count]) => {
-              const open = key === 'same' ? collapsed[key] === true : collapsed[key] !== true
-              const items = compare.items.filter((item) => item.status === key)
-              return h('div', { key, style: styles.card },
-                h('button', {
-                  type: 'button',
-                  style: { display: 'flex', alignItems: 'center', gap: 6, width: '100%', padding: 0, border: 'none', background: 'transparent', color: 'inherit', cursor: 'pointer', font: 'inherit', textAlign: 'left' },
-                  onClick: () => setCollapsed({ ...collapsed, [key]: !open }),
-                },
-                  h('span', { style: styles.sectionTitle }, (open ? '▾ ' : '▸ ') + label),
-                  h('span', { style: styles.badge }, count)),
-                open
-                  ? h('div', { style: { display: 'flex', flexDirection: 'column', gap: 2, marginTop: 6 } },
-                      h('div', { style: { display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 96px 96px', gap: 8, padding: '2px 8px', fontSize: 10.5, opacity: 0.5 } },
-                        h('span', null, t('compareRow')),
-                        h('span', null, 'A'),
-                        h('span', null, 'B')),
-                      items.map((item) => h(CompareRow, { key: item.key, t, item })))
-                  : null)
-            }))
+          : compare === null
+            ? null
+            : compare.items.length === 0
+              ? h('div', { style: styles.empty }, t('compareEmpty'))
+              : items.length === 0
+                ? h('div', { style: styles.empty }, t('compareNoDiff'))
+                : h('div', { className: 'ps-cmp-body' },
+                    items.map((item) => h(CompareRow, {
+                      key: item.key,
+                      t,
+                      item,
+                      expanded: expanded[item.key] === true,
+                      onToggle: () => setExpanded({ ...expanded, [item.key]: expanded[item.key] !== true }),
+                    }))))
     }
 
     function StudioPage({ t, resolveText }) {
@@ -2018,6 +2363,41 @@ window.__ModuleLoader__.load({
           setNotice(String(cause && cause.message ? cause.message : cause))
         }
       }
+
+      const simpleCopy = async (base) => {
+        try {
+          let plugins = Array.isArray(base.plugins) ? clone(base.plugins) : null
+          if (plugins === null) {
+            const body = await requestJson('/preset-source?id=' + encodeURIComponent(base.id))
+            plugins = Array.isArray(body.plugins) ? clone(body.plugins) : []
+          }
+          const used = new Set([...draft.map((preset) => preset.id), ...(state?.presets ?? []).map((preset) => preset.id)])
+          const id = uniqueName(slugify(base.id + '-simple'), used)
+          const preset = {
+            id,
+            name: (base.name || base.id) + t('simpleSuffix'),
+            description: base.description ?? '',
+            order: nextOrder(),
+            plugins,
+            locked: false,
+          }
+          setDraft((prev) => [...prev, preset])
+          setSelectedId(id)
+          setNotice(null)
+          return id
+        } catch (cause) {
+          setNotice(String(cause && cause.message ? cause.message : cause))
+          return null
+        }
+      }
+
+      const setPersona = (presetId, text) => mutatePlugins(presetId, (plugins) => {
+        const row = findPersonaRow(plugins)
+        if (row === undefined) return
+        const config = row.config !== null && typeof row.config === 'object' && !Array.isArray(row.config) ? { ...row.config } : {}
+        config.prefix = text
+        row.config = config
+      })
 
       const guardDirty = () => !dirty || window.confirm(t('discardThenDelete'))
 
@@ -2295,7 +2675,7 @@ window.__ModuleLoader__.load({
         clearCompareCache: () => compareCache.current.clear(),
         load, selectPreset: (id) => setSelectedId(id),
         brokenOf: (id) => (state?.presets ?? []).find((preset) => preset.id === id)?.broken,
-        createBlank: () => createPreset(undefined), copyPreset,
+        createBlank: () => createPreset(undefined), copyPreset, simpleCopy, setPersona,
         deletePreset, adoptPreset, setLocked,
         updatePreset, save, discard,
         presetDirty, canRenamePreset, renamePreset,
@@ -2319,23 +2699,24 @@ window.__ModuleLoader__.load({
 
       return h('div', { className: 'ps-root', style: styles.root },
         h('div', { className: 'ps-topbar', style: styles.topbar },
-          h('div', { style: styles.brand },
+          h('div', { className: 'ps-brand', style: styles.brand },
             h('span', { style: styles.logo }, h(Icon, { name: 'spark', size: 16 })),
             h('div', { style: { display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 } },
               h('h1', { style: styles.title }, t('title')),
-              h('p', { style: styles.subtitle },
+              h('p', { className: 'ps-subtitle', style: styles.subtitle },
                 t(page === 'compare' ? 'compareSubtitle' : page === 'simple' ? 'simpleSubtitle' : 'subtitle')))),
-          h('div', { className: 'ps-seg', style: { marginLeft: 4 } },
-            [['simple', t('pageSimple')], ['standard', t('pageStandard')], ['compare', t('pageCompare')]].map(([key, label]) =>
-              h('button', { key, type: 'button', 'data-active': page === key, onClick: () => setPage(key) }, label))),
-          h('span', { style: { flex: '1 1 auto' } }),
-          state?.profile?.name ? h('span', { style: styles.profileChip }, h('span', { style: styles.profileDot }), 'profile: ' + state.profile.name) : null,
-          state?.hmr === false ? h('span', { style: styles.badgeWarn }, 'HMR off') : null,
-          h(DesignNotes, { api }),
-          h('button', {
-            type: 'button', style: styles.iconButton, title: t('refresh'), 'aria-label': t('refresh'),
-            onClick: () => void load(),
-          }, h(Icon, { name: 'refresh', size: 14 }))),
+          h('div', { className: 'ps-topnav' },
+            h('div', { className: 'ps-seg' },
+              [['simple', t('pageSimple')], ['standard', t('pageStandard')], ['compare', t('pageCompare')]].map(([key, label]) =>
+                h('button', { key, type: 'button', 'data-active': page === key, onClick: () => setPage(key) }, label)))),
+          h('div', { className: 'ps-actions' },
+            state?.profile?.name ? h('span', { style: styles.profileChip }, h('span', { style: styles.profileDot }), 'profile: ' + state.profile.name) : null,
+            state?.hmr === false ? h('span', { style: styles.badgeWarn }, 'HMR off') : null,
+            h(DesignNotes, { api }),
+            h('button', {
+              type: 'button', style: styles.iconButton, title: t('refresh'), 'aria-label': t('refresh'),
+              onClick: () => void load(),
+            }, h(Icon, { name: 'refresh', size: 14 })))),
         h('div', { style: styles.body },
           page === 'standard'
             ? h(React.Fragment, null,
@@ -2344,7 +2725,7 @@ window.__ModuleLoader__.load({
                 h('aside', { style: { ...styles.right, display: 'flex', flexDirection: 'column', minHeight: 0 } },
                   h(Drawer, { api })))
             : page === 'compare'
-              ? h('main', { className: 'ps-scroll', style: { ...styles.column, flex: '1 1 auto', padding: '14px 20px' } }, h(ComparePage, { api }))
+              ? h('main', { className: 'ps-scroll', style: { ...styles.column, flex: '1 1 auto', padding: 0 } }, h(ComparePage, { api }))
               : h('main', { className: 'ps-scroll', style: { ...styles.column, flex: '1 1 auto', padding: 0 } }, h(SimplePage, { api }))))
     }
 
