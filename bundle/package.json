@@ -11,11 +11,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/cningan/dsh-preset-studio.git"
+    "url": "git+https://github.com/cningan/dsh-preset-builder.git"
   },
-  "homepage": "https://github.com/cningan/dsh-preset-studio#readme",
+  "homepage": "https://github.com/cningan/dsh-preset-builder#readme",
   "bugs": {
-    "url": "https://github.com/cningan/dsh-preset-studio/issues"
+    "url": "https://github.com/cningan/dsh-preset-builder/issues"
   },
   "keywords": ["dsh", "deepseek-harness", "cordis", "agent-preset", "plugin"],
   "main": "index.js",
