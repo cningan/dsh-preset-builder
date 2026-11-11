@@ -17,7 +17,7 @@ DSH's Web UI can show a preset's configuration (read-only YAML) and make one the
 - Collect packages and their rows into the preset, with automatic package groups for multi-row packages.
 - The package drawer only offers **statically disabled** rows (`disabled: true`, i.e. preset-only rows); rows active in the Host or decided by a condition stay uncollectable so a later condition flip cannot register the plugin twice. **A package whose rows are all active is not shown at all** (official and third-party alike; see Design notes); official rows active in the Host remain folded under "Host-managed". Rows already declared in the current preset are filtered out too.
 - An inactive bundle gets its own "Community · bundle off" or "Official · bundle off" group and can be collected early; rows are tagged "on/off in bundle", and the editor plus the group header warn that enabling the bundle later may clash with the Host. Enabling the bundle first and checking row state is the recommended path.
-- The editor checks preset rows against currently active Host modules by module name; a match shows an "already active in the Host" warning, including after a bundle is enabled later.
+- The editor checks preset rows against currently active Host modules by module name; a red box lists the exact row ids and modules and the row gets a "Host conflict" badge. Rows from an off bundle are shown in yellow boxes and yellow row borders; both remain visible after a bundle is enabled.
 - Package cards show the official Chinese title and description from each package's `locale/zh.json`; non-official packages sort first and official ones last.
 - Explanations appear on demand: section headers, order, preset id and save validation use `?` popovers (hover to peek, click to pin); the top-bar "Design notes" explains the Host/preset split and why a third-party package may be absent.
 - Only Tool, Skill and Persona keywords are highlighted (including their Chinese labels), so row/package purpose is quick to spot; no full-page colouring.
@@ -59,7 +59,7 @@ Install this repository's `bundle/` as a bundle through DSH's `plugin_manager` (
 
 ## Status
 
-v0.3.0 installable. Verified in an **isolated DSH instance** (separate `DSH_HOME` and a temporary profile) through the UI: sidebar entry, three-column layout, blank-preset creation, id rename, package collection, save, lock/unlock, immediate deletion, automatic preset-only package discovery (persona), and the YAML draft preview. A manually inserted foreign declaration in that profile also verified adoption → edit → delete-with-tombstone. Pre-save mount validation, acceptance of the official Standard composition, rejection of host-service conflicts, and 14 unit checks all pass.
+v0.3.1 installable. Verified in an **isolated DSH instance** (separate `DSH_HOME` and a temporary profile) through the UI: sidebar entry, three-column layout, blank-preset creation, id rename, package collection, save, lock/unlock, immediate deletion, automatic preset-only package discovery (persona), and the YAML draft preview. A manually inserted foreign declaration in that profile also verified adoption → edit → delete-with-tombstone. Pre-save mount validation, acceptance of the official Standard composition, rejection of host-service conflicts, and 14 unit checks all pass.
 
 ## Verification
 

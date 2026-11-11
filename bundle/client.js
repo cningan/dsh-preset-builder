@@ -64,6 +64,8 @@ window.__ModuleLoader__.load({
       conflictWarning: '{count} 行已在 Host 启用；预设再声明同一模块会重复注册。请从预设移出，或先禁用 Host 对应行。',
       conflictWarningShort: '包含 Host 已启用的行，可能与 Host 重复注册。',
       conflictHint: 'Host 已经在挂载这些模块；预设声明同一模块会重复注册。检查按模块名匹配，条件行以当前 Host 状态为准。',
+      conflictBadge: 'Host 冲突',
+      inactiveBadge: '未开 Bundle',
       designButton: '设计说明',
       designHelp: '工坊怎么工作',
       designHost: 'Host 与预设是两层：Host 已启用的行不会进入可收录，因为预设再声明会重复注册。',
@@ -209,6 +211,8 @@ window.__ModuleLoader__.load({
       conflictWarning: '{count} row(s) are already active in the Host; declaring the same module in a preset registers it twice. Remove them from the preset, or disable the Host rows first.',
       conflictWarningShort: 'Contains rows that are active in the Host and may be registered twice.',
       conflictHint: 'The Host already mounts these modules; a preset declaring the same module registers it twice. The check matches by module name; conditional rows use the current Host state.',
+      conflictBadge: 'Host conflict',
+      inactiveBadge: 'bundle off',
       designButton: 'Design notes',
       designHelp: 'How the workshop works',
       designHost: 'Host and presets are two layers: rows active in the Host are not collectable, because a preset declaring them would register the same plugin twice.',
@@ -399,11 +403,15 @@ window.__ModuleLoader__.load({
       packageDesc: { fontSize: 11.5, opacity: 0.7, lineHeight: 1.45, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' },
       packageFoot: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 1 },
       packageMeta: { fontSize: 10.5, opacity: 0.55 },
-      inactiveBanner: { display: 'flex', alignItems: 'flex-start', gap: 6, marginTop: 8, padding: '6px 9px', borderRadius: 9, border: `1px solid ${tone(16)}`, background: tone(5), fontSize: 11, lineHeight: 1.45 },
+      inactiveBanner: { display: 'flex', alignItems: 'flex-start', gap: 6, marginTop: 8, padding: '6px 9px', borderRadius: 9, border: '1px solid color-mix(in srgb, #d97706 45%, transparent)', background: 'color-mix(in srgb, #f59e0b 10%, Canvas)', fontSize: 11, lineHeight: 1.45 },
       collectBtn: { padding: '3px 8px', borderRadius: 7, border: `1px solid ${tone(30)}`, background: 'transparent', color: 'inherit', cursor: 'pointer', font: 'inherit', fontSize: 11.5, fontWeight: 600 },
       muted: { opacity: 0.62, fontSize: 12 },
       empty: { padding: '18px 8px', opacity: 0.6, textAlign: 'center', fontSize: 12 },
       errorBox: { padding: '10px 12px', borderRadius: 8, background: tone(8), border: `1px solid ${tone(16)}`, fontSize: 12 },
+      errorWarnBox: { display: 'flex', alignItems: 'flex-start', gap: 6, padding: '7px 9px', borderRadius: 9, border: '1px solid color-mix(in srgb, #dc2626 55%, transparent)', background: 'color-mix(in srgb, #dc2626 8%, Canvas)', fontSize: 11.5, lineHeight: 1.45 },
+      inactiveWarnBox: { display: 'flex', alignItems: 'flex-start', gap: 6, padding: '7px 9px', borderRadius: 9, border: '1px solid color-mix(in srgb, #d97706 55%, transparent)', background: 'color-mix(in srgb, #f59e0b 13%, Canvas)', fontSize: 11.5, lineHeight: 1.45 },
+      badgeError: { fontSize: 10, padding: '1px 6px', borderRadius: 999, border: '1px solid color-mix(in srgb, #dc2626 50%, transparent)', background: 'color-mix(in srgb, #dc2626 12%, Canvas)', color: '#b91c1c', whiteSpace: 'nowrap' },
+      badgeWarnYellow: { fontSize: 10, padding: '1px 6px', borderRadius: 999, border: '1px solid color-mix(in srgb, #d97706 50%, transparent)', background: 'color-mix(in srgb, #f59e0b 15%, Canvas)', color: '#92400e', whiteSpace: 'nowrap' },
       dot: { width: 7, height: 7, borderRadius: 999, background: 'currentColor', flex: '0 0 auto' },
       group: { border: `1px dashed ${tone(16)}`, borderRadius: 12, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 5 },
       groupHead: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
@@ -936,11 +944,19 @@ window.__ModuleLoader__.load({
                   row.config.map((child) => h(RowView, { key: child.id, api, preset, row: child, depth: depth + 1, readOnly })))
             : null)
       }
+      const offBundle = typeof row.name === 'string' && api.inactiveModules?.has(row.name) === true
+      const hostConflict = typeof row.name === 'string' && row.disabled !== true && api.activeModules?.has(row.name) === true
+      const flagged = hostConflict
+        ? { borderColor: 'color-mix(in srgb, #dc2626 60%, transparent)', background: 'color-mix(in srgb, #dc2626 6%, Canvas)', boxShadow: 'inset 2px 0 0 #dc2626' }
+        : offBundle
+          ? { borderColor: 'color-mix(in srgb, #d97706 55%, transparent)', background: 'color-mix(in srgb, #f59e0b 10%, Canvas)', boxShadow: 'inset 2px 0 0 #d97706' }
+          : {}
       return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 2 } },
-        h('div', { className: 'ps-row', style: { ...styles.rowLine, marginLeft: depth * 12, opacity: rowState(row) === 'enabled' ? 1 : 0.62 } },
+        h('div', { className: 'ps-row', style: { ...styles.rowLine, marginLeft: depth * 12, opacity: rowState(row) === 'enabled' ? 1 : 0.62, ...flagged } },
           h('span', { style: { ...styles.dot, opacity: rowState(row) === 'enabled' ? 0.8 : 0.2 } }),
           h('span', { style: styles.rowName }, row.id),
           h('code', { style: styles.code }, row.name),
+          hostConflict ? h('span', { style: styles.badgeError }, t('conflictBadge')) : offBundle ? h('span', { style: styles.badgeWarnYellow }, t('inactiveBadge')) : null,
           h('span', { style: { flex: '1 1 auto' } }),
           h(RowActions, { api, preset, row, readOnly })),
         !readOnly && api.configEditorId === row.id
@@ -1176,7 +1192,7 @@ window.__ModuleLoader__.load({
             displayName !== pkg.name ? h('div', { style: styles.packageModule, title: pkg.name }, pkg.name) : null),
           h('div', { style: { display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap', marginLeft: 'auto' } },
             h('span', { style: pkg.official ? styles.badge : styles.badgeWarn }, pkg.official ? t('officialTag') : t('thirdParty')),
-            inactive ? h('span', { style: styles.badgeWarn, title: t('inactiveHint') }, t('inactiveTag')) : null,
+            inactive ? h('span', { style: styles.badgeWarnYellow, title: t('inactiveHint') }, t('inactiveTag')) : null,
             pkg.presetOnly === true ? h('span', { style: styles.badgeWarn, title: t('presetOnlyHint') }, t('presetOnly')) : null,
             collectable.length === 0
               ? rows.some((row) => row.enabled)
@@ -1199,7 +1215,7 @@ window.__ModuleLoader__.load({
             h('code', { style: { ...styles.code, flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, row.id || row.moduleName),
             row.enabled ? h('span', { style: styles.badgeWarn }, t('hostActive')) : null,
             row.bundleActive === false && row.bundleEnabled !== undefined
-              ? h('span', { style: styles.badgeWarn, title: row.bundleName ? row.bundleName : t('inactiveHint') }, row.bundleEnabled ? t('bundleEnabledTag') : t('bundleDisabledTag'))
+              ? h('span', { style: row.bundleEnabled ? styles.badgeWarnYellow : styles.badge, title: row.bundleName ? row.bundleName : t('inactiveHint') }, row.bundleEnabled ? t('bundleEnabledTag') : t('bundleDisabledTag'))
               : null,
             row.disabled?.kind === 'platform' ? h('span', { style: styles.badgeWarn }, row.disabled.label) : null,
             row.disabled?.kind === 'expression' ? h('span', { style: styles.badgeWarn, title: t('conditionalHint') }, t('conditional')) : null,
@@ -1368,15 +1384,23 @@ window.__ModuleLoader__.load({
             ? h('div', { style: styles.muted }, t('adoptUnavailable'))
             : null),
         editable ? h(SaveBar, { api }) : null,
-        inactive.length > 0
-          ? h('div', { style: styles.warnBox },
-              h('span', { style: { flex: '1 1 auto' } }, t('inactiveWarning', { count: inactive.length, bundles: inactiveBundles.join(', ') })),
-              h(Help, { api, title: t('inactiveTag'), text: t('inactiveHint') }))
-          : null,
         conflicts.length > 0
-          ? h('div', { style: styles.warnBox },
-              h('span', { style: { flex: '1 1 auto' } }, t('conflictWarning', { count: conflicts.length })),
+          ? h('div', { style: styles.errorWarnBox },
+              h('div', { style: { flex: '1 1 auto', display: 'flex', flexDirection: 'column', gap: 3 } },
+                h('div', { style: { fontWeight: 650, color: '#b91c1c' } }, t('conflictWarning', { count: conflicts.length })),
+                conflicts.map((item) => h('div', { key: item.id + '|' + item.name, style: { display: 'flex', gap: 6, fontSize: 11, flexWrap: 'wrap' } },
+                  h('code', { style: { ...styles.code, color: 'inherit', opacity: 0.8 } }, item.id || '—'),
+                  h('code', { style: { ...styles.code, color: 'inherit', opacity: 0.8 } }, item.name)))),
               h(Help, { api, title: t('conflictWarningShort'), text: t('conflictHint') }))
+          : null,
+        inactive.length > 0
+          ? h('div', { style: styles.inactiveWarnBox },
+              h('div', { style: { flex: '1 1 auto', display: 'flex', flexDirection: 'column', gap: 3 } },
+                h('div', { style: { fontWeight: 650 } }, t('inactiveWarning', { count: inactive.length, bundles: inactiveBundles.join(', ') })),
+                inactive.map((item) => h('div', { key: item.moduleName, style: { display: 'flex', gap: 6, fontSize: 11, flexWrap: 'wrap' } },
+                  h('code', { style: { ...styles.code, color: 'inherit', opacity: 0.8 } }, item.moduleName),
+                  h('span', { style: { opacity: 0.6 } }, '· ' + item.bundle)))),
+              h(Help, { api, title: t('inactiveTag'), text: t('inactiveHint') }))
           : null,
         preset.broken
           ? h('div', { style: styles.errorBox },
@@ -1778,18 +1802,26 @@ window.__ModuleLoader__.load({
         const found = new Map()
         walkRows(preset.plugins, (row) => {
           const hit = inactiveModules.get(row.name)
-          if (hit !== undefined && !found.has(row.name)) found.set(row.name, hit)
+          if (hit !== undefined && !found.has(row.name)) {
+            found.set(row.name, { moduleName: row.name, bundle: hit.bundle, bundleEnabled: hit.bundleEnabled })
+          }
         })
         return [...found.values()]
       }
 
       const conflictUsage = (preset) => {
-        const found = new Map()
+        const found = []
+        const seen = new Set()
         walkRows(preset.plugins, (row) => {
+          if (row.disabled === true) return
           const hit = activeModules.get(row.name)
-          if (hit !== undefined && !found.has(row.name)) found.set(row.name, hit)
+          if (hit === undefined) return
+          const key = String(row.id ?? '') + '|' + row.name
+          if (seen.has(key)) return
+          seen.add(key)
+          found.push({ id: typeof row.id === 'string' ? row.id : '', name: row.name, packageName: hit.packageName })
         })
-        return [...found.values()]
+        return found
       }
 
       const warnings = React.useMemo(() => {
