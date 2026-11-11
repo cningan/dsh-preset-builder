@@ -68,6 +68,7 @@ window.__ModuleLoader__.load({
       inactiveBadge: '未开 Bundle',
       designButton: '设计说明',
       designHelp: '工坊怎么工作',
+      help: '帮助',
       designHost: 'Host 与预设是两层：Host 已启用的行不会进入可收录，因为预设再声明会重复注册。',
       designBundle: '未启用的 bundle 单独列为一组：它的行现在没有被 Host 挂载，可以提前收录；但以后启用该 bundle 会与 Host 重复，建议先启用并确认行状态。',
       designCollect: '已启用 bundle 里只收录静态禁用、留给预设挂载的行；未启用 bundle 的行单独分组，条件行不收录。',
@@ -162,6 +163,39 @@ window.__ModuleLoader__.load({
       noEditablePreset: '请先选择一个可编辑的预设（官方预设与锁定预设不可收录）。',
       stalePackage: '包未安装',
       duplicateRow: '行 id 重复',
+      pageSimple: '简易',
+      pageStandard: '标准',
+      pageCompare: '对比',
+      simpleSubtitle: '简化的预设入口，暂时留空。',
+      simplePlaceholder: '简易页先留空，后续放更轻量的预设入口。',
+      compareSubtitle: '按 Loader 行 id 对齐两个预设，查看声明、启停与配置差异。',
+      compareTitle: '预设对比',
+      comparePickA: '预设 A',
+      comparePickB: '预设 B',
+      compareSwap: '交换 A/B',
+      compareOnlyDiff: '只看差异',
+      compareLoading: '读取中…',
+      compareLoadFailed: '读取预设失败',
+      compareSummary: 'A 启用 {a} 行 · B 启用 {b} 行 · 差异 {diff} 处',
+      compareOnlyLeft: '只在 A',
+      compareOnlyRight: '只在 B',
+      compareStateDiff: '启停不同',
+      compareConfigDiff: '配置不同',
+      comparePathDiff: '分组不同',
+      compareSame: '相同',
+      compareEmpty: '两边都没有可比较的行。',
+      compareSelf: '两侧是同一个预设。',
+      compareDraft: '含未保存草稿',
+      compareEnabled: '启用',
+      compareDisabled: '禁用',
+      compareConditional: '条件',
+      compareRow: '行',
+      compareConfigMismatch: '两边的 config 不一致',
+      comparePathMismatch: '两边的分组路径不一致',
+      compareRoot: '根',
+      compareNoDiff: '没有差异。',
+      compareHelp: '按 Loader 行 id 对齐：同 id 才视为同一行。状态取有效值，组被禁用时其子行也按禁用比较；条件行单列，不与启用合并。',
+      compareRules: '对齐规则',
     }
 
     const en = {
@@ -215,6 +249,7 @@ window.__ModuleLoader__.load({
       inactiveBadge: 'bundle off',
       designButton: 'Design notes',
       designHelp: 'How the workshop works',
+      help: 'Help',
       designHost: 'Host and presets are two layers: rows active in the Host are not collectable, because a preset declaring them would register the same plugin twice.',
       designBundle: 'Bundles that are off get their own groups: their rows are not mounted by the Host now and can be collected early, but enabling the bundle later duplicates the Host; enable it first and check the row state.',
       designCollect: 'An active bundle offers only statically disabled rows left for presets; rows from an off bundle are grouped separately, and conditional rows are not collectable.',
@@ -309,6 +344,39 @@ window.__ModuleLoader__.load({
       noEditablePreset: 'Select an editable preset first (official and locked presets cannot collect rows).',
       stalePackage: 'package not installed',
       duplicateRow: 'duplicate row id',
+      pageSimple: 'Simple',
+      pageStandard: 'Standard',
+      pageCompare: 'Compare',
+      simpleSubtitle: 'A lighter preset entry, intentionally empty for now.',
+      simplePlaceholder: 'The Simple page is reserved for a lighter preset workflow.',
+      compareSubtitle: 'Align two presets by Loader row id to see declarations, enablement and config differences.',
+      compareTitle: 'Preset comparison',
+      comparePickA: 'Preset A',
+      comparePickB: 'Preset B',
+      compareSwap: 'Swap A/B',
+      compareOnlyDiff: 'Differences only',
+      compareLoading: 'Loading…',
+      compareLoadFailed: 'Failed to load the preset',
+      compareSummary: 'A enables {a} row(s) · B enables {b} · {diff} difference(s)',
+      compareOnlyLeft: 'Only in A',
+      compareOnlyRight: 'Only in B',
+      compareStateDiff: 'State differs',
+      compareConfigDiff: 'Config differs',
+      comparePathDiff: 'Group differs',
+      compareSame: 'Same',
+      compareEmpty: 'Neither preset declares any row.',
+      compareSelf: 'Both sides are the same preset.',
+      compareDraft: 'includes unsaved draft',
+      compareEnabled: 'enabled',
+      compareDisabled: 'disabled',
+      compareConditional: 'conditional',
+      compareRow: 'Row',
+      compareConfigMismatch: 'The two configs differ',
+      comparePathMismatch: 'The two group paths differ',
+      compareRoot: 'root',
+      compareNoDiff: 'No differences.',
+      compareHelp: 'Aligned by Loader row id: only the same id counts as the same row. States are effective, so a row inside a disabled group is compared as disabled; conditional rows stay separate from enabled ones.',
+      compareRules: 'Alignment rules',
     }
 
     const tone = (percent) => `color-mix(in srgb, currentColor ${percent}%, transparent)`
@@ -362,6 +430,11 @@ window.__ModuleLoader__.load({
       .ps-search-wrap { position: relative; display: flex; align-items: center; width: 100%; }
       .ps-search-wrap svg { position: absolute; left: 9px; opacity: 0.5; pointer-events: none; }
       .ps-search { padding-left: 30px !important; }
+      .ps-compare-row { border: 1px solid transparent; border-radius: 8px; }
+      .ps-compare-row:hover { background: color-mix(in srgb, currentColor 6%, transparent); border-color: color-mix(in srgb, currentColor 10%, transparent); }
+      .ps-compare-head { position: sticky; top: 0; z-index: 4; background: var(--dsw-alias-bg-base, Canvas); }
+      .ps-compare-pick { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+      .ps-compare-pick select { max-width: 260px; }
     `
 
     const styles = {
@@ -529,6 +602,131 @@ window.__ModuleLoader__.load({
         return row.disabled?.kind === 'static' || row.disabled?.kind === 'none'
       }
       return row.enabled === false && (row.disabled?.kind === 'static' || row.disabled?.kind === 'none')
+    }
+
+    // ---------- preset comparison ----------
+    // Golden contract: bundle/lib/diff.mjs, exercised by test/unit.mjs.
+    // The client ships as one plain-JS file, so keep this small copy in sync.
+
+    function canonicalConfig(value) {
+      if (value === null || value === undefined) return 'null'
+      if (typeof value !== 'object') return JSON.stringify(value)
+      if (Array.isArray(value)) return '[' + value.map(canonicalConfig).join(',') + ']'
+      const keys = Object.keys(value).sort()
+      if (keys.length === 0) return 'null'
+      return '{' + keys.map((key) => JSON.stringify(key) + ':' + canonicalConfig(value[key])).join(',') + '}'
+    }
+
+    function combineRowState(inherited, own) {
+      if (inherited === 'disabled' || own === 'disabled') return 'disabled'
+      if (inherited === 'conditional' || own === 'conditional') return 'conditional'
+      return 'enabled'
+    }
+
+    /** Flatten a composition into leaf rows with effective state and group path. */
+    function flattenPresetRows(rows) {
+      const leaves = []
+      const visit = (list, path, inherited) => {
+        if (!Array.isArray(list)) return
+        for (const row of list) {
+          if (row === null || typeof row !== 'object') continue
+          if (isGroup(row)) {
+            const state = combineRowState(inherited, rowState(row))
+            visit(row.config, [...path, typeof row.id === 'string' ? row.id : ''], state)
+            continue
+          }
+          leaves.push({
+            id: typeof row.id === 'string' && row.id.length > 0 ? row.id : undefined,
+            name: typeof row.name === 'string' ? row.name : '',
+            path: [...path],
+            state: combineRowState(inherited, rowState(row)),
+            declared: rowState(row),
+            config: canonicalConfig(row.config),
+          })
+        }
+      }
+      visit(rows, [], 'enabled')
+      return leaves
+    }
+
+    function indexPresetLeaves(leaves) {
+      const map = new Map()
+      const order = []
+      for (const leaf of leaves) {
+        const base = leaf.id ?? 'name:' + leaf.name
+        let key = base
+        let index = 2
+        while (map.has(key)) {
+          key = base + '#' + index
+          index += 1
+        }
+        map.set(key, leaf)
+        order.push(key)
+      }
+      return { map, order }
+    }
+
+    function samePath(left, right) {
+      if (left.length !== right.length) return false
+      for (let index = 0; index < left.length; index += 1) {
+        if (left[index] !== right[index]) return false
+      }
+      return true
+    }
+
+    function diffPresetRows(leftRows, rightRows) {
+      const left = indexPresetLeaves(flattenPresetRows(leftRows))
+      const right = indexPresetLeaves(flattenPresetRows(rightRows))
+      const keys = [...left.order, ...right.order.filter((key) => !left.map.has(key))]
+      const items = []
+      const summary = {
+        leftRows: left.map.size, rightRows: right.map.size,
+        leftEnabled: 0, rightEnabled: 0, leftConditional: 0, rightConditional: 0,
+        onlyLeft: 0, onlyRight: 0, stateDiff: 0, configDiff: 0, pathDiff: 0, same: 0,
+      }
+      for (const key of keys) {
+        const a = left.map.get(key)
+        const b = right.map.get(key)
+        if (a !== undefined) {
+          if (a.state === 'enabled') summary.leftEnabled += 1
+          if (a.state === 'conditional') summary.leftConditional += 1
+        }
+        if (b !== undefined) {
+          if (b.state === 'enabled') summary.rightEnabled += 1
+          if (b.state === 'conditional') summary.rightConditional += 1
+        }
+        const item = {
+          key,
+          id: a?.id ?? b?.id,
+          name: a?.name ?? b?.name ?? '',
+          left: a === undefined ? { present: false } : { present: true, state: a.state, declared: a.declared, path: a.path, config: a.config },
+          right: b === undefined ? { present: false } : { present: true, state: b.state, declared: b.declared, path: b.path, config: b.config },
+          status: 'same',
+          stateDiff: false,
+          configDiff: false,
+          pathDiff: false,
+        }
+        if (a === undefined) {
+          item.status = 'only-right'
+        } else if (b === undefined) {
+          item.status = 'only-left'
+        } else {
+          item.stateDiff = a.state !== b.state
+          item.configDiff = a.config !== b.config
+          item.pathDiff = !samePath(a.path, b.path)
+          if (item.stateDiff) item.status = 'state'
+          else if (item.configDiff) item.status = 'config'
+          else if (item.pathDiff) item.status = 'path'
+        }
+        if (item.status === 'only-left') summary.onlyLeft += 1
+        else if (item.status === 'only-right') summary.onlyRight += 1
+        else if (item.status === 'state') summary.stateDiff += 1
+        else if (item.status === 'config') summary.configDiff += 1
+        else if (item.status === 'path') summary.pathDiff += 1
+        else summary.same += 1
+        items.push(item)
+      }
+      return { items, summary }
     }
 
     // ---------- presentation primitives ----------
@@ -1453,6 +1651,213 @@ window.__ModuleLoader__.load({
           : null)
     }
 
+    function SimplePage({ api }) {
+      const t = api.t
+      return h('div', { style: { flex: '1 1 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '28px 20px' } },
+        h('div', { style: { ...styles.card, maxWidth: 420, alignItems: 'center', textAlign: 'center', gap: 8 } },
+          h(Icon, { name: 'spark', size: 22, style: { opacity: 0.4 } }),
+          h('div', { style: { fontWeight: 650 } }, t('pageSimple')),
+          h('div', { style: styles.muted }, t('simplePlaceholder'))))
+    }
+
+    function compareStateLabel(t, state) {
+      if (state === 'enabled') return t('compareEnabled')
+      if (state === 'disabled') return t('compareDisabled')
+      return t('compareConditional')
+    }
+
+    function CompareStateCell({ t, entry }) {
+      if (entry === undefined || entry.present !== true) {
+        return h('span', { style: { ...styles.muted, fontSize: 11.5 } }, '—')
+      }
+      const color = entry.state === 'enabled' ? 'var(--ps-ok)' : entry.state === 'conditional' ? 'var(--ps-warn)' : tone(24)
+      return h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11.5, opacity: entry.state === 'disabled' ? 0.62 : 1 } },
+        h('span', { style: { width: 6, height: 6, borderRadius: 999, background: color, flex: '0 0 auto' } }),
+        compareStateLabel(t, entry.state))
+    }
+
+    function CompareRow({ t, item }) {
+      const markers = []
+      if (item.configDiff) {
+        markers.push(h('span', { key: 'config', style: styles.badge, title: t('compareConfigMismatch') }, t('compareConfigDiff')))
+      }
+      if (item.pathDiff) {
+        markers.push(h('span', { key: 'path', style: styles.badge, title: t('comparePathMismatch') }, t('comparePathDiff')))
+      }
+      const labelPath = (path) => path.length > 0 ? path.join(' › ') : t('compareRoot')
+      let pathText = ''
+      if (item.left.present && item.right.present) {
+        if (item.pathDiff) pathText = labelPath(item.left.path) + ' → ' + labelPath(item.right.path)
+        else if (item.left.path.length > 0) pathText = labelPath(item.left.path)
+      } else if (item.left.present && item.left.path.length > 0) {
+        pathText = labelPath(item.left.path)
+      } else if (item.right.present && item.right.path.length > 0) {
+        pathText = labelPath(item.right.path)
+      }
+      return h('div', {
+        className: 'ps-compare-row',
+        style: { display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 96px 96px', gap: 8, alignItems: 'center', padding: '5px 8px' },
+      },
+        h('div', { style: { display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 } },
+          h('div', { style: { display: 'flex', gap: 6, alignItems: 'baseline', minWidth: 0, flexWrap: 'wrap' } },
+            h('code', { style: { ...styles.code, fontWeight: 650, opacity: 0.88 } }, item.id || item.key),
+            h('span', { style: { ...styles.code, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, item.name),
+            ...markers),
+          pathText.length > 0
+            ? h('div', { style: { fontSize: 10.5, opacity: 0.5, display: 'flex', gap: 4, flexWrap: 'wrap' } }, h('span', null, pathText))
+            : null),
+        h(CompareStateCell, { t, entry: item.left }),
+        h(CompareStateCell, { t, entry: item.right }))
+    }
+
+    function ComparePage({ api }) {
+      const t = api.t
+      const choices = api.presetChoices
+      const preferredRight = (left) => {
+        for (const id of ['ptc', 'standard', 'cordis', 'minimal']) {
+          if (id !== left && choices.some((choice) => choice.id === id)) return id
+        }
+        return choices.find((choice) => choice.id !== left)?.id ?? left
+      }
+      const initialLeft = api.selectedId ?? choices[0]?.id ?? null
+      const [leftId, setLeftId] = React.useState(initialLeft)
+      const [rightId, setRightId] = React.useState(() => preferredRight(initialLeft))
+      const [onlyDiff, setOnlyDiff] = React.useState(true)
+      const [collapsed, setCollapsed] = React.useState({})
+      const [reload, setReload] = React.useState(0)
+      const [remoteLeft, setRemoteLeft] = React.useState({ status: 'idle' })
+      const [remoteRight, setRemoteRight] = React.useState({ status: 'idle' })
+
+      React.useEffect(() => {
+        const ids = new Set(choices.map((choice) => choice.id))
+        if (leftId !== null && !ids.has(leftId)) setLeftId(choices[0]?.id ?? null)
+        if (rightId !== null && !ids.has(rightId)) setRightId(preferredRight(leftId))
+      }, [choices, leftId, rightId])
+
+      React.useEffect(() => {
+        if (leftId === null || api.localPreset(leftId) !== null) {
+          setRemoteLeft({ status: 'idle' })
+          return undefined
+        }
+        let alive = true
+        setRemoteLeft({ status: 'loading' })
+        api.loadPresetRows(leftId)
+          .then((source) => { if (alive) setRemoteLeft({ status: 'ready', name: source.name, rows: source.rows }) })
+          .catch((error) => { if (alive) setRemoteLeft({ status: 'error', error: String(error?.message ?? error) }) })
+        return () => { alive = false }
+      }, [leftId, api.dataVersion, reload])
+
+      React.useEffect(() => {
+        if (rightId === null || api.localPreset(rightId) !== null) {
+          setRemoteRight({ status: 'idle' })
+          return undefined
+        }
+        let alive = true
+        setRemoteRight({ status: 'loading' })
+        api.loadPresetRows(rightId)
+          .then((source) => { if (alive) setRemoteRight({ status: 'ready', name: source.name, rows: source.rows }) })
+          .catch((error) => { if (alive) setRemoteRight({ status: 'error', error: String(error?.message ?? error) }) })
+        return () => { alive = false }
+      }, [rightId, api.dataVersion, reload])
+
+      const sourceOf = (id, remote) => {
+        if (id === null) return { status: 'idle' }
+        const local = api.localPreset(id)
+        if (local !== null) {
+          return { status: 'ready', rows: local.plugins, name: local.name || id, draft: api.presetDirty(local) }
+        }
+        return remote
+      }
+      const left = sourceOf(leftId, remoteLeft)
+      const right = sourceOf(rightId, remoteRight)
+      const compare = left.status === 'ready' && right.status === 'ready' ? diffPresetRows(left.rows, right.rows) : null
+      const totalDiff = compare === null ? 0
+        : compare.summary.onlyLeft + compare.summary.onlyRight + compare.summary.stateDiff + compare.summary.configDiff + compare.summary.pathDiff
+      const sections = compare === null ? [] : [
+        ['only-left', t('compareOnlyLeft'), compare.summary.onlyLeft],
+        ['only-right', t('compareOnlyRight'), compare.summary.onlyRight],
+        ['state', t('compareStateDiff'), compare.summary.stateDiff],
+        ['config', t('compareConfigDiff'), compare.summary.configDiff],
+        ['path', t('comparePathDiff'), compare.summary.pathDiff],
+        ['same', t('compareSame'), compare.summary.same],
+      ]
+      const visible = sections.filter(([key, , count]) => count > 0 && !(onlyDiff && key === 'same'))
+      const optionGroups = [
+        { label: t('official'), items: choices.filter((choice) => choice.kind === 'official') },
+        { label: t('custom'), items: choices.filter((choice) => choice.kind !== 'official') },
+      ]
+      const picker = (value, setValue, label) => h('label', { className: 'ps-compare-pick' },
+        h('span', { style: { ...styles.muted, fontSize: 11 } }, label),
+        h('select', {
+          style: { ...styles.input, width: 'auto', maxWidth: 260, fontSize: 11.5 },
+          value: value ?? '',
+          'aria-label': label,
+          onChange: (event) => setValue(event.target.value),
+        }, optionGroups.map((group) => group.items.length === 0 ? null : h('optgroup', { key: group.label, label: group.label },
+          group.items.map((choice) => h('option', { key: choice.id, value: choice.id }, (choice.name || choice.id) + ' · ' + choice.id))))))
+      const swap = () => {
+        setLeftId(rightId)
+        setRightId(leftId)
+      }
+      const statusOrProblems = left.status === 'error' || right.status === 'error'
+        ? h('div', { style: styles.errorBox },
+            t('compareLoadFailed') + ': ' + (left.status === 'error' ? left.error : right.error),
+            h('button', { type: 'button', style: { ...styles.button, marginLeft: 8 }, onClick: () => setReload(reload + 1) }, t('retry')))
+        : left.status === 'loading' || right.status === 'loading'
+          ? h('div', { style: styles.empty }, t('compareLoading'))
+          : null
+      return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 1080, margin: '0 auto' } },
+        h('div', { style: styles.card },
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' } },
+            h('span', { style: { fontWeight: 650, fontSize: 13.5 } }, t('compareTitle')),
+            h(Help, { api, title: t('compareRules'), text: t('compareHelp') }),
+            h('span', { style: { flex: '1 1 auto' } }),
+            h('button', { type: 'button', style: styles.button, onClick: () => { api.clearCompareCache?.(); setReload(reload + 1) } }, t('refresh'))),
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 8 } },
+            picker(leftId, setLeftId, t('comparePickA')),
+            h('button', { type: 'button', style: styles.buttonGhost, title: t('compareSwap'), 'aria-label': t('compareSwap'), onClick: swap }, '⇄'),
+            picker(rightId, setRightId, t('comparePickB')),
+            h('span', { style: { flex: '1 1 auto' } }),
+            h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11.5, opacity: 0.8 } },
+              h('input', { type: 'checkbox', checked: onlyDiff, onChange: (event) => setOnlyDiff(event.target.checked) }),
+              t('compareOnlyDiff'))),
+          leftId === rightId ? h('div', { style: { ...styles.muted, marginTop: 6 } }, t('compareSelf')) : null),
+        statusOrProblems,
+        compare === null ? null : h('div', { style: styles.card },
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 12 } },
+            h('span', { style: styles.badge, title: left.draft ? t('compareDraft') : undefined }, 'A · ' + (left.name || leftId)),
+            left.draft ? h('span', { style: styles.badgeWarn }, t('compareDraft')) : null,
+            h('span', { style: { opacity: 0.5 } }, '×'),
+            h('span', { style: styles.badge, title: right.draft ? t('compareDraft') : undefined }, 'B · ' + (right.name || rightId)),
+            right.draft ? h('span', { style: styles.badgeWarn }, t('compareDraft')) : null,
+            h('span', { style: { flex: '1 1 auto' } }),
+            h('span', { style: { opacity: 0.75 } }, t('compareSummary', { a: compare.summary.leftEnabled, b: compare.summary.rightEnabled, diff: totalDiff })))),
+        compare === null ? null : compare.items.length === 0
+          ? h('div', { style: styles.empty }, t('compareEmpty'))
+          : visible.length === 0
+            ? h('div', { style: styles.empty }, t('compareNoDiff'))
+            : visible.map(([key, label, count]) => {
+              const open = key === 'same' ? collapsed[key] === true : collapsed[key] !== true
+              const items = compare.items.filter((item) => item.status === key)
+              return h('div', { key, style: styles.card },
+                h('button', {
+                  type: 'button',
+                  style: { display: 'flex', alignItems: 'center', gap: 6, width: '100%', padding: 0, border: 'none', background: 'transparent', color: 'inherit', cursor: 'pointer', font: 'inherit', textAlign: 'left' },
+                  onClick: () => setCollapsed({ ...collapsed, [key]: !open }),
+                },
+                  h('span', { style: styles.sectionTitle }, (open ? '▾ ' : '▸ ') + label),
+                  h('span', { style: styles.badge }, count)),
+                open
+                  ? h('div', { style: { display: 'flex', flexDirection: 'column', gap: 2, marginTop: 6 } },
+                      h('div', { style: { display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 96px 96px', gap: 8, padding: '2px 8px', fontSize: 10.5, opacity: 0.5 } },
+                        h('span', null, t('compareRow')),
+                        h('span', null, 'A'),
+                        h('span', null, 'B')),
+                      items.map((item) => h(CompareRow, { key: item.key, t, item })))
+                  : null)
+            }))
+    }
+
     function StudioPage({ t, resolveText }) {
       const [state, setState] = React.useState(null)
       const [draft, setDraft] = React.useState([])
@@ -1470,6 +1875,9 @@ window.__ModuleLoader__.load({
       const [isolateEditorId, setIsolateEditorId] = React.useState(null)
       const [selectedGroupId, setSelectedGroupId] = React.useState(null)
       const [addRowOpen, setAddRowOpen] = React.useState(false)
+      const [page, setPage] = React.useState('standard')
+      const [dataVersion, setDataVersion] = React.useState(0)
+      const compareCache = React.useRef(new Map())
 
       const dirty = React.useMemo(() => JSON.stringify(draft) !== JSON.stringify(saved), [draft, saved])
 
@@ -1491,6 +1899,8 @@ window.__ModuleLoader__.load({
           setDraft(managed)
           setSaved(clone(managed))
           setBaseRevision(body.revision ?? '')
+          compareCache.current.clear()
+          setDataVersion((value) => value + 1)
           setSelectedId((current) => (body.presets ?? []).some((preset) => preset.id === current)
             ? current
             : ((body.presets ?? []).find((preset) => preset.kind !== 'official')?.id ?? (body.presets ?? [])[0]?.id ?? null))
@@ -1522,6 +1932,30 @@ window.__ModuleLoader__.load({
         if (!draft.some((entry) => entry.id === preset.id)) return false
         const base = savedById.get(preset.id)
         return base === undefined || JSON.stringify(base) !== JSON.stringify(preset)
+      }
+      const presetChoices = React.useMemo(() => {
+        const choices = []
+        const seen = new Set()
+        for (const preset of state?.presets ?? []) {
+          seen.add(preset.id)
+          choices.push({ id: preset.id, name: preset.name ?? '', kind: preset.kind })
+        }
+        for (const preset of draft) {
+          if (!seen.has(preset.id)) choices.push({ id: preset.id, name: preset.name ?? '', kind: 'managed' })
+        }
+        return choices
+      }, [state, draft])
+      const localPreset = (id) => draft.find((preset) => preset.id === id) ?? null
+      const loadPresetRows = (id) => {
+        const key = String(id)
+        if (compareCache.current.has(key)) return compareCache.current.get(key)
+        const pending = requestJson('/preset-source?id=' + encodeURIComponent(id)).then((body) => ({
+          name: typeof body.name === 'string' ? body.name : id,
+          rows: Array.isArray(body.plugins) ? body.plugins : [],
+        }))
+        compareCache.current.set(key, pending)
+        pending.catch(() => { compareCache.current.delete(key) })
+        return pending
       }
       const canRenamePreset = (id) => !saved.some((preset) => preset.id === id) && draft.some((preset) => preset.id === id)
       const renamePreset = (oldId, rawId) => {
@@ -1856,8 +2290,9 @@ window.__ModuleLoader__.load({
         resolveText,
         inactiveModules, inactiveUsage, activeRowIds, conflictUsage,
         view, tab, menuOpen, collapsed, configEditorId, isolateEditorId, selectedGroupId, warnings, baseRevision,
-        officialPresets, foreignPresets,
-        setMenuOpen, setView, setTab, setNotice,
+        officialPresets, foreignPresets, page, presetChoices, dataVersion,
+        setMenuOpen, setView, setTab, setNotice, setPage, localPreset, loadPresetRows,
+        clearCompareCache: () => compareCache.current.clear(),
         load, selectPreset: (id) => setSelectedId(id),
         brokenOf: (id) => (state?.presets ?? []).find((preset) => preset.id === id)?.broken,
         createBlank: () => createPreset(undefined), copyPreset,
@@ -1888,7 +2323,11 @@ window.__ModuleLoader__.load({
             h('span', { style: styles.logo }, h(Icon, { name: 'spark', size: 16 })),
             h('div', { style: { display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 } },
               h('h1', { style: styles.title }, t('title')),
-              h('p', { style: styles.subtitle }, t('subtitle')))),
+              h('p', { style: styles.subtitle },
+                t(page === 'compare' ? 'compareSubtitle' : page === 'simple' ? 'simpleSubtitle' : 'subtitle')))),
+          h('div', { className: 'ps-seg', style: { marginLeft: 4 } },
+            [['simple', t('pageSimple')], ['standard', t('pageStandard')], ['compare', t('pageCompare')]].map(([key, label]) =>
+              h('button', { key, type: 'button', 'data-active': page === key, onClick: () => setPage(key) }, label))),
           h('span', { style: { flex: '1 1 auto' } }),
           state?.profile?.name ? h('span', { style: styles.profileChip }, h('span', { style: styles.profileDot }), 'profile: ' + state.profile.name) : null,
           state?.hmr === false ? h('span', { style: styles.badgeWarn }, 'HMR off') : null,
@@ -1898,10 +2337,15 @@ window.__ModuleLoader__.load({
             onClick: () => void load(),
           }, h(Icon, { name: 'refresh', size: 14 }))),
         h('div', { style: styles.body },
-          h('aside', { className: 'ps-scroll', style: { ...styles.column, ...styles.left } }, h(PresetColumn, { api })),
-          h('main', { className: 'ps-scroll', style: { ...styles.column, ...styles.middle } }, h(Editor, { api })),
-          h('aside', { style: { ...styles.right, display: 'flex', flexDirection: 'column', minHeight: 0 } },
-            h(Drawer, { api }))))
+          page === 'standard'
+            ? h(React.Fragment, null,
+                h('aside', { className: 'ps-scroll', style: { ...styles.column, ...styles.left } }, h(PresetColumn, { api })),
+                h('main', { className: 'ps-scroll', style: { ...styles.column, ...styles.middle } }, h(Editor, { api })),
+                h('aside', { style: { ...styles.right, display: 'flex', flexDirection: 'column', minHeight: 0 } },
+                  h(Drawer, { api })))
+            : page === 'compare'
+              ? h('main', { className: 'ps-scroll', style: { ...styles.column, flex: '1 1 auto', padding: '14px 20px' } }, h(ComparePage, { api }))
+              : h('main', { className: 'ps-scroll', style: { ...styles.column, flex: '1 1 auto', padding: 0 } }, h(SimplePage, { api }))))
     }
 
     async function sidebarEntryEnabled() {

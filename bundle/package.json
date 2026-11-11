@@ -1,9 +1,9 @@
 {
   "name": "dsh-preset-builder",
-  "version": "0.3.3",
+  "version": "0.4.0",
   "type": "module",
   "scripts": {
-    "check": "node --check client.js && node --check index.js && node --check lib/inventory.mjs && node --check lib/rules.mjs",
+    "check": "node --check client.js && node --check index.js && node --check lib/inventory.mjs && node --check lib/rules.mjs && node --check lib/diff.mjs",
     "test": "node ../test/unit.mjs"
   },
   "description": "Build custom Agent presets in the DSH Web UI: collect package rows, edit groups and config, save as ordinary preset declarations.",

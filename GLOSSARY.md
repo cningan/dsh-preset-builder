@@ -71,6 +71,14 @@ _Avoid_: 卸载、禁用（移出与禁用不同）
 **组合区（composition area）**：工作台中编辑当前预设结构树的区域。
 _Avoid_: 画布、列表
 
+**标准页（standard page）**：顶栏三页导航的默认页，即原有的三栏工作台（预设列表、组合区、包抽屉）。
+_Avoid_: 配置页、主页
+
+**简易页（simple page）**：顶栏三页导航中的预留页，当前只显示占位说明，不承载功能。
+
+**对比页（compare page）**：顶栏三页导航中的对比视图，按 Loader row id 对齐任意两个预设，展示只在一边、启停、配置与分组路径差异。
+_Avoid_: 差异表、DIFF 页面（口语可用，文档统一用对比页）
+
 **包抽屉（package drawer）**：工作台中按包浏览、收录行的侧边区域。
 
 **用户补丁层（user patch layer）**：profile 的 `cordis.patch.yml`，位于所有 bundle 层之后，可覆盖行配置、禁用行、插入新行。
