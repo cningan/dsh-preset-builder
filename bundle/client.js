@@ -166,7 +166,7 @@ window.__ModuleLoader__.load({
       pageSimple: '简易',
       pageStandard: '标准',
       pageCompare: '对比',
-      simpleSubtitle: '只改名称和人设的轻量配置。',
+      simpleSubtitle: '轻量配置：名称、ID、描述与人设。',
       compareSubtitle: '左右并排两个预设，按 Loader 行 id 对齐，查看声明、启停与字段级配置差异。',
       compareTitle: '预设对比',
       comparePickA: '预设 A',
@@ -196,11 +196,18 @@ window.__ModuleLoader__.load({
       compareHelp: '按 Loader 行 id 对齐：同 id 才视为同一行。状态取有效值，组被禁用时其子行也按禁用比较；条件行单列，不与启用合并。',
       compareRules: '对齐规则',
       simpleTitle: '简易配置',
-      simpleIntro: '选一个预设，改名字和人设提示词，保存即可。',
+      simpleIntro: '选一个预设，改名字、ID、描述与人设，保存即可。',
       simplePickBase: '基础预设',
       simpleReadonly: '官方预设只读，会先复制一个自定义副本。',
       simpleCopyEdit: '复制并编辑',
       simpleName: '预设名称',
+      simpleId: '预设 ID',
+      simpleIdHint: '小写字母、数字、连字符；留空自动生成；保存后不可改。',
+      simpleIdBlankUses: '当前将使用 {id}；保存后不可改。',
+      simpleIdPlaceholder: '留空自动生成',
+      simpleIdInvalid: 'ID 只能使用小写字母、数字和连字符，且以字母或数字开头。',
+      simpleDescription: '描述',
+      simpleDescriptionPlaceholder: '一句话说明这个预设的用途（可留空）',
       simplePersona: '人设提示词',
       simplePersonaHint: '写清这个 Agent 是谁、该怎么做事；会写入 persona 的 prefix，保存后对新会话生效。',
       simplePersonaPlaceholder: '例如：你是一名谨慎的代码审阅者，先读代码再给结论……',
@@ -227,6 +234,11 @@ window.__ModuleLoader__.load({
       compareGhost: '未声明',
       compareDiffCount: '差异 {count} 处',
       compareValueEmpty: '空',
+      compareInheritedChip: '继承：{state}',
+      compareInheritedHint: '行本身为「{declared}」，受祖先组影响后为「{state}」。',
+      compareExpand: '展开',
+      compareCollapse: '收起',
+      compareField: '字段',
     }
 
     const en = {
@@ -378,7 +390,7 @@ window.__ModuleLoader__.load({
       pageSimple: 'Simple',
       pageStandard: 'Standard',
       pageCompare: 'Compare',
-      simpleSubtitle: 'A lightweight setup for name and persona only.',
+      simpleSubtitle: 'Light setup: name, ID, description and persona.',
       compareSubtitle: 'Put two presets side by side, aligned by Loader row id, with state and field-level config differences.',
       compareTitle: 'Preset comparison',
       comparePickA: 'Preset A',
@@ -408,11 +420,18 @@ window.__ModuleLoader__.load({
       compareHelp: 'Aligned by Loader row id: only the same id counts as the same row. States are effective, so a row inside a disabled group is compared as disabled; conditional rows stay separate from enabled ones.',
       compareRules: 'Alignment rules',
       simpleTitle: 'Simple setup',
-      simpleIntro: 'Pick a preset, change its name and persona prompt, then save.',
+      simpleIntro: 'Pick a preset, then adjust its name, ID, description and persona before saving.',
       simplePickBase: 'Base preset',
       simpleReadonly: 'Official presets are read-only; a custom copy is created first.',
       simpleCopyEdit: 'Copy and edit',
       simpleName: 'Preset name',
+      simpleId: 'Preset ID',
+      simpleIdHint: 'Lowercase letters, digits and hyphens; leave blank to auto-generate; fixed after saving.',
+      simpleIdBlankUses: 'It will use {id}; fixed after saving.',
+      simpleIdPlaceholder: 'Leave blank to auto-generate',
+      simpleIdInvalid: 'IDs use lowercase letters, digits and hyphens, starting with a letter or digit.',
+      simpleDescription: 'Description',
+      simpleDescriptionPlaceholder: 'One line about what this preset is for (optional)',
       simplePersona: 'Persona prompt',
       simplePersonaHint: 'Describe who this Agent is and how it should work; it becomes the persona prefix and applies to new sessions after saving.',
       simplePersonaPlaceholder: 'e.g. You are a careful code reviewer: read the code first, then give conclusions…',
@@ -439,6 +458,11 @@ window.__ModuleLoader__.load({
       compareGhost: 'not declared',
       compareDiffCount: '{count} difference(s)',
       compareValueEmpty: 'empty',
+      compareInheritedChip: 'Inherited {state}',
+      compareInheritedHint: 'Declared {declared}, effective {state} after an ancestor group.',
+      compareExpand: 'Expand',
+      compareCollapse: 'Collapse',
+      compareField: 'Field',
     }
 
     const tone = (percent) => `color-mix(in srgb, currentColor ${percent}%, transparent)`
@@ -501,52 +525,74 @@ window.__ModuleLoader__.load({
       .ps-search-wrap { position: relative; display: flex; align-items: center; width: 100%; }
       .ps-search-wrap svg { position: absolute; left: 9px; opacity: 0.5; pointer-events: none; }
       .ps-search { padding-left: 30px !important; }
-      .ps-simple { width: 100%; max-width: 660px; margin: 0 auto; padding: 20px 18px 48px; display: flex; flex-direction: column; gap: 12px; }
+      .ps-simple, .ps-simple * { box-sizing: border-box; }
+      .ps-simple { width: 100%; max-width: 720px; margin: 0 auto; padding: 20px 18px 48px; display: flex; flex-direction: column; gap: 12px; }
       .ps-simple-title { margin: 0 0 2px; font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
-      .ps-simple-intro { margin: 0; font-size: 12px; opacity: 0.62; line-height: 1.55; }
-      .ps-simple-persona { min-height: 190px !important; font-family: inherit !important; font-size: 13px !important; line-height: 1.6 !important; padding: 10px 12px !important; }
+      .ps-simple-intro { margin: 0; font-size: 12.5px; opacity: 0.64; line-height: 1.6; }
+      .ps-simple-block { display: flex; flex-direction: column; gap: 5px; }
+      .ps-simple-label { font-size: 11.5px; font-weight: 650; opacity: 0.72; }
+      .ps-simple-hint { font-size: 11px; opacity: 0.55; line-height: 1.5; }
+      .ps-simple-error { font-size: 11px; color: var(--ps-danger); line-height: 1.45; }
+      .ps-simple-persona { min-height: 210px !important; font-family: inherit !important; font-size: 13.5px !important; line-height: 1.65 !important; padding: 11px 13px !important; }
       .ps-simple-foot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 11px; opacity: 0.62; }
-      .ps-cmp { display: flex; flex-direction: column; width: 100%; max-width: 1180px; margin: 0 auto; padding: 14px 18px 40px; gap: 8px; }
-      .ps-cmp-head { position: sticky; top: 0; z-index: 7; display: grid; grid-template-columns: minmax(0, 1fr) 36px minmax(0, 1fr); align-items: stretch; border: 1px solid color-mix(in srgb, currentColor 12%, transparent); border-radius: 12px; background: var(--dsw-alias-bg-base, Canvas); overflow: hidden; }
-      .ps-cmp-headcell { padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+      .ps-cmp, .ps-cmp * { box-sizing: border-box; }
+      .ps-cmp { display: flex; flex-direction: column; width: 100%; max-width: 1440px; margin: 0 auto; padding: 14px 20px 44px; gap: 8px; }
+      .ps-cmp-head { position: sticky; top: 0; z-index: 7; display: grid; grid-template-columns: minmax(0, 1fr) 44px minmax(0, 1fr); align-items: stretch; border: 1px solid color-mix(in srgb, currentColor 12%, transparent); border-radius: 12px; background: var(--dsw-alias-bg-base, Canvas); overflow: hidden; }
+      .ps-cmp-headcell { padding: 10px 12px; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
       .ps-cmp-headcell + .ps-cmp-headcell { border-left: 1px solid color-mix(in srgb, currentColor 8%, transparent); }
-      .ps-cmp-kicker { font-size: 10px; letter-spacing: 0.04em; font-weight: 650; opacity: 0.55; }
-      .ps-cmp-select { width: 100% !important; max-width: none !important; font-size: 12px !important; padding: 4px 7px !important; }
-      .ps-cmp-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 10.5px; opacity: 0.6; }
+      .ps-cmp-kicker { font-size: 10.5px; letter-spacing: 0.04em; font-weight: 650; opacity: 0.58; }
+      .ps-cmp-select { width: 100% !important; max-width: none !important; font-size: 12.5px !important; padding: 5px 8px !important; }
+      .ps-cmp-meta { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; font-size: 11px; opacity: 0.62; }
       .ps-cmp-swap { align-self: center; justify-self: center; }
       .ps-cmp-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 0 2px 2px; }
-      .ps-cmp-legend { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 10.5px; opacity: 0.78; }
+      .ps-cmp-legend { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 11px; opacity: 0.78; }
       .ps-legend-item { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
       .ps-legend-swatch { width: 9px; height: 9px; border-radius: 3px; border: 1px solid color-mix(in srgb, currentColor 14%, transparent); }
       .ps-cmp-body { display: flex; flex-direction: column; border: 1px solid color-mix(in srgb, currentColor 10%, transparent); border-radius: 12px; overflow: hidden; }
-      .ps-cmp-row { display: grid; grid-template-columns: minmax(0, 1fr) 36px minmax(0, 1fr); border-top: 1px solid color-mix(in srgb, currentColor 6%, transparent); }
+      .ps-cmp-row { display: grid; grid-template-columns: minmax(0, 1fr) 44px minmax(0, 1fr); border-top: 1px solid color-mix(in srgb, currentColor 6%, transparent); }
       .ps-cmp-row:first-child { border-top: none; }
       .ps-cmp-row:hover { background: color-mix(in srgb, currentColor 3.5%, transparent); }
-      .ps-cmp-cell { padding: 6px 10px; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-      .ps-cmp-cell.del { background: color-mix(in srgb, var(--ps-danger) 8%, transparent); box-shadow: inset 2px 0 0 color-mix(in srgb, var(--ps-danger) 55%, transparent); }
-      .ps-cmp-cell.add { background: color-mix(in srgb, var(--ps-ok) 9%, transparent); box-shadow: inset 2px 0 0 color-mix(in srgb, var(--ps-ok) 60%, transparent); }
-      .ps-cmp-cell.mod { background: color-mix(in srgb, var(--ps-warn) 7%, transparent); box-shadow: inset 2px 0 0 color-mix(in srgb, var(--ps-warn) 45%, transparent); }
-      .ps-cmp-cell.modconfig { background: color-mix(in srgb, #4f7cff 6%, transparent); box-shadow: inset 2px 0 0 color-mix(in srgb, #4f7cff 45%, transparent); }
+      .ps-cmp-cell { padding: 9px 12px; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 3px; }
+      .ps-cmp-cell.del { background: color-mix(in srgb, var(--ps-danger) 7%, transparent); box-shadow: inset 2px 0 0 color-mix(in srgb, var(--ps-danger) 55%, transparent); }
+      .ps-cmp-cell.add { background: color-mix(in srgb, var(--ps-ok) 8%, transparent); box-shadow: inset 2px 0 0 color-mix(in srgb, var(--ps-ok) 60%, transparent); }
+      .ps-cmp-cell.mod { background: color-mix(in srgb, var(--ps-warn) 6%, transparent); box-shadow: inset 2px 0 0 color-mix(in srgb, var(--ps-warn) 45%, transparent); }
+      .ps-cmp-cell.modconfig { background: color-mix(in srgb, #4f7cff 5%, transparent); box-shadow: inset 2px 0 0 color-mix(in srgb, #4f7cff 45%, transparent); }
       .ps-cmp-cell.modpath { background: color-mix(in srgb, currentColor 3.5%, transparent); box-shadow: inset 2px 0 0 color-mix(in srgb, currentColor 20%, transparent); }
       .ps-cmp-cell.ghost { background: repeating-linear-gradient(135deg, color-mix(in srgb, currentColor 3%, transparent) 0 6px, transparent 6px 12px); }
-      .ps-cmp-gutter { display: flex; align-items: flex-start; justify-content: center; padding-top: 7px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 12px; font-weight: 700; }
-      .ps-cmp-line1 { display: flex; align-items: center; gap: 6px; min-width: 0; flex-wrap: wrap; }
-      .ps-cmp-id { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 11px; font-weight: 650; opacity: 0.9; }
-      .ps-cmp-mod { font-size: 10.5px; opacity: 0.55; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
-      .ps-cmp-path { font-size: 10px; opacity: 0.45; }
-      .ps-cmp-state { display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; white-space: nowrap; }
+      .ps-cmp-gutter { display: flex; align-items: center; justify-content: center; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 13px; font-weight: 700; }
+      .ps-cmp-main { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; min-width: 0; }
+      .ps-cmp-identity { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+      .ps-cmp-modline { display: flex; align-items: center; gap: 8px; min-width: 0; }
+      .ps-cmp-preview { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 10.5px; opacity: 0.56; padding-left: 8px; border-left: 1px solid color-mix(in srgb, currentColor 13%, transparent); }
+      .ps-cmp-chips { display: flex; align-items: center; justify-content: flex-end; gap: 5px; flex-wrap: wrap; min-width: 0; }
+      .ps-cmp-chip { font-size: 10px; line-height: 1.5; padding: 1px 7px; border-radius: 999px; background: color-mix(in srgb, currentColor 6.5%, transparent); opacity: 0.72; white-space: nowrap; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+      .ps-cmp-id { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 12.5px; font-weight: 650; opacity: 0.92; }
+      .ps-cmp-mod { font-size: 11px; opacity: 0.6; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+      .ps-cmp-state { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; white-space: nowrap; }
       .ps-cmp-dot { width: 6px; height: 6px; border-radius: 999px; flex: 0 0 auto; }
-      .ps-cmp-ghost { font-size: 10.5px; opacity: 0.35; font-style: italic; }
-      .ps-cmp-fields { grid-column: 1 / -1; margin: 0 10px 8px; border: 1px solid color-mix(in srgb, currentColor 12%, transparent); border-radius: 9px; overflow: hidden; background: color-mix(in srgb, currentColor 1.5%, transparent); }
-      .ps-cmp-field { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr); gap: 8px; padding: 3px 9px; font-size: 10.5px; line-height: 1.45; }
+      .ps-cmp-ghost { font-size: 11px; opacity: 0.4; font-style: italic; }
+      .ps-cmp-diffbar { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; width: 100%; padding: 5px 12px; border: 0; border-top: 1px solid color-mix(in srgb, currentColor 8%, transparent); background: color-mix(in srgb, #4f7cff 4.5%, transparent); color: inherit; cursor: pointer; font: inherit; text-align: left; }
+      .ps-cmp-diffbar:hover { background: color-mix(in srgb, #4f7cff 8%, transparent); }
+      .ps-cmp-diffbar-tag { font-size: 10.5px; font-weight: 650; color: color-mix(in srgb, #4f7cff 78%, currentColor); white-space: nowrap; }
+      .ps-cmp-diffbar-paths { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 10.5px; opacity: 0.62; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+      .ps-cmp-diffbar-action { margin-left: auto; font-size: 10.5px; opacity: 0.72; white-space: nowrap; }
+      .ps-cmp-fields { grid-column: 1 / -1; margin: 0 12px 10px; border: 1px solid color-mix(in srgb, currentColor 12%, transparent); border-radius: 9px; overflow: auto; max-height: 320px; background: color-mix(in srgb, currentColor 1.5%, transparent); }
+      .ps-cmp-field { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr); gap: 10px; padding: 4px 10px; font-size: 11px; line-height: 1.5; }
       .ps-cmp-field + .ps-cmp-field { border-top: 1px solid color-mix(in srgb, currentColor 6%, transparent); }
       .ps-cmp-fieldpath { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; opacity: 0.72; word-break: break-all; }
       .ps-cmp-fieldval { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; white-space: pre-wrap; word-break: break-word; min-width: 0; }
       .ps-cmp-fieldval.del { color: color-mix(in srgb, var(--ps-danger) 78%, currentColor); }
       .ps-cmp-fieldval.add { color: color-mix(in srgb, var(--ps-ok) 72%, currentColor); }
-      .ps-cmp-fieldhead { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr); gap: 8px; padding: 4px 9px; font-size: 10px; letter-spacing: 0.03em; opacity: 0.55; border-bottom: 1px solid color-mix(in srgb, currentColor 8%, transparent); }
-      @media (max-width: 760px) {
-        .ps-cmp-head, .ps-cmp-row { grid-template-columns: minmax(0, 1fr) 26px minmax(0, 1fr); }
+      .ps-cmp-fieldhead { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr); gap: 10px; padding: 5px 10px; font-size: 10px; letter-spacing: 0.03em; opacity: 0.55; border-bottom: 1px solid color-mix(in srgb, currentColor 8%, transparent); }
+      .ps-actions .ps-profile { max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      @media (max-width: 1180px) {
+        .ps-actions .ps-profile { display: none; }
+      }
+      @media (max-width: 900px) {
+        .ps-cmp-head, .ps-cmp-row { grid-template-columns: minmax(0, 1fr) 28px minmax(0, 1fr); }
+        .ps-cmp-main { grid-template-columns: minmax(0, 1fr) auto; }
+        .ps-cmp-identity { grid-column: 1; }
+        .ps-cmp-chips { grid-column: 1 / -1; justify-content: flex-start; }
         .ps-cmp-field, .ps-cmp-fieldhead { grid-template-columns: minmax(0, 1fr); gap: 2px; }
       }
     `
@@ -1842,6 +1888,8 @@ window.__ModuleLoader__.load({
       const [baseId, setBaseId] = React.useState(initialManaged ?? api.selectedId ?? api.presetChoices[0]?.id ?? null)
       const [notice, setNotice] = React.useState(null)
       const [copying, setCopying] = React.useState(false)
+      const [idText, setIdText] = React.useState(initialManaged ?? '')
+      const [idError, setIdError] = React.useState(null)
 
       React.useEffect(() => {
         if (workingId !== null && api.localPreset(workingId) === null) setWorkingId(null)
@@ -1851,6 +1899,14 @@ window.__ModuleLoader__.load({
       const base = baseId === null ? null : (api.localPreset(baseId) ?? (api.state?.presets ?? []).find((preset) => preset.id === baseId) ?? null)
       const persona = working === null ? null : findPersonaRow(working.plugins)
       const locked = working?.locked === true
+      const canEditId = working !== null && !locked && api.canRenamePreset(working.id)
+      const idPending = canEditId && idText.trim() !== '' && idText.trim() !== working.id
+
+      React.useEffect(() => {
+        if (working === null) return
+        setIdText(working.id)
+        setIdError(null)
+      }, [working?.id])
 
       React.useEffect(() => {
         if (base !== null || api.presetChoices.length === 0) return
@@ -1879,6 +1935,52 @@ window.__ModuleLoader__.load({
         } finally {
           setCopying(false)
         }
+      }
+      const applyId = (raw) => {
+        if (working === null || !canEditId) return true
+        const next = String(raw ?? '').trim()
+        if (next === '') return true
+        if (!/^[a-z0-9][a-z0-9-]*$/.test(next)) {
+          setIdError(t('simpleIdInvalid'))
+          return false
+        }
+        if (next === working.id) {
+          setIdError(null)
+          return true
+        }
+        const error = api.renamePreset(working.id, next)
+        if (error) {
+          setIdError(error)
+          return false
+        }
+        setIdError(null)
+        setIdText(next)
+        setWorkingId(next)
+        setBaseId(next)
+        return true
+      }
+      const changeId = (value) => {
+        if (!canEditId) return
+        setIdText(value)
+        setIdError(null)
+        if (value !== '' && /^[a-z0-9][a-z0-9-]*$/.test(value)) applyId(value)
+      }
+      const blurId = () => {
+        if (!canEditId) return
+        const text = idText.trim()
+        if (text === '') {
+          setIdError(null)
+          return
+        }
+        if (!/^[a-z0-9][a-z0-9-]*$/.test(text)) {
+          setIdError(t('simpleIdInvalid'))
+          return
+        }
+        if (text !== working.id) applyId(text)
+      }
+      const saveSimple = async () => {
+        await api.save()
+        if (idText.trim() === '' && working !== null) setIdText(working.id)
       }
       const options = api.presetChoices
       const nameCounts = new Map()
@@ -1921,15 +2023,45 @@ window.__ModuleLoader__.load({
         working === null
           ? (base === null ? h('div', { style: styles.empty }, t('simpleEmpty')) : null)
           : h(React.Fragment, null,
-              h('div', { style: styles.card },
-                h('label', { htmlFor: 'ps-simple-name', style: styles.sectionTitle }, t('simpleName')),
-                h('input', {
-                  id: 'ps-simple-name',
-                  style: { ...styles.input, fontSize: 14, fontWeight: 600, padding: '7px 9px' },
-                  value: String(working.name ?? ''),
-                  disabled: locked,
-                  onChange: (event) => api.updatePreset(working.id, { name: event.target.value }),
-                })),
+              h('div', { style: { ...styles.card, gap: 10 } },
+                h('div', { className: 'ps-simple-block' },
+                  h('label', { htmlFor: 'ps-simple-name', className: 'ps-simple-label' }, t('simpleName')),
+                  h('input', {
+                    id: 'ps-simple-name',
+                    style: { ...styles.input, fontSize: 14, fontWeight: 600, padding: '7px 9px' },
+                    value: String(working.name ?? ''),
+                    disabled: locked,
+                    onChange: (event) => api.updatePreset(working.id, { name: event.target.value }),
+                  })),
+                h('div', { className: 'ps-simple-block' },
+                  h('label', { htmlFor: 'ps-simple-id', className: 'ps-simple-label' }, t('simpleId')),
+                  h('input', {
+                    id: 'ps-simple-id',
+                    style: { ...styles.input, fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace', fontSize: 12.5, padding: '6px 9px' },
+                    value: idText,
+                    placeholder: t('simpleIdPlaceholder'),
+                    disabled: !canEditId,
+                    spellCheck: false,
+                    autoCapitalize: 'off',
+                    onChange: (event) => changeId(event.target.value),
+                    onBlur: blurId,
+                    onKeyDown: (event) => { if (event.key === 'Enter') event.currentTarget.blur() },
+                  }),
+                  h('div', { className: 'ps-simple-hint' },
+                    idText.trim() === '' && working !== null
+                      ? t('simpleIdBlankUses', { id: working.id })
+                      : t('simpleIdHint')),
+                  idError !== null ? h('div', { className: 'ps-simple-error' }, idError) : null),
+                h('div', { className: 'ps-simple-block' },
+                  h('label', { htmlFor: 'ps-simple-description', className: 'ps-simple-label' }, t('simpleDescription')),
+                  h('input', {
+                    id: 'ps-simple-description',
+                    style: { ...styles.input, fontSize: 12.5, padding: '6px 9px' },
+                    value: String(working.description ?? ''),
+                    placeholder: t('simpleDescriptionPlaceholder'),
+                    disabled: locked,
+                    onChange: (event) => api.updatePreset(working.id, { description: event.target.value }),
+                  }))),
               h('div', { style: styles.card },
                 h('div', { style: { display: 'flex', alignItems: 'center', gap: 6 } },
                   h('label', { htmlFor: 'ps-simple-persona', style: styles.sectionTitle }, t('simplePersona')),
@@ -1952,7 +2084,7 @@ window.__ModuleLoader__.load({
                 h('span', { style: api.dirty ? styles.badgeWarn : styles.badge }, api.dirty ? t('unsaved') : t('saved')),
                 h('span', { style: { flex: '1 1 auto' } }),
                 h('button', { type: 'button', style: styles.button, disabled: !api.dirty || api.saving, onClick: () => api.discard() }, t('discard')),
-                h('button', { type: 'button', style: styles.buttonPrimary, disabled: !api.dirty || api.saving, onClick: () => api.save() }, api.saving ? t('saving') : t('save'))),
+                h('button', { type: 'button', style: styles.buttonPrimary, disabled: !api.dirty || api.saving || idPending || idError !== null, onClick: () => void saveSimple() }, api.saving ? t('saving') : t('save'))),
               api.notice !== null ? h('div', { style: styles.errorBox }, api.notice) : null,
               notice !== null ? h('div', { style: styles.errorBox }, notice) : null,
               h('div', { className: 'ps-simple-foot' },
@@ -2003,6 +2135,19 @@ window.__ModuleLoader__.load({
       return String(value)
     }
 
+    function configPreviewOf(config, t) {
+      if (config === null || typeof config !== 'object') return ''
+      const parts = []
+      for (const field of configFields(config)) {
+        if (field.value !== null && typeof field.value === 'object') continue
+        const text = formatConfigValue(field.value, t)
+        parts.push((field.path || 'config') + ': ' + (text.length > 56 ? text.slice(0, 56) + '…' : text))
+        if (parts.length >= 2) break
+      }
+      const joined = parts.join(' · ')
+      return joined.length > 120 ? joined.slice(0, 120) + '…' : joined
+    }
+
     function presetStatsOf(rows) {
       const leaves = flattenPresetRows(rows)
       return { rows: leaves.length, enabled: leaves.filter((leaf) => leaf.state === 'enabled').length }
@@ -2015,20 +2160,28 @@ window.__ModuleLoader__.load({
         return h('div', { className },
           h('div', { className: 'ps-cmp-ghost' }, t('compareGhost')))
       }
+      const preview = configPreviewOf(entry.config, t)
       return h('div', { className },
-        h('div', { className: 'ps-cmp-line1' },
-          h('span', { className: 'ps-cmp-state', style: { opacity: entry.state === 'disabled' ? 0.6 : 1 } },
+        h('div', { className: 'ps-cmp-main' },
+          h('span', { className: 'ps-cmp-state', style: { opacity: entry.state === 'disabled' ? 0.66 : 1 } },
             h('span', { className: 'ps-cmp-dot', style: { background: compareStateColor(entry.state) } }),
             compareStateLabel(t, entry.state)),
-          h('code', { className: 'ps-cmp-id' }, item.id || item.key)),
-        h('div', { className: 'ps-cmp-mod' }, item.name),
-        entry.path.length > 0 ? h('div', { className: 'ps-cmp-path' }, entry.path.join(' › ')) : null)
+          h('div', { className: 'ps-cmp-identity' },
+            h('code', { className: 'ps-cmp-id' }, item.id || item.key),
+            h('div', { className: 'ps-cmp-modline' },
+              h('div', { className: 'ps-cmp-mod', title: item.name }, item.name),
+              preview.length > 0 ? h('span', { className: 'ps-cmp-preview', title: preview }, preview) : null)),
+          h('div', { className: 'ps-cmp-chips' },
+            entry.path.length > 0 ? h('span', { className: 'ps-cmp-chip', title: entry.path.join(' › ') }, entry.path.join(' › ')) : null,
+            entry.declared !== entry.state
+              ? h('span', { className: 'ps-cmp-chip', title: t('compareInheritedHint', { declared: compareStateLabel(t, entry.declared), state: compareStateLabel(t, entry.state) }) }, t('compareInheritedChip', { state: compareStateLabel(t, entry.state) }))
+              : null)))
     }
 
     function FieldDiffPanel({ t, fields }) {
       return h('div', { className: 'ps-cmp-fields' },
         h('div', { className: 'ps-cmp-fieldhead' },
-          h('span', null, t('compareFieldDiff')),
+          h('span', null, t('compareField')),
           h('span', null, 'A'),
           h('span', null, 'B')),
         fields.map((field) => h('div', { key: field.path, className: 'ps-cmp-field' },
@@ -2042,17 +2195,21 @@ window.__ModuleLoader__.load({
       const fields = item.configDiff && item.left.present && item.right.present
         ? configFieldDiff(item.left.config, item.right.config)
         : []
+      const paths = fields.slice(0, 4).map((field) => field.path || t('compareValueEmpty')).join(' · ') + (fields.length > 4 ? ' …' : '')
       return h('div', { className: 'ps-cmp-row' },
         h(CompareCell, { t, item, side: 'left' }),
         h('div', { className: 'ps-cmp-gutter', style: { color: meta.color }, title: meta.label }, meta.glyph),
         h(CompareCell, { t, item, side: 'right' }),
         fields.length > 0
-          ? h('div', { style: { gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-start', padding: '0 10px 6px' } },
-              h('button', {
-                type: 'button',
-                style: { ...styles.buttonGhost, fontSize: 10.5 },
-                onClick: onToggle,
-              }, (expanded ? '▾ ' : '▸ ') + t('compareFieldsCount', { count: fields.length })))
+          ? h('button', {
+              type: 'button',
+              className: 'ps-cmp-diffbar',
+              'aria-expanded': expanded,
+              onClick: onToggle,
+            },
+              h('span', { className: 'ps-cmp-diffbar-tag' }, 'Δ ' + t('compareFieldsCount', { count: fields.length })),
+              h('span', { className: 'ps-cmp-diffbar-paths' }, paths),
+              h('span', { className: 'ps-cmp-diffbar-action' }, expanded ? t('compareCollapse') + ' ▴' : t('compareExpand') + ' ▾'))
           : null,
         expanded && fields.length > 0 ? h(FieldDiffPanel, { t, fields }) : null)
     }
@@ -2710,7 +2867,7 @@ window.__ModuleLoader__.load({
               [['simple', t('pageSimple')], ['standard', t('pageStandard')], ['compare', t('pageCompare')]].map(([key, label]) =>
                 h('button', { key, type: 'button', 'data-active': page === key, onClick: () => setPage(key) }, label)))),
           h('div', { className: 'ps-actions' },
-            state?.profile?.name ? h('span', { style: styles.profileChip }, h('span', { style: styles.profileDot }), 'profile: ' + state.profile.name) : null,
+            state?.profile?.name ? h('span', { className: 'ps-profile', style: styles.profileChip }, h('span', { style: styles.profileDot }), 'profile: ' + state.profile.name) : null,
             state?.hmr === false ? h('span', { style: styles.badgeWarn }, 'HMR off') : null,
             h(DesignNotes, { api }),
             h('button', {

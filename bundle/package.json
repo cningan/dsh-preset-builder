@@ -1,6 +1,6 @@
 {
   "name": "dsh-preset-builder",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "type": "module",
   "scripts": {
     "check": "node --check client.js && node --check index.js && node --check lib/inventory.mjs && node --check lib/rules.mjs && node --check lib/diff.mjs",
