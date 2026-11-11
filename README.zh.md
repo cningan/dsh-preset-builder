@@ -59,7 +59,7 @@ DSH 的 Web 界面能查看预设配置（只读 YAML）、能把某个预设设
 
 ## 状态
 
-v0.3.2 可安装。已在**独立 DSH 实例**（独立 `DSH_HOME` 与临时 profile）中通过界面验证：侧栏入口、三栏渲染、新建空白预设、改代号、收录包、保存、锁定/解锁、即时删除、仅预设包自动发现（persona）、YAML 草稿预览；另在隔离 profile 手工放了一条外部声明，验证「接管 → 编辑 → 删除留下墓碑」。保存前预挂载校验、官方 Standard 组合接受、宿主服务冲突拒绝均通过；纯函数单测 14 项通过。
+v0.3.3 可安装。已在**独立 DSH 实例**（独立 `DSH_HOME` 与临时 profile）中通过界面验证：侧栏入口、三栏渲染、新建空白预设、改代号、收录包、保存、锁定/解锁、即时删除、仅预设包自动发现（persona）、YAML 草稿预览；另在隔离 profile 手工放了一条外部声明，验证「接管 → 编辑 → 删除留下墓碑」。保存前预挂载校验、官方 Standard 组合接受、宿主服务冲突拒绝均通过；纯函数单测 15 项通过。
 
 ## 验证
 
@@ -70,11 +70,11 @@ v0.3.2 可安装。已在**独立 DSH 实例**（独立 `DSH_HOME` 与临时 pro
 
 日常发布由 GitHub Actions 完成，不手工 `npm publish`：
 
-- `ci.yml`：push/PR 安装依赖、语法检查、14 项单测、`npm pack --dry-run`。
+- `ci.yml`：push/PR 安装依赖、语法检查、15 项单测、`npm pack --dry-run`。
 - `publish.yml`：推 `v*` tag 触发，经 GitHub OIDC（Trusted Publishing）发布到 npm，并自动创建带 tgz 的 GitHub Release；tag 必须等于 `bundle/package.json` 的 version，否则先失败。
 - 发布动作：改代码 → 在 `bundle/` 下 `npm version patch|minor|major` → `git push --follow-tags`。
 - 只有首次建包允许人工 `npm publish`。
 
 ## 开发
 
-需要带 profile 的 DSH 桌面端。准备好 bundle 目录后，用 `plugin_manager` 的 `install_bundle` 指向本仓库的 `bundle/` 安装。契约见 [SPEC.md](SPEC.md)，领域词汇见 [GLOSSARY.md](GLOSSARY.md)。
+需要带 profile 的 DSH 桌面端。准备好 bundle 目录后，用 `plugin_manager` 的 `install_bundle` 指向本仓库的 `bundle/` 安装。契约见 [SPEC.md](SPEC.md)，领域词汇见 [GLOSSARY.md](GLOSSARY.md)，隔离 UI 冒烟步骤见 [test/ui-smoke.md](test/ui-smoke.md)。

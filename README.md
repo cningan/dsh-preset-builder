@@ -59,7 +59,7 @@ Install this repository's `bundle/` as a bundle through DSH's `plugin_manager` (
 
 ## Status
 
-v0.3.2 installable. Verified in an **isolated DSH instance** (separate `DSH_HOME` and a temporary profile) through the UI: sidebar entry, three-column layout, blank-preset creation, id rename, package collection, save, lock/unlock, immediate deletion, automatic preset-only package discovery (persona), and the YAML draft preview. A manually inserted foreign declaration in that profile also verified adoption → edit → delete-with-tombstone. Pre-save mount validation, acceptance of the official Standard composition, rejection of host-service conflicts, and 14 unit checks all pass.
+v0.3.3 installable. Verified in an **isolated DSH instance** (separate `DSH_HOME` and a temporary profile) through the UI: sidebar entry, three-column layout, blank-preset creation, id rename, package collection, save, lock/unlock, immediate deletion, automatic preset-only package discovery (persona), and the YAML draft preview. A manually inserted foreign declaration in that profile also verified adoption → edit → delete-with-tombstone. Pre-save mount validation, acceptance of the official Standard composition, rejection of host-service conflicts, and 15 unit checks all pass.
 
 ## Verification
 
@@ -70,11 +70,11 @@ v0.3.2 installable. Verified in an **isolated DSH instance** (separate `DSH_HOME
 
 Day-to-day releases run in GitHub Actions; do not publish by hand:
 
-- `ci.yml`: install, syntax checks, 14 unit checks, and `npm pack --dry-run` on push/PR.
+- `ci.yml`: install, syntax checks, 15 unit checks, and `npm pack --dry-run` on push/PR.
 - `publish.yml`: a `v*` tag publishes through GitHub OIDC (Trusted Publishing) and opens a GitHub Release with the tgz; the tag must equal `bundle/package.json`'s version or the run fails first.
 - Release flow: change code → `npm version patch|minor|major` inside `bundle/` → `git push --follow-tags`.
 - Only the very first publish of a new package is allowed to run `npm publish` manually.
 
 ## Development
 
-Requires the DSH desktop app with a profile. Prepare the bundle directory, then install it with `plugin_manager` `install_bundle` against this package directory (`bundle/`). See [SPEC.md](SPEC.md) for the contract and [GLOSSARY.md](GLOSSARY.md) for the domain vocabulary.
+Requires the DSH desktop app with a profile. Prepare the bundle directory, then install it with `plugin_manager` `install_bundle` against this package directory (`bundle/`). See [SPEC.md](SPEC.md) for the contract, [GLOSSARY.md](GLOSSARY.md) for the domain vocabulary, and [test/ui-smoke.md](test/ui-smoke.md) for the isolated UI smoke procedure.

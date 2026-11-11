@@ -3,6 +3,7 @@
  * from the repository root; it needs the bundle's local dependencies.
  */
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -10,6 +11,7 @@ import { buildBlock, parseBlock, readBlock, replaceBlock, extractBlock, validate
 import { describeDisabledExpression } from '../bundle/lib/platform.mjs'
 import { emitListItem, parseYaml } from '../bundle/lib/yaml.mjs'
 import { addInactiveBundlePackages, addPresetOnlyPackages, pickText, textMap } from '../bundle/lib/inventory.mjs'
+import { conflictUsage, inactiveUsage, isCollectableRow } from '../bundle/lib/rules.mjs'
 
 let passed = 0
 function test(name, fn) {
@@ -79,6 +81,30 @@ test('platform expressions are read conservatively', () => {
   assert.equal(describeDisabledExpression("['darwin','linux'].includes(process.platform)").label, '仅 macOS / Linux')
   assert.equal(describeDisabledExpression("!ctx.get('profileContext')").label, '条件启用')
   assert.equal(describeDisabledExpression("process.env.FOO").kind, 'expression')
+})
+
+test('collectability and Host conflict rules use row ids, not module names', () => {
+  assert.equal(isCollectableRow({ bundleActive: true, enabled: false, disabled: { kind: 'static' } }), true)
+  assert.equal(isCollectableRow({ bundleActive: true, enabled: true, disabled: { kind: 'none' } }), false)
+  assert.equal(isCollectableRow({ bundleActive: true, enabled: false, disabled: { kind: 'platform' } }), false)
+  assert.equal(isCollectableRow({ bundleActive: false, enabled: false, disabled: { kind: 'none' } }), true)
+  assert.equal(isCollectableRow({ bundleActive: false, enabled: false, disabled: { kind: 'static' } }), true)
+  assert.equal(isCollectableRow({ bundleActive: false, enabled: false, disabled: { kind: 'conditional' } }), false)
+
+  const skill = { id: 'skill-filesystem', name: '@deepseek-ai/dsh-skill-filesystem' }
+  const activeGlobal = new Map([['skill-filesystem-global', { moduleName: skill.name, packageName: skill.name }]])
+  assert.deepEqual(conflictUsage({ plugins: [skill] }, activeGlobal), [])
+  assert.equal(conflictUsage({ plugins: [{ ...skill, id: 'skill-filesystem-global' }] }, activeGlobal).length, 1)
+  assert.deepEqual(conflictUsage({ plugins: [{ ...skill, disabled: true, id: 'skill-filesystem-global' }] }, activeGlobal), [])
+
+  const inactive = new Map([[skill.name, { bundle: 'dsh-web-app', bundleEnabled: true }]])
+  assert.deepEqual(inactiveUsage({ plugins: [{ ...skill, id: 'nested', group: true, config: [skill] }] }, inactive), [
+    { moduleName: skill.name, bundle: 'dsh-web-app', bundleEnabled: true },
+  ])
+
+  const client = readFileSync(new URL('../bundle/client.js', import.meta.url), 'utf8')
+  assert.match(client, /api\.activeRowIds\?\.has\(row\.id\)/)
+  assert.doesNotMatch(client, /api\.activeModules/)
 })
 
 test('invalid presets are reported, not silently repaired', () => {

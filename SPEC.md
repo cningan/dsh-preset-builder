@@ -73,6 +73,7 @@ DSH 的 Agent 预设决定新会话可用的工具与运行方式。当前 Web �
 ## 测试决策
 
 - 纯函数单测覆盖：托管块定位与替换、slug 生成与冲突、预设结构校验、平台表达式解析、包级行归并、YAML 序列化（含 `!!js` 标签、块标量与多行往返）。
+- 可收录/冲突规则单测（`bundle/lib/rules.mjs` 为 golden contract）：已启用 bundle 只收静态禁用行；未开 Bundle 可收默认启用或静态禁用行、条件行不可收；Host 冲突按 Loader row id，Standard 的 `skill-filesystem` 与 Host 的 `skill-filesystem-global` 不冲突，同 id 才冲突，预设 `disabled: true` 不参与。
 - 多行配置验证：独立实例通过「添加行」加入 `@deepseek-ai/dsh-tool-web`，配置 `note` 填两行文本，保存后 `/state` 的 `config.note` 保留 `\n`，YAML 预览输出 `note: |-`；`persona` 模板加入后配置编辑器把 `section` 渲染为多行文本框。
 - 选中态验证：点击预设项后只保留背景填充与左侧强调条，不再出现焦点外框。
 - 仅预设包验证：种子预设声明 `@deepseek-ai/dsh-persona`（`prefix: 测试人设`）后，`/state` 出现 `presetOnly` 包「智能体角色设定」，行 `disabled.kind === 'none'`；收录进空白预设后保存成功，配置带回 `prefix`。列表滚动 1200px 时搜索框纵坐标不变（头部固定）。

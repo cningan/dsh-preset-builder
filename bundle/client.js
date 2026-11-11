@@ -314,7 +314,12 @@ window.__ModuleLoader__.load({
     const tone = (percent) => `color-mix(in srgb, currentColor ${percent}%, transparent)`
 
     const STYLE_TEXT = `
-      .ps-root { background: linear-gradient(180deg, color-mix(in srgb, currentColor 2%, transparent), transparent 180px); }
+      .ps-root {
+        --ps-danger: var(--dsw-alias-color-danger, var(--dsw-alias-danger, #dc2626));
+        --ps-warn: var(--dsw-alias-color-warning, var(--dsw-alias-warning, #d97706));
+        --ps-ok: var(--dsw-alias-color-success, var(--dsw-alias-success, #22c55e));
+        background: linear-gradient(180deg, color-mix(in srgb, currentColor 2%, transparent), transparent 180px);
+      }
       .ps-root button { transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease, transform 120ms ease, box-shadow 120ms ease; }
       .ps-root button:not(:disabled):hover { background-color: color-mix(in srgb, currentColor 8%, transparent); }
       .ps-root button:disabled { opacity: 0.45; cursor: default; }
@@ -403,15 +408,15 @@ window.__ModuleLoader__.load({
       packageDesc: { fontSize: 11.5, opacity: 0.7, lineHeight: 1.45, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' },
       packageFoot: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 1 },
       packageMeta: { fontSize: 10.5, opacity: 0.55 },
-      inactiveBanner: { display: 'flex', alignItems: 'flex-start', gap: 6, marginTop: 8, padding: '6px 9px', borderRadius: 9, border: '1px solid color-mix(in srgb, #d97706 45%, transparent)', background: 'color-mix(in srgb, #f59e0b 10%, Canvas)', fontSize: 11, lineHeight: 1.45 },
+      inactiveBanner: { display: 'flex', alignItems: 'flex-start', gap: 6, marginTop: 8, padding: '6px 9px', borderRadius: 9, border: '1px solid color-mix(in srgb, var(--ps-warn) 45%, transparent)', background: 'color-mix(in srgb, var(--ps-warn) 10%, Canvas)', fontSize: 11, lineHeight: 1.45 },
       collectBtn: { padding: '3px 8px', borderRadius: 7, border: `1px solid ${tone(30)}`, background: 'transparent', color: 'inherit', cursor: 'pointer', font: 'inherit', fontSize: 11.5, fontWeight: 600 },
       muted: { opacity: 0.62, fontSize: 12 },
       empty: { padding: '18px 8px', opacity: 0.6, textAlign: 'center', fontSize: 12 },
       errorBox: { padding: '10px 12px', borderRadius: 8, background: tone(8), border: `1px solid ${tone(16)}`, fontSize: 12 },
-      errorWarnBox: { display: 'flex', alignItems: 'flex-start', gap: 6, padding: '7px 9px', borderRadius: 9, border: '1px solid color-mix(in srgb, #dc2626 55%, transparent)', background: 'color-mix(in srgb, #dc2626 8%, Canvas)', fontSize: 11.5, lineHeight: 1.45 },
-      inactiveWarnBox: { display: 'flex', alignItems: 'flex-start', gap: 6, padding: '7px 9px', borderRadius: 9, border: '1px solid color-mix(in srgb, #d97706 55%, transparent)', background: 'color-mix(in srgb, #f59e0b 13%, Canvas)', fontSize: 11.5, lineHeight: 1.45 },
-      badgeError: { fontSize: 10, padding: '1px 6px', borderRadius: 999, border: '1px solid color-mix(in srgb, #dc2626 50%, transparent)', background: 'color-mix(in srgb, #dc2626 12%, Canvas)', color: '#b91c1c', whiteSpace: 'nowrap' },
-      badgeWarnYellow: { fontSize: 10, padding: '1px 6px', borderRadius: 999, border: '1px solid color-mix(in srgb, #d97706 50%, transparent)', background: 'color-mix(in srgb, #f59e0b 15%, Canvas)', color: '#92400e', whiteSpace: 'nowrap' },
+      errorWarnBox: { display: 'flex', alignItems: 'flex-start', gap: 6, padding: '7px 9px', borderRadius: 9, border: '1px solid color-mix(in srgb, var(--ps-danger) 55%, transparent)', background: 'color-mix(in srgb, var(--ps-danger) 8%, Canvas)', fontSize: 11.5, lineHeight: 1.45 },
+      inactiveWarnBox: { display: 'flex', alignItems: 'flex-start', gap: 6, padding: '7px 9px', borderRadius: 9, border: '1px solid color-mix(in srgb, var(--ps-warn) 55%, transparent)', background: 'color-mix(in srgb, var(--ps-warn) 13%, Canvas)', fontSize: 11.5, lineHeight: 1.45 },
+      badgeError: { fontSize: 10, padding: '1px 6px', borderRadius: 999, border: '1px solid color-mix(in srgb, var(--ps-danger) 50%, transparent)', background: 'color-mix(in srgb, var(--ps-danger) 12%, Canvas)', color: 'color-mix(in srgb, var(--ps-danger) 65%, currentColor)', whiteSpace: 'nowrap' },
+      badgeWarnYellow: { fontSize: 10, padding: '1px 6px', borderRadius: 999, border: '1px solid color-mix(in srgb, var(--ps-warn) 50%, transparent)', background: 'color-mix(in srgb, var(--ps-warn) 15%, Canvas)', color: 'color-mix(in srgb, var(--ps-warn) 70%, currentColor)', whiteSpace: 'nowrap' },
       dot: { width: 7, height: 7, borderRadius: 999, background: 'currentColor', flex: '0 0 auto' },
       group: { border: `1px dashed ${tone(16)}`, borderRadius: 12, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 5 },
       groupHead: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
@@ -508,6 +513,10 @@ window.__ModuleLoader__.load({
       if (row.disabled !== undefined && row.disabled !== null) return 'conditional'
       return 'enabled'
     }
+
+    // ---------- collectability rules ----------
+    // Golden contract: bundle/lib/rules.mjs, exercised by test/unit.mjs.
+    // The client ships as one plain-JS file, so keep this small copy in sync.
 
     /**
      * A static-disabled host row is preset-only. A conditional row (platform,
@@ -947,9 +956,9 @@ window.__ModuleLoader__.load({
       const offBundle = typeof row.name === 'string' && api.inactiveModules?.has(row.name) === true
       const hostConflict = typeof row.id === 'string' && row.id.length > 0 && row.disabled !== true && api.activeRowIds?.has(row.id) === true
       const flagged = hostConflict
-        ? { borderColor: 'color-mix(in srgb, #dc2626 60%, transparent)', background: 'color-mix(in srgb, #dc2626 6%, Canvas)', boxShadow: 'inset 2px 0 0 #dc2626' }
+        ? { borderColor: 'color-mix(in srgb, var(--ps-danger) 60%, transparent)', background: 'color-mix(in srgb, var(--ps-danger) 6%, Canvas)', boxShadow: 'inset 2px 0 0 var(--ps-danger)' }
         : offBundle
-          ? { borderColor: 'color-mix(in srgb, #d97706 55%, transparent)', background: 'color-mix(in srgb, #f59e0b 10%, Canvas)', boxShadow: 'inset 2px 0 0 #d97706' }
+          ? { borderColor: 'color-mix(in srgb, var(--ps-warn) 55%, transparent)', background: 'color-mix(in srgb, var(--ps-warn) 10%, Canvas)', boxShadow: 'inset 2px 0 0 var(--ps-warn)' }
           : {}
       return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 2 } },
         h('div', { className: 'ps-row', style: { ...styles.rowLine, marginLeft: depth * 12, opacity: rowState(row) === 'enabled' ? 1 : 0.62, ...flagged } },
@@ -1327,7 +1336,7 @@ window.__ModuleLoader__.load({
       const t = api.t
       const dirty = api.dirty
       return h('div', { style: styles.saveBar },
-        h('span', { style: { ...styles.dot, background: dirty ? '#f59e0b' : '#22c55e' } }),
+        h('span', { style: { ...styles.dot, background: dirty ? 'var(--ps-warn)' : 'var(--ps-ok)' } }),
         h('span', { style: dirty ? styles.badgeWarn : styles.badge }, dirty ? t('unsaved') : t('saved')),
         h(Help, { api, title: t('save'), text: t('saveCheckHint') }),
         h('span', { style: { flex: '1 1 auto' } }),
@@ -1387,7 +1396,7 @@ window.__ModuleLoader__.load({
         conflicts.length > 0
           ? h('div', { style: styles.errorWarnBox },
               h('div', { style: { flex: '1 1 auto', display: 'flex', flexDirection: 'column', gap: 3 } },
-                h('div', { style: { fontWeight: 650, color: '#b91c1c' } }, t('conflictWarning', { count: conflicts.length })),
+                h('div', { style: { fontWeight: 650, color: 'color-mix(in srgb, var(--ps-danger) 70%, currentColor)' } }, t('conflictWarning', { count: conflicts.length })),
                 conflicts.map((item) => h('div', { key: item.id + '|' + item.name, style: { display: 'flex', gap: 6, fontSize: 11, flexWrap: 'wrap' } },
                   h('code', { style: { ...styles.code, color: 'inherit', opacity: 0.8 } }, item.id || '—'),
                   h('code', { style: { ...styles.code, color: 'inherit', opacity: 0.8 } }, item.name)))),

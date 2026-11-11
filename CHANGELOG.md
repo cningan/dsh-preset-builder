@@ -1,5 +1,11 @@
 # 变更记录
 
+## 0.3.3 — 规则契约、语义色与开发工具
+
+- 抽出 `bundle/lib/rules.mjs`，把可收录、未开 Bundle、Host 冲突规则固定成单测的 golden contract；覆盖 Standard 的 `skill-filesystem` 不冲突、同 row id 冲突、预设禁用行不冲突、嵌套组与未开 Bundle 行。单测 15 项。
+- 红色/黄色标记改用语义 CSS 变量，优先读取宿主 danger/warning token，缺失时才回退；徽标文字和行背景改为与 `currentColor`/`Canvas` 混合，改善深浅色主题可读性。
+- 补充隔离 UI 冒烟文档（`test/ui-smoke.md`）；`bundle/package.json` 的 `check` / `test` 脚本继续由 CI 使用。
+
 ## 0.3.2 — Host 冲突改为按 Loader row id 判断
 
 - 修复误报：同一模块在 Host 和预设里使用不同 row id 是 scoped 用法，不再标红。官方 Standard 的 `skill-filesystem` 与 Host 的 `skill-filesystem-global` 即属此类；Host 的 `skill-filesystem` 行本身是静态禁用。
