@@ -1,8 +1,11 @@
 /**
  * Read model of the composition: packages and the rows they contribute.
  */
+import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { cleanValue } from './patch.mjs'
 import { describeDisabledExpression } from './platform.mjs'
+import { parseYaml } from './yaml.mjs'
 
 /** Package name of a module specifier: `@scope/name/sub` -> `@scope/name`. */
 export function packageNameOf(specifier) {
@@ -21,6 +24,7 @@ export function describeDisabled(value) {
   if (typeof value === 'string') return describeDisabledExpression(value)
   if (value !== null && typeof value === 'object') {
     if (typeof value.__jsExpr === 'string') return describeDisabledExpression(value.__jsExpr)
+    if (typeof value.__js === 'string') return describeDisabledExpression(value.__js)
     for (const key of ['text', 'source', 'value']) {
       if (typeof value[key] === 'string') return describeDisabledExpression(value[key])
     }
@@ -144,6 +148,121 @@ export function addPresetOnlyPackages(ctx, packages, trees) {
   }
   packages.sort((a, b) => a.name.localeCompare(b.name))
   return packages
+}
+
+/**
+ * Installed profile bundles that are not in `dsh.profile.bundles` still declare
+ * rows in their bundle patch. Those rows are not mounted today, but a preset can
+ * mount them — an explicit, separate group with a conflict warning. Rows are
+ * kept per bundle so the UI can distinguish "bundle off" from "Host active".
+ */
+export async function addInactiveBundlePackages(ctx, packages, profileDir) {
+  if (typeof profileDir !== 'string' || profileDir.length === 0) return 0
+  let manifest
+  try {
+    manifest = JSON.parse(await readFile(join(profileDir, 'package.json'), 'utf8'))
+  } catch {
+    return 0
+  }
+  const active = new Set(Array.isArray(manifest?.dsh?.profile?.bundles)
+    ? manifest.dsh.profile.bundles.filter((name) => typeof name === 'string')
+    : [])
+  // Without an explicit active-bundle list there is no safe way to tell an
+  // installed bundle from an active one; leave the drawer unchanged.
+  if (active.size === 0) return 0
+  const byPackage = new Map(packages.map((pkg) => [pkg.name, pkg]))
+  const knownModules = new Set()
+  for (const pkg of packages) {
+    for (const row of pkg.rows) knownModules.add(row.moduleName)
+  }
+  const seen = new Set()
+  let added = 0
+  for (const dep of Object.keys(manifest?.dependencies ?? {})) {
+    if (active.has(dep)) continue
+    const pkgDir = join(profileDir, 'node_modules', ...dep.split('/'))
+    let meta
+    let parsed
+    try {
+      meta = JSON.parse(await readFile(join(pkgDir, 'package.json'), 'utf8'))
+      const patchRel = meta?.dsh?.bundle?.patch
+      if (typeof patchRel !== 'string' || patchRel.length === 0) continue
+      parsed = parseYaml(await readFile(join(pkgDir, patchRel), 'utf8'))
+    } catch {
+      // A broken or platform-specific bundle must not break the whole drawer.
+      continue
+    }
+    if (!Array.isArray(parsed)) continue
+    const rows = []
+    const walk = (list) => {
+      for (const row of list ?? []) {
+        if (row === null || typeof row !== 'object') continue
+        if (row.group === true && Array.isArray(row.config)) {
+          walk(row.config)
+          continue
+        }
+        if (typeof row.name === 'string' && row.name.length > 0) rows.push(row)
+      }
+    }
+    for (const entry of parsed) {
+      if (entry !== null && typeof entry === 'object' && Array.isArray(entry.insert)) walk(entry.insert)
+    }
+    for (const row of rows) {
+      if (row.name.startsWith('cordis:') || knownModules.has(row.name)) continue
+      const packageName = packageNameOf(row.name)
+      let record = byPackage.get(packageName)
+      if (record === undefined) {
+        const info = metaOf(ctx, packageName, ctx?.baseUrl)
+        record = {
+          name: packageName,
+          title: info?.title || packageName,
+          titles: info?.titles,
+          description: info?.description || '',
+          descriptions: info?.descriptions,
+          icon: info?.icon,
+          official: packageName.startsWith('@deepseek-ai/'),
+          inactiveBundles: [],
+          rows: [],
+        }
+        byPackage.set(packageName, record)
+        packages.push(record)
+      }
+      if (!Array.isArray(record.inactiveBundles)) record.inactiveBundles = []
+      if (!record.inactiveBundles.includes(dep)) record.inactiveBundles.push(dep)
+      const id = typeof row.id === 'string' && row.id.length > 0 ? row.id : slugOf(packageName)
+      const key = `${dep}:${id}:${row.name}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      const disabled = describeDisabled(row.disabled)
+      let config = null
+      try {
+        config = cleanValue(row.config)
+      } catch {
+        config = null
+      }
+      record.rows.push({
+        id,
+        moduleName: row.name,
+        enabled: false,
+        disabled,
+        config,
+        source: 'inactive-bundle',
+        bundleActive: false,
+        bundleName: dep,
+        bundleEnabled: disabled.kind === 'none'
+          ? true
+          : disabled.kind === 'static' ? disabled.value !== true : undefined,
+      })
+      knownModules.add(row.name)
+      added += 1
+    }
+  }
+  if (added > 0) {
+    for (const record of byPackage.values()) {
+      record.rows.sort((a, b) => a.id.localeCompare(b.id) || a.moduleName.localeCompare(b.moduleName))
+    }
+    packages.sort((a, b) => a.name.localeCompare(b.name))
+  }
+  return added
 }
 
 export function buildInventory(ctx) {

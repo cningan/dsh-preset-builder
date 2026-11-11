@@ -1,5 +1,14 @@
 # 变更记录
 
+## 0.3.0 — 未启用 bundle 单独成组，可提前收录
+
+- 收录模型改为「bundle 状态 × 行状态」：已启用 bundle 仍只收静态禁用行；未启用 bundle 的行单独进入「非官方 · 未开 Bundle」「官方 · 未开 Bundle」，可以提前收录，包括该 bundle 内默认启用的行。条件行（平台/环境表达式）仍不收录。
+- profile 直接依赖中声明了 `dsh.bundle.patch`、但不在 `dsh.profile.bundles` 的 bundle，现在会被读取；行带 `bundleActive`、`bundleName`、`bundleEnabled` 元数据。
+- 抽屉四组 + 顶部冲突提醒；未开 Bundle 的行标「bundle 内启用 / 禁用」；编辑器显示「N 行来自未启用的 bundle」警告，保存不阻断。
+- 编辑器新增 Host 冲突检查：预设行与当前 Host 已启用模块按模块名重合时，显示「N 行已在 Host 启用」警告；官方 Standard 不误报。
+- 目的：官方实验性插件（如 Compute Use）在 bundle 未开启时可以提前体验；同时明确提醒启用 bundle 后可能与 Host 重复，建议先启用并确认行状态。
+- 单测增加到 14 项（新增未开 Bundle 行元数据验证）。
+
 ## 0.2.13 — 明确收录按行判断，与包来源无关
 
 - 规格和提示文案改为中性表述：官方包与第三方包使用同一判据。整包已启用时不显示，是因为没有可收录的行，不是因为它是第三方。

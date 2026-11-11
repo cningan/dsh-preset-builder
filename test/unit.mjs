@@ -3,10 +3,13 @@
  * from the repository root; it needs the bundle's local dependencies.
  */
 import assert from 'node:assert/strict'
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { buildBlock, parseBlock, readBlock, replaceBlock, extractBlock, validatePresets, blockRevision } from '../bundle/lib/patch.mjs'
 import { describeDisabledExpression } from '../bundle/lib/platform.mjs'
 import { emitListItem, parseYaml } from '../bundle/lib/yaml.mjs'
-import { addPresetOnlyPackages, pickText, textMap } from '../bundle/lib/inventory.mjs'
+import { addInactiveBundlePackages, addPresetOnlyPackages, pickText, textMap } from '../bundle/lib/inventory.mjs'
 
 let passed = 0
 function test(name, fn) {
@@ -167,5 +170,51 @@ test('preset-only modules become collectable packages', () => {
   addPresetOnlyPackages({ get: () => undefined }, known, [[{ id: 'tool-web', name: '@deepseek-ai/dsh-tool-web' }]])
   assert.equal(known.length, 1)
 })
+
+const tempRoot = await mkdtemp(join(tmpdir(), 'dsh-inactive-bundle-'))
+try {
+  const profile = join(tempRoot, 'profile')
+  const offDir = join(profile, 'node_modules', 'dsh-off-bundle')
+  await mkdir(offDir, { recursive: true })
+  await writeFile(join(profile, 'package.json'), JSON.stringify({
+    dependencies: { 'dsh-on-bundle': '1.0.0', 'dsh-off-bundle': '1.0.0' },
+    dsh: { profile: { bundles: ['dsh-on-bundle'] } },
+  }))
+  await writeFile(join(offDir, 'package.json'), JSON.stringify({
+    name: 'dsh-off-bundle',
+    version: '1.0.0',
+    dsh: { bundle: { patch: './cordis.patch.yml' } },
+  }))
+  await writeFile(join(offDir, 'cordis.patch.yml'), [
+    '- insert:',
+    '    - id: off-enabled',
+    "      name: '@deepseek-ai/dsh-tool-off-enabled'",
+    '    - id: off-static',
+    "      name: '@deepseek-ai/dsh-tool-off-static'",
+    '      disabled: true',
+    "    - id: off-conditional",
+    "      name: '@deepseek-ai/dsh-tool-off-conditional'",
+    "      disabled: !!js process.platform === 'win32'",
+    '',
+  ].join('\n'))
+  const packages = []
+  const added = await addInactiveBundlePackages({ get: () => undefined }, packages, profile)
+  assert.equal(added, 3)
+  const rows = packages.flatMap((pkg) => pkg.rows)
+  const enabled = rows.find((row) => row.id === 'off-enabled')
+  const disabled = rows.find((row) => row.id === 'off-static')
+  const conditional = rows.find((row) => row.id === 'off-conditional')
+  assert.equal(enabled.bundleActive, false)
+  assert.equal(enabled.bundleName, 'dsh-off-bundle')
+  assert.equal(enabled.bundleEnabled, true)
+  assert.equal(disabled.disabled.kind, 'static')
+  assert.equal(disabled.bundleEnabled, false)
+  assert.equal(conditional.disabled.kind, 'platform')
+  assert.equal(packages.every((pkg) => pkg.inactiveBundles.includes('dsh-off-bundle')), true)
+} finally {
+  await rm(tempRoot, { recursive: true, force: true })
+}
+passed += 1
+console.log(`ok ${passed} - inactive bundles expose their rows with bundle metadata`)
 
 console.log(`\n${passed} checks passed`)

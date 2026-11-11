@@ -16,13 +16,15 @@ DSH's Web UI can show a preset's configuration (read-only YAML) and make one the
 - Deleting a custom preset takes effect immediately; adopted/foreign declarations leave a disabled tombstone so a bundle update cannot resurrect them.
 - Collect packages and their rows into the preset, with automatic package groups for multi-row packages.
 - The package drawer only offers **statically disabled** rows (`disabled: true`, i.e. preset-only rows); rows active in the Host or decided by a condition stay uncollectable so a later condition flip cannot register the plugin twice. **A package whose rows are all active is not shown at all** (official and third-party alike; see Design notes); official rows active in the Host remain folded under "Host-managed". Rows already declared in the current preset are filtered out too.
+- An inactive bundle gets its own "Community · bundle off" or "Official · bundle off" group and can be collected early; rows are tagged "on/off in bundle", and the editor plus the group header warn that enabling the bundle later may clash with the Host. Enabling the bundle first and checking row state is the recommended path.
+- The editor checks preset rows against currently active Host modules by module name; a match shows an "already active in the Host" warning, including after a bundle is enabled later.
 - Package cards show the official Chinese title and description from each package's `locale/zh.json`; non-official packages sort first and official ones last.
 - Explanations appear on demand: section headers, order, preset id and save validation use `?` popovers (hover to peek, click to pin); the top-bar "Design notes" explains the Host/preset split and why a third-party package may be absent.
 - Only Tool, Skill and Persona keywords are highlighted (including their Chinese labels), so row/package purpose is quick to spot; no full-page colouring.
 - Tighter three-column spacing and card padding, wrapping package titles, and a single blue accent for primary actions.
 - Titles and descriptions follow the interface language (the in-app language setting or the system language); third-party packages with `locale/*.json` work the same way.
 - Preset-only packages (persona, tool presentation, …) are discovered automatically and collectable with the config from their preset declaration; the search box stays fixed while only the cards scroll.
-- Installed-but-inactive third-party bundles are not collectable: the bundle may later be enabled for Host use, and a preset declaring the same row would register it twice; the UI also does not synthesize rows from its patch.
+- Inactive bundles are visible too: a direct profile dependency that declares `dsh.bundle.patch` but is absent from `dsh.profile.bundles` gets an off-bundle group and can be collected early; the UI warns about a Host clash if the bundle is enabled later and recommends enabling it first.
 - Long string config such as `section`, `prefix`, and `prompt` uses a multiline editor; YAML output uses `|` block scalars.
 - "Add row" inserts a module by hand (with a `persona` template), covering preset-only packages; both collection and manual rows land in the selected group.
 - The YAML tab previews unsaved drafts (marked as a draft preview) instead of failing for new presets.
@@ -57,7 +59,7 @@ Install this repository's `bundle/` as a bundle through DSH's `plugin_manager` (
 
 ## Status
 
-v0.2.13 installable. Verified in an **isolated DSH instance** (separate `DSH_HOME` and a temporary profile) through the UI: sidebar entry, three-column layout, blank-preset creation, id rename, package collection, save, lock/unlock, immediate deletion, automatic preset-only package discovery (persona), and the YAML draft preview. A manually inserted foreign declaration in that profile also verified adoption → edit → delete-with-tombstone. Pre-save mount validation, acceptance of the official Standard composition, rejection of host-service conflicts, and 13 unit checks all pass.
+v0.3.0 installable. Verified in an **isolated DSH instance** (separate `DSH_HOME` and a temporary profile) through the UI: sidebar entry, three-column layout, blank-preset creation, id rename, package collection, save, lock/unlock, immediate deletion, automatic preset-only package discovery (persona), and the YAML draft preview. A manually inserted foreign declaration in that profile also verified adoption → edit → delete-with-tombstone. Pre-save mount validation, acceptance of the official Standard composition, rejection of host-service conflicts, and 14 unit checks all pass.
 
 ## Verification
 
@@ -68,7 +70,7 @@ v0.2.13 installable. Verified in an **isolated DSH instance** (separate `DSH_HOM
 
 Day-to-day releases run in GitHub Actions; do not publish by hand:
 
-- `ci.yml`: install, syntax checks, 13 unit checks, and `npm pack --dry-run` on push/PR.
+- `ci.yml`: install, syntax checks, 14 unit checks, and `npm pack --dry-run` on push/PR.
 - `publish.yml`: a `v*` tag publishes through GitHub OIDC (Trusted Publishing) and opens a GitHub Release with the tgz; the tag must equal `bundle/package.json`'s version or the run fails first.
 - Release flow: change code → `npm version patch|minor|major` inside `bundle/` → `git push --follow-tags`.
 - Only the very first publish of a new package is allowed to run `npm publish` manually.

@@ -35,10 +35,13 @@ _Avoid_: 全局插件、系统插件
 **预设行（preset row）**：预设在会话作用域内挂载的插件行；由 `config.plugins` 声明，随预设启用。
 _Avoid_: 会话插件
 
-**可收录行（collectable row）**：所属 bundle 已启用装配、且当前在 Host 被**静态禁用**（`disabled: true`）的行；未启用 bundle 的补丁行、条件行都不计入。收录后默认在预设内启用。
+**可收录行（collectable row）**：已启用 bundle 中当前被**静态禁用**（`disabled: true`）或仅预设提供的行；未启用 bundle 中非条件行也列为可提前收录，但归入「未开 Bundle」组并带冲突警告。条件行不算；收录后默认在预设内启用。
 _Avoid_: 可用行、空闲插件
 
-**未启用 bundle（inactive bundle）**：已安装、但不在 Host 装载树里的 bundle。它不是「仅预设包」；它的补丁行不参与收录，因为它可能在之后的启动被启用为 Host 使用，预设再声明同一行会重复挂载。
+**未启用 bundle（inactive bundle）**：已安装为 profile 直接依赖、声明了 `dsh.bundle.patch`，但不在 `dsh.profile.bundles` 列表里的 bundle。它的行现在不被 Host 挂载，工坊单独分组并允许提前收录；启用该 bundle 后可能与预设重复，需用户先启用并确认行状态。它不是「仅预设包」。
+_Avoid_: 未安装插件、禁用插件
+
+**未开 Bundle 行（off-bundle row）**：来自未启用 bundle 的补丁行。标 `bundleActive: false`，并带 `bundleName` 与 `bundleEnabled`（在该 bundle 内是否启用）；可以提前收录，条件行除外。
 _Avoid_: 禁用插件、未安装插件
 
 **仅预设包（preset-only package）**：只被预设声明挂载、不在 Host 装载树里的包（如 persona）。包抽屉会从预设声明里自动发现它并标「仅预设」；「添加行」仍可手动加入任意模块。

@@ -9,7 +9,7 @@
 import { readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import Schema from '@deepseek-ai/schemastery'
-import { addPresetOnlyPackages, buildInventory } from './lib/inventory.mjs'
+import { addInactiveBundlePackages, addPresetOnlyPackages, buildInventory } from './lib/inventory.mjs'
 import {
   AGENT_PRESET,
   ROW_PREFIX,
@@ -388,6 +388,8 @@ async function buildState(ctx, config) {
     return (a.order ?? Infinity) - (b.order ?? Infinity) || a.id.localeCompare(b.id)
   })
   const inventory = buildInventory(ctx)
+  const profileDir = ctx.get('profileContext')?.dir
+  const inactiveRows = await addInactiveBundlePackages(ctx, inventory.packages, profileDir)
   const presetTrees = []
   for (const preset of presets) {
     if (Array.isArray(preset.plugins)) presetTrees.push(preset.plugins)
@@ -415,6 +417,7 @@ async function buildState(ctx, config) {
     tombstones: model.tombstones,
     packages: inventory.packages,
     rowCount: inventory.rows,
+    inactiveRows,
   }
 }
 

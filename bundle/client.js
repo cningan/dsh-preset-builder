@@ -51,12 +51,26 @@ window.__ModuleLoader__.load({
       collectableSection: '可收录',
       officialCollectable: '官方 · 可收录',
       thirdPartyCollectable: '非官方 · 可收录',
+      thirdPartyInactive: '非官方 · 未开 Bundle',
+      officialInactive: '官方 · 未开 Bundle',
+      inactiveTag: '未开 Bundle',
+      bundleEnabledTag: 'bundle 内启用',
+      bundleDisabledTag: 'bundle 内禁用',
+      inactiveHint: '这些 bundle 未启用，里面的行现在不会被 Host 挂载。收录进预设后，如果以后启用该 bundle，会与 Host 重复；建议先启用 bundle，并确认这些行在 bundle 中静态禁用。',
+      inactiveBanner: '未开 Bundle 可以提前收录；启用该 bundle 后可能与 Host 重复，优先启用 bundle 处理。',
+      inactiveCollectNone: '该包在未开 bundle 中没有可安全收录的行（只剩条件行）。',
+      inactiveWarning: '{count} 行来自未启用的 bundle（{bundles}）；启用这些 bundle 后会与 Host 重复。建议先启用并确认行状态。',
+      inactiveWarningShort: '包含未开 Bundle 的行，启用该 bundle 前请检查冲突。',
+      conflictWarning: '{count} 行已在 Host 启用；预设再声明同一模块会重复注册。请从预设移出，或先禁用 Host 对应行。',
+      conflictWarningShort: '包含 Host 已启用的行，可能与 Host 重复注册。',
+      conflictHint: 'Host 已经在挂载这些模块；预设声明同一模块会重复注册。检查按模块名匹配，条件行以当前 Host 状态为准。',
       designButton: '设计说明',
       designHelp: '工坊怎么工作',
       designHost: 'Host 与预设是两层：Host 已启用的行不会进入可收录，因为预设再声明会重复注册。',
-      designBundle: '未在 Host 启用的 bundle 也不收：它可能在以后被启用；工坊不改变 Host 的启用状态。',
-      designCollect: '可收录只包含：已启用 bundle 中静态禁用、留给预设挂载的行，或仅预设包。',
+      designBundle: '未启用的 bundle 单独列为一组：它的行现在没有被 Host 挂载，可以提前收录；但以后启用该 bundle 会与 Host 重复，建议先启用并确认行状态。',
+      designCollect: '已启用 bundle 里只收录静态禁用、留给预设挂载的行；未启用 bundle 的行单独分组，条件行不收录。',
       designRows: '可收录性只看行：包里还有未启用的行，就只列出并收录这些行；整包都已启用时不显示，官方和第三方一样。',
+      designInactive: '未开 Bundle 的包会标「未开 Bundle」；bundle 内启用的行还会标「bundle 内启用」，提醒启用后可能重复。',
       helpHighlight: '彩色词提示：Tool 工具、Skill 技能、Persona 人设。',
       helpCollect: '可收录：Host 已启用 bundle 里静态禁用、留给预设挂载的行。',
       helpOfficialHost: '官方 Host 行：只读，展开可看。',
@@ -182,12 +196,26 @@ window.__ModuleLoader__.load({
       collectableSection: 'Collectable',
       officialCollectable: 'Official · collectable',
       thirdPartyCollectable: 'Community · collectable',
+      thirdPartyInactive: 'Community · bundle off',
+      officialInactive: 'Official · bundle off',
+      inactiveTag: 'bundle off',
+      bundleEnabledTag: 'on in bundle',
+      bundleDisabledTag: 'off in bundle',
+      inactiveHint: 'These bundles are not enabled, so their rows are not mounted by the Host now. If the bundle is enabled later, a preset declaring the same rows will duplicate it; enabling the bundle first and making those rows statically disabled is preferred.',
+      inactiveBanner: 'Rows from bundles that are off can be collected early; enabling the bundle later may duplicate the Host. Prefer enabling the bundle first.',
+      inactiveCollectNone: 'No safe rows in this off bundle (only conditional rows).',
+      inactiveWarning: '{count} row(s) come from bundles that are off ({bundles}); enabling them will duplicate the Host. Enable them first and check the row state.',
+      inactiveWarningShort: 'Contains rows from a bundle that is off; check for conflicts before enabling it.',
+      conflictWarning: '{count} row(s) are already active in the Host; declaring the same module in a preset registers it twice. Remove them from the preset, or disable the Host rows first.',
+      conflictWarningShort: 'Contains rows that are active in the Host and may be registered twice.',
+      conflictHint: 'The Host already mounts these modules; a preset declaring the same module registers it twice. The check matches by module name; conditional rows use the current Host state.',
       designButton: 'Design notes',
       designHelp: 'How the workshop works',
       designHost: 'Host and presets are two layers: rows active in the Host are not collectable, because a preset declaring them would register the same plugin twice.',
-      designBundle: 'A bundle that is not active in the Host is not collectable either: it may be enabled later, and the workshop never changes Host activation.',
-      designCollect: 'Collectable means: a statically disabled row inside an active bundle, or a preset-only package.',
+      designBundle: 'Bundles that are off get their own groups: their rows are not mounted by the Host now and can be collected early, but enabling the bundle later duplicates the Host; enable it first and check the row state.',
+      designCollect: 'An active bundle offers only statically disabled rows left for presets; rows from an off bundle are grouped separately, and conditional rows are not collectable.',
       designRows: 'Collectability is row-level, not source-level: if a package still has inactive rows, only those rows are listed and collectable; a package whose rows are all active is not shown, for official and third-party packages alike.',
+      designInactive: 'Packages from a bundle that is off are marked "bundle off"; rows that would be active inside that bundle are marked "on in bundle", warning about duplication if it is enabled.',
       helpHighlight: 'Colour cues: Tool, Skill, Persona.',
       helpCollect: 'Collectable: rows statically disabled in an active Host bundle, left for presets to mount.',
       helpOfficialHost: 'Official Host rows are read-only; expand to inspect them.',
@@ -371,6 +399,7 @@ window.__ModuleLoader__.load({
       packageDesc: { fontSize: 11.5, opacity: 0.7, lineHeight: 1.45, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' },
       packageFoot: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 1 },
       packageMeta: { fontSize: 10.5, opacity: 0.55 },
+      inactiveBanner: { display: 'flex', alignItems: 'flex-start', gap: 6, marginTop: 8, padding: '6px 9px', borderRadius: 9, border: `1px solid ${tone(16)}`, background: tone(5), fontSize: 11, lineHeight: 1.45 },
       collectBtn: { padding: '3px 8px', borderRadius: 7, border: `1px solid ${tone(30)}`, background: 'transparent', color: 'inherit', cursor: 'pointer', font: 'inherit', fontSize: 11.5, fontWeight: 600 },
       muted: { opacity: 0.62, fontSize: 12 },
       empty: { padding: '18px 8px', opacity: 0.6, textAlign: 'center', fontSize: 12 },
@@ -382,6 +411,7 @@ window.__ModuleLoader__.load({
       menu: { position: 'absolute', zIndex: 20, marginTop: 4, background: 'Canvas', border: `1px solid ${tone(18)}`, borderRadius: 12, padding: 6, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 210, boxShadow: '0 14px 36px rgba(0,0,0,0.18)' },
       menuItem: { padding: '6px 9px', borderRadius: 7, border: 'none', background: 'transparent', color: 'inherit', cursor: 'pointer', textAlign: 'left', font: 'inherit', fontSize: 12 },
       saveBar: { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 10, border: `1px solid ${tone(14)}`, background: 'var(--dsw-alias-bg-base, Canvas)', flexWrap: 'wrap', position: 'sticky', top: 0, zIndex: 6 },
+      warnBox: { display: 'flex', alignItems: 'flex-start', gap: 6, padding: '7px 9px', borderRadius: 9, border: `1px solid ${tone(20)}`, background: tone(5), fontSize: 11.5, lineHeight: 1.45 },
       yaml: { margin: 0, padding: '10px 12px', borderRadius: 9, border: `1px solid ${tone(12)}`, background: tone(4), fontSize: 11, lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace', overflow: 'auto', maxHeight: '60vh' },
     }
 
@@ -478,6 +508,9 @@ window.__ModuleLoader__.load({
      * condition flips. Keep collection to the static case.
      */
     function isCollectableRow(row) {
+      if (row.bundleActive === false) {
+        return row.disabled?.kind === 'static' || row.disabled?.kind === 'none'
+      }
       return row.enabled === false && (row.disabled?.kind === 'static' || row.disabled?.kind === 'none')
     }
 
@@ -642,6 +675,7 @@ window.__ModuleLoader__.load({
           h('div', null, '• ', termNodes(t('designBundle'))),
           h('div', null, '• ', termNodes(t('designCollect'))),
           h('div', null, '• ', termNodes(t('designRows'))),
+          h('div', null, '• ', termNodes(t('designInactive'))),
           h('div', { style: { ...styles.muted, marginTop: 4 } }, termNodes(t('helpHighlight')))),
       })
     }
@@ -1045,13 +1079,20 @@ window.__ModuleLoader__.load({
         })
       }, [packages, query])
       const listed = ordered.map((pkg) => ({ pkg, rows: pkg.rows.filter((row) => !declared.has(row.moduleName)) }))
-      const usable = listed.filter((entry) => entry.rows.some(isCollectableRow))
-      const hostManaged = listed.filter((entry) => entry.rows.length > 0
+      const activeListed = listed.map((entry) => ({ pkg: entry.pkg, rows: entry.rows.filter((row) => row.bundleActive !== false) }))
+        .filter((entry) => entry.rows.length > 0)
+      const inactiveListed = listed.map((entry) => ({ pkg: entry.pkg, rows: entry.rows.filter((row) => row.bundleActive === false) }))
+        .filter((entry) => entry.rows.length > 0)
+      const usable = activeListed.filter((entry) => entry.rows.some(isCollectableRow))
+      const inactiveUsable = inactiveListed.filter((entry) => entry.rows.some(isCollectableRow))
+      const hostManaged = activeListed.filter((entry) => entry.rows.length > 0
         && entry.rows.every((row) => row.enabled || row.disabled?.kind === 'expression'))
       const thirdUsable = usable.filter((entry) => entry.pkg.official !== true)
       const officialUsable = usable.filter((entry) => entry.pkg.official === true)
       const officialHost = hostManaged.filter((entry) => entry.pkg.official === true)
-      const empty = usable.length === 0 && officialHost.length === 0
+      const thirdInactive = inactiveUsable.filter((entry) => entry.pkg.official !== true)
+      const officialInactive = inactiveUsable.filter((entry) => entry.pkg.official === true)
+      const empty = usable.length === 0 && officialHost.length === 0 && inactiveUsable.length === 0
       const section = { display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }
       const activeOpen = showActive || query.trim().length > 0
       const sectionHead = (label, count, helpTitle, helpText) => h('div', { style: styles.sectionHead },
@@ -1083,12 +1124,28 @@ window.__ModuleLoader__.load({
                 thirdUsable.length > 0
                   ? h('div', { style: section },
                       sectionHead(t('thirdPartyCollectable'), thirdUsable.length, t('thirdPartyCollectable'), t('helpCollect')),
-                      thirdUsable.map((entry) => h(PackageCard, { key: entry.pkg.name, api, pkg: entry.pkg, rows: entry.rows })))
+                      thirdUsable.map((entry) => h(PackageCard, { key: 'active:' + entry.pkg.name, api, pkg: entry.pkg, rows: entry.rows })))
                   : null,
                 officialUsable.length > 0
                   ? h('div', { style: section },
                       sectionHead(t('officialCollectable'), officialUsable.length, t('officialCollectable'), t('helpCollect')),
-                      officialUsable.map((entry) => h(PackageCard, { key: entry.pkg.name, api, pkg: entry.pkg, rows: entry.rows })))
+                      officialUsable.map((entry) => h(PackageCard, { key: 'active:' + entry.pkg.name, api, pkg: entry.pkg, rows: entry.rows })))
+                  : null,
+                inactiveUsable.length > 0
+                  ? h(React.Fragment, null,
+                      h('div', { style: styles.inactiveBanner },
+                        h('span', { style: { flex: '1 1 auto' } }, t('inactiveBanner')),
+                        h(Help, { api, title: t('inactiveTag'), text: t('inactiveHint') })),
+                      thirdInactive.length > 0
+                        ? h('div', { style: section },
+                            sectionHead(t('thirdPartyInactive'), thirdInactive.length, t('thirdPartyInactive'), t('inactiveHint')),
+                            thirdInactive.map((entry) => h(PackageCard, { key: 'inactive:' + entry.pkg.name, api, pkg: entry.pkg, rows: entry.rows })))
+                        : null,
+                      officialInactive.length > 0
+                        ? h('div', { style: section },
+                            sectionHead(t('officialInactive'), officialInactive.length, t('officialInactive'), t('inactiveHint')),
+                            officialInactive.map((entry) => h(PackageCard, { key: 'inactive:' + entry.pkg.name, api, pkg: entry.pkg, rows: entry.rows })))
+                        : null)
                   : null,
                 officialHost.length > 0
                   ? h('div', { style: section },
@@ -1099,7 +1156,7 @@ window.__ModuleLoader__.load({
                           onClick: () => setShowActive(!showActive),
                         }, (activeOpen ? '▾ ' : '▸ ') + t('hostActiveSection') + ' · ' + officialHost.length),
                         h(Help, { api, title: t('hostActiveSection'), text: t('hostActiveHint') })),
-                      activeOpen ? officialHost.map((entry) => h(PackageCard, { key: entry.pkg.name, api, pkg: entry.pkg, rows: entry.rows })) : null)
+                      activeOpen ? officialHost.map((entry) => h(PackageCard, { key: 'host:' + entry.pkg.name, api, pkg: entry.pkg, rows: entry.rows })) : null)
                   : null)))
     }
 
@@ -1108,6 +1165,7 @@ window.__ModuleLoader__.load({
       const [open, setOpen] = React.useState(false)
       const collectable = rows.filter(isCollectableRow)
       const mixed = collectable.length > 0 && collectable.length < rows.length
+      const inactive = rows.some((row) => row.bundleActive === false)
       const title = api.resolveText(pkg.titles) ?? pkg.title ?? pkg.name
       const description = api.resolveText(pkg.descriptions) ?? pkg.description ?? ''
       const displayName = title && title !== pkg.name ? title : pkg.name
@@ -1118,6 +1176,7 @@ window.__ModuleLoader__.load({
             displayName !== pkg.name ? h('div', { style: styles.packageModule, title: pkg.name }, pkg.name) : null),
           h('div', { style: { display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap', marginLeft: 'auto' } },
             h('span', { style: pkg.official ? styles.badge : styles.badgeWarn }, pkg.official ? t('officialTag') : t('thirdParty')),
+            inactive ? h('span', { style: styles.badgeWarn, title: t('inactiveHint') }, t('inactiveTag')) : null,
             pkg.presetOnly === true ? h('span', { style: styles.badgeWarn, title: t('presetOnlyHint') }, t('presetOnly')) : null,
             collectable.length === 0
               ? rows.some((row) => row.enabled)
@@ -1130,15 +1189,18 @@ window.__ModuleLoader__.load({
           h('span', { style: styles.packageMeta }, rows.length + ' ' + t('rows') + (collectable.length > 0 ? ' · ' + collectable.length + ' ' + t('collectableSection') : '')),
           h('span', { style: { flex: '1 1 auto' } }),
           collectable.length === 0
-            ? h('span', { style: { ...styles.muted, fontSize: 11 } }, t('collectNone'))
+            ? h('span', { style: { ...styles.muted, fontSize: 11 } }, inactive ? t('inactiveCollectNone') : t('collectNone'))
             : h('button', {
                 type: 'button', style: styles.collectBtn,
-                onClick: () => api.collectPackage(pkg, mixed ? collectable : undefined),
+                onClick: () => api.collectPackage(pkg, collectable),
               }, h(Icon, { name: 'plus', size: 12, style: { marginRight: 3, verticalAlign: '-2px' } }), mixed ? t('collectUsable') : t('collect'))),
         open ? h('div', { style: { display: 'flex', flexDirection: 'column', gap: 4, marginTop: 2 } },
           rows.map((row) => h('div', { key: row.id + ':' + row.moduleName, style: { ...styles.rowLine, background: 'transparent', borderColor: tone(6), fontSize: 11 } },
             h('code', { style: { ...styles.code, flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, row.id || row.moduleName),
             row.enabled ? h('span', { style: styles.badgeWarn }, t('hostActive')) : null,
+            row.bundleActive === false && row.bundleEnabled !== undefined
+              ? h('span', { style: styles.badgeWarn, title: row.bundleName ? row.bundleName : t('inactiveHint') }, row.bundleEnabled ? t('bundleEnabledTag') : t('bundleDisabledTag'))
+              : null,
             row.disabled?.kind === 'platform' ? h('span', { style: styles.badgeWarn }, row.disabled.label) : null,
             row.disabled?.kind === 'expression' ? h('span', { style: styles.badgeWarn, title: t('conditionalHint') }, t('conditional')) : null,
             isCollectableRow(row) ? h('button', { type: 'button', style: styles.buttonGhost, onClick: () => api.collectPackage(pkg, [row]) }, t('collectRow')) : null)))
@@ -1265,6 +1327,9 @@ window.__ModuleLoader__.load({
       const managed = preset.kind === 'managed'
       const locked = preset.locked === true
       const editable = managed && !locked
+      const inactive = api.inactiveUsage(preset)
+      const inactiveBundles = [...new Set(inactive.map((item) => item.bundle).filter((name) => name.length > 0))]
+      const conflicts = api.conflictUsage(preset)
       return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 10 } },
         h('div', { style: styles.card },
           h('div', { style: { display: 'flex', gap: 8, alignItems: 'flex-start', flexWrap: 'wrap' } },
@@ -1303,6 +1368,16 @@ window.__ModuleLoader__.load({
             ? h('div', { style: styles.muted }, t('adoptUnavailable'))
             : null),
         editable ? h(SaveBar, { api }) : null,
+        inactive.length > 0
+          ? h('div', { style: styles.warnBox },
+              h('span', { style: { flex: '1 1 auto' } }, t('inactiveWarning', { count: inactive.length, bundles: inactiveBundles.join(', ') })),
+              h(Help, { api, title: t('inactiveTag'), text: t('inactiveHint') }))
+          : null,
+        conflicts.length > 0
+          ? h('div', { style: styles.warnBox },
+              h('span', { style: { flex: '1 1 auto' } }, t('conflictWarning', { count: conflicts.length })),
+              h(Help, { api, title: t('conflictWarningShort'), text: t('conflictHint') }))
+          : null,
         preset.broken
           ? h('div', { style: styles.errorBox },
               h('div', { style: { fontWeight: 600, marginBottom: 4 } }, t('broken') + ': ' + preset.broken),
@@ -1672,6 +1747,51 @@ window.__ModuleLoader__.load({
         setAddRowOpen(false)
       }
 
+      const inactiveModules = React.useMemo(() => {
+        const map = new Map()
+        for (const pkg of state?.packages ?? []) {
+          for (const row of pkg.rows ?? []) {
+            if (row.bundleActive === false && !map.has(row.moduleName)) {
+              map.set(row.moduleName, {
+                bundle: typeof row.bundleName === 'string' ? row.bundleName : '',
+                bundleEnabled: row.bundleEnabled === true,
+              })
+            }
+          }
+        }
+        return map
+      }, [state])
+
+      const activeModules = React.useMemo(() => {
+        const map = new Map()
+        for (const pkg of state?.packages ?? []) {
+          for (const row of pkg.rows ?? []) {
+            if (row.bundleActive !== false && row.enabled === true && !map.has(row.moduleName)) {
+              map.set(row.moduleName, { packageName: pkg.name })
+            }
+          }
+        }
+        return map
+      }, [state])
+
+      const inactiveUsage = (preset) => {
+        const found = new Map()
+        walkRows(preset.plugins, (row) => {
+          const hit = inactiveModules.get(row.name)
+          if (hit !== undefined && !found.has(row.name)) found.set(row.name, hit)
+        })
+        return [...found.values()]
+      }
+
+      const conflictUsage = (preset) => {
+        const found = new Map()
+        walkRows(preset.plugins, (row) => {
+          const hit = activeModules.get(row.name)
+          if (hit !== undefined && !found.has(row.name)) found.set(row.name, hit)
+        })
+        return [...found.values()]
+      }
+
       const warnings = React.useMemo(() => {
         const issues = []
         for (const preset of draft) {
@@ -1684,13 +1804,16 @@ window.__ModuleLoader__.load({
             if (seen.has(row.id)) issues.push(preset.id + ': ' + t('duplicateRow') + ' ' + row.id)
             seen.add(row.id)
           })
+          if (inactiveUsage(preset).length > 0) issues.push(preset.id + ': ' + t('inactiveWarningShort'))
+          if (conflictUsage(preset).length > 0) issues.push(preset.id + ': ' + t('conflictWarningShort'))
         }
         return issues
-      }, [draft, state])
+      }, [draft, state, inactiveModules, activeModules])
 
       const api = {
         t, state, draft, selectedId, selected, dirty, saving, notice, status,
         resolveText,
+        inactiveModules, inactiveUsage, activeModules, conflictUsage,
         view, tab, menuOpen, collapsed, configEditorId, isolateEditorId, selectedGroupId, warnings, baseRevision,
         officialPresets, foreignPresets,
         setMenuOpen, setView, setTab, setNotice,
