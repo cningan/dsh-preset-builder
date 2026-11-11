@@ -11,7 +11,7 @@ Remove-Item -Recurse -Force $dshHome -ErrorAction SilentlyContinue
 $env:DSH_HOME = $dshHome
 dsh --profile verify --from-default-profile web --dump-config | Out-Null
 
-$profile = Join-Path $dshHome 'profiles\verify'
+$profileDir = Join-Path $dshHome 'profiles\verify'
 @'
 {
   "name": "dsh-profile-verify",
@@ -25,9 +25,9 @@ $profile = Join-Path $dshHome 'profiles\verify'
     }
   }
 }
-'@ | Set-Content (Join-Path $profile 'package.json') -Encoding utf8
+'@ | Set-Content (Join-Path $profileDir 'package.json') -Encoding utf8
 
-Push-Location $profile
+Push-Location $profileDir
 pnpm install --ignore-scripts
 Pop-Location
 
