@@ -53,6 +53,19 @@ window.__ModuleLoader__.load({
       thirdPartyCollectable: '非官方 · 可收录',
       thirdPartyHost: '非官方 · Host 已启用',
       thirdPartyHostHint: '这些是已安装的第三方包；它们的行在 Host 中已经启用，收进预设有重复注册风险，因此只展示、不提供收录。',
+      designButton: '设计说明',
+      designHelp: '工坊怎么工作',
+      designHost: 'Host 与预设是两层：Host 已启用的行不会进入可收录，因为预设再声明会重复注册。',
+      designBundle: '未在 Host 启用的 bundle 也不收：它可能在以后被启用；工坊不改变 Host 的启用状态。',
+      designCollect: '可收录只包含：已启用 bundle 中静态禁用、留给预设挂载的行，或仅预设包。',
+      helpHighlight: '彩色词提示：Tool 工具、Skill 技能、Persona 人设。',
+      helpCollect: '可收录：Host 已启用 bundle 里静态禁用、留给预设挂载的行。',
+      helpOfficialHost: '官方 Host 行：只读，展开可看。',
+      helpSearch: '搜索包名、标题、简介或行 id。',
+      helpPresetKinds: '官方预设只读；其它预设都可管理，外部声明需要先接管。',
+      helpOrder: '数字越小越靠前；同序按 id。',
+      helpId: '保存前可改：小写字母、数字、连字符；保存后固定。',
+      helpFiltered: '当前预设已声明的行会从抽屉隐藏。',
       presetOnly: '仅预设',
       presetOnlyHint: '该包只被预设使用，不在 Host 装载树里；收录后由预设挂载。',
       hostActive: 'Host 已启用',
@@ -172,6 +185,19 @@ window.__ModuleLoader__.load({
       thirdPartyCollectable: 'Community · collectable',
       thirdPartyHost: 'Community · active in Host',
       thirdPartyHostHint: 'Installed third-party packages whose rows are already active in the Host. Collecting them into a preset would register the same plugin twice, so they are listed without a collect action.',
+      designButton: 'Design notes',
+      designHelp: 'How the workshop works',
+      designHost: 'Host and presets are two layers: rows active in the Host are not collectable, because a preset declaring them would register the same plugin twice.',
+      designBundle: 'A bundle that is not active in the Host is not collectable either: it may be enabled later, and the workshop never changes Host activation.',
+      designCollect: 'Collectable means: a statically disabled row inside an active bundle, or a preset-only package.',
+      helpHighlight: 'Colour cues: Tool, Skill, Persona.',
+      helpCollect: 'Collectable: rows statically disabled in an active Host bundle, left for presets to mount.',
+      helpOfficialHost: 'Official Host rows are read-only; expand to inspect them.',
+      helpSearch: 'Search package name, title, description or row id.',
+      helpPresetKinds: 'Official presets are read-only; all other presets are manageable, and external declarations must be adopted first.',
+      helpOrder: 'Lower numbers come first; ties sort by id.',
+      helpId: 'Editable before the first save: lowercase letters, digits and hyphens; fixed after saving.',
+      helpFiltered: 'Rows already declared by this preset are hidden from the drawer.',
       presetOnly: 'preset-only',
       presetOnlyHint: 'This package is only mounted by presets (absent from the Host loader); collected rows are mounted by the preset.',
       hostActive: 'in host',
@@ -258,7 +284,8 @@ window.__ModuleLoader__.load({
     const tone = (percent) => `color-mix(in srgb, currentColor ${percent}%, transparent)`
 
     const STYLE_TEXT = `
-      .ps-root button { transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; }
+      .ps-root { background: linear-gradient(180deg, color-mix(in srgb, currentColor 2%, transparent), transparent 180px); }
+      .ps-root button { transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease, transform 120ms ease, box-shadow 120ms ease; }
       .ps-root button:not(:disabled):hover { background-color: color-mix(in srgb, currentColor 8%, transparent); }
       .ps-root button:disabled { opacity: 0.45; cursor: default; }
       .ps-root :focus-visible { outline: none; }
@@ -267,56 +294,96 @@ window.__ModuleLoader__.load({
       .ps-scroll::-webkit-scrollbar { width: 9px; height: 9px; }
       .ps-scroll::-webkit-scrollbar-thumb { background: color-mix(in srgb, currentColor 18%, transparent); border-radius: 999px; border: 2px solid transparent; background-clip: padding-box; }
       .ps-scroll::-webkit-scrollbar-track { background: transparent; }
-      .ps-item-active { box-shadow: inset 2px 0 0 color-mix(in srgb, currentColor 55%, transparent); }
-      .ps-card { transition: border-color 120ms ease; }
-      .ps-card:hover { border-color: color-mix(in srgb, currentColor 24%, transparent); }
+      .ps-preset { border: 1px solid transparent !important; }
+      .ps-preset:hover { background: color-mix(in srgb, currentColor 6%, transparent) !important; transform: translateY(-1px); }
+      .ps-preset-active { background: color-mix(in srgb, currentColor 7%, transparent) !important; box-shadow: inset 2px 0 0 #4f7cff !important; }
+      .ps-card { transition: border-color 140ms ease, box-shadow 140ms ease; }
+      .ps-card:hover { border-color: color-mix(in srgb, currentColor 24%, transparent); box-shadow: 0 8px 22px color-mix(in srgb, currentColor 7%, transparent); }
       .ps-row:hover { background-color: color-mix(in srgb, currentColor 8%, transparent); }
       .ps-sticky { position: sticky; top: 0; z-index: 6; background: var(--dsw-alias-bg-base, Canvas); }
+      .ps-topbar { background: color-mix(in srgb, var(--dsw-alias-bg-base, Canvas) 94%, transparent); }
+      .ps-new { background: #4f7cff !important; color: #fff !important; border-color: transparent !important; }
+      .ps-new:hover { background: #5d88ff !important; transform: translateY(-1px); }
+      .ps-package { background: color-mix(in srgb, currentColor 2.2%, transparent); transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease; }
+      .ps-package:hover { transform: translateY(-1px); box-shadow: 0 7px 20px color-mix(in srgb, currentColor 8%, transparent); border-color: color-mix(in srgb, currentColor 22%, transparent); }
+      .ps-help { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 999px; border: 1px solid color-mix(in srgb, currentColor 26%, transparent); font-size: 10px; font-weight: 700; line-height: 1; opacity: 0.62; cursor: help; flex: 0 0 auto; }
+      .ps-help:hover { opacity: 1; background: color-mix(in srgb, currentColor 10%, transparent) !important; }
+      .ps-tip { position: fixed; z-index: 1000; width: 300px; box-sizing: border-box; max-height: 340px; overflow: auto; padding: 11px 13px; border-radius: 12px; background: Canvas; border: 1px solid color-mix(in srgb, currentColor 18%, transparent); box-shadow: 0 14px 38px rgba(0,0,0,0.22); font-size: 12px; line-height: 1.55; color: inherit; animation: ps-fade 120ms ease; }
+      .ps-tip-title { font-weight: 650; margin-bottom: 4px; }
+      @keyframes ps-fade { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+      .ps-term { font-weight: 650; }
+      .ps-term-tool { color: #2f6bff; }
+      .ps-term-skill { color: #8b5cf6; }
+      .ps-term-persona { color: #b26a00; }
+      @media (prefers-color-scheme: dark) {
+        .ps-term-tool { color: #8ab4ff; }
+        .ps-term-skill { color: #b79bff; }
+        .ps-term-persona { color: #f0bd6b; }
+      }
+      .ps-seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 10px; background: color-mix(in srgb, currentColor 6%, transparent); }
+      .ps-seg button { border: none !important; background: transparent !important; border-radius: 8px !important; padding: 4px 10px !important; opacity: 0.7; }
+      .ps-seg button[data-active="true"] { background: color-mix(in srgb, currentColor 14%, transparent) !important; opacity: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+      .ps-seg button:hover { opacity: 1; }
+      .ps-search-wrap { position: relative; display: flex; align-items: center; width: 100%; }
+      .ps-search-wrap svg { position: absolute; left: 9px; opacity: 0.5; pointer-events: none; }
+      .ps-search { padding-left: 30px !important; }
     `
 
     const styles = {
-      root: { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, color: 'inherit', fontSize: 13, boxSizing: 'border-box' },
-      topbar: { display: 'flex', alignItems: 'center', gap: 10, padding: '12px 18px 10px', borderBottom: `1px solid ${tone(10)}`, flexWrap: 'wrap' },
-      title: { margin: 0, fontSize: 15, fontWeight: 600 },
-      subtitle: { margin: 0, fontSize: 12, opacity: 0.65, flex: '1 1 240px' },
+      root: { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, color: 'inherit', fontSize: 13, boxSizing: 'border-box', position: 'relative' },
+      topbar: { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px 9px', borderBottom: `1px solid ${tone(10)}`, flexWrap: 'wrap' },
+      brand: { display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 },
+      logo: { width: 28, height: 28, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#4f7cff', color: '#fff', flex: '0 0 auto' },
+      title: { margin: 0, fontSize: 15, fontWeight: 700, letterSpacing: '-0.01em' },
+      subtitle: { margin: 0, fontSize: 11.5, opacity: 0.58, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+      profileChip: { display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10.5, padding: '2px 7px', borderRadius: 999, background: tone(8), opacity: 0.85 },
+      profileDot: { width: 5, height: 5, borderRadius: 999, background: 'currentColor', opacity: 0.5 },
+      iconButton: { width: 26, height: 26, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, border: `1px solid ${tone(14)}`, background: tone(5), color: 'inherit', cursor: 'pointer', padding: 0 },
       body: { display: 'flex', flex: '1 1 auto', minHeight: 0 },
       column: { display: 'flex', flexDirection: 'column', minHeight: 0, overflowY: 'auto', scrollbarGutter: 'stable' },
-      left: { width: 240, flex: '0 0 240px', borderRight: `1px solid ${tone(10)}`, padding: '12px 8px', gap: 10 },
-      middle: { flex: '1 1 auto', padding: '14px 20px', gap: 10 },
-      right: { width: 360, flex: '0 0 360px', borderLeft: `1px solid ${tone(10)}`, padding: '12px 14px', gap: 8 },
-      sectionTitle: { fontSize: 11, letterSpacing: '0.04em', opacity: 0.6, textTransform: 'uppercase', margin: '4px 4px 2px' },
-      presetItem: { display: 'flex', flexDirection: 'column', gap: 2, padding: '6px 8px', borderRadius: 8, border: '1px solid transparent', background: 'transparent', color: 'inherit', textAlign: 'left', cursor: 'pointer', font: 'inherit' },
+      left: { width: 248, flex: '0 0 248px', borderRight: `1px solid ${tone(10)}`, padding: '10px 8px', gap: 9 },
+      middle: { flex: '1 1 auto', padding: '14px 16px', gap: 10 },
+      right: { width: 332, flex: '0 0 332px', borderLeft: `1px solid ${tone(10)}`, padding: '10px 10px', gap: 8 },
+      sectionTitle: { fontSize: 10.5, letterSpacing: '0.03em', opacity: 0.55, margin: '3px 4px 1px', fontWeight: 650 },
+      sectionHead: { display: 'flex', alignItems: 'center', gap: 5, margin: '4px 2px 1px' },
+      presetItem: { display: 'flex', flexDirection: 'column', gap: 2, padding: '6px 8px', borderRadius: 9, border: '1px solid transparent', background: 'transparent', color: 'inherit', textAlign: 'left', cursor: 'pointer', font: 'inherit' },
       presetItemActive: { background: tone(9) },
-      presetName: { fontWeight: 550, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
-      presetMeta: { fontSize: 11, opacity: 0.6 },
+      presetTop: { display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 },
+      presetName: { fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', minWidth: 0 },
+      presetMeta: { fontSize: 10.5, opacity: 0.58 },
       badge: { fontSize: 10, padding: '1px 6px', borderRadius: 999, background: tone(10), opacity: 0.9, whiteSpace: 'nowrap' },
       badgeWarn: { fontSize: 10, padding: '1px 6px', borderRadius: 999, border: `1px solid ${tone(30)}`, opacity: 0.95, whiteSpace: 'nowrap' },
-      card: { border: `1px solid ${tone(12)}`, borderRadius: 10, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8 },
-      rowLine: { display: 'flex', alignItems: 'center', gap: 6, padding: '5px 7px', borderRadius: 7, background: tone(4), flexWrap: 'wrap' },
-      rowName: { minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 550 },
+      badgeRow: { display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' },
+      card: { border: `1px solid ${tone(10)}`, borderRadius: 12, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 7, background: 'color-mix(in srgb, currentColor 1.8%, transparent)' },
+      rowLine: { display: 'flex', alignItems: 'center', gap: 6, padding: '5px 7px', borderRadius: 8, border: `1px solid ${tone(7)}`, background: tone(4), flexWrap: 'wrap' },
+      rowName: { minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 },
       code: { fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace', fontSize: 11, opacity: 0.7 },
-      button: { padding: '4px 9px', borderRadius: 7, border: `1px solid ${tone(16)}`, background: tone(6), color: 'inherit', cursor: 'pointer', font: 'inherit', fontSize: 12 },
-      buttonPrimary: { padding: '4px 12px', borderRadius: 7, border: `1px solid ${tone(30)}`, background: tone(16), color: 'inherit', cursor: 'pointer', font: 'inherit', fontSize: 12, fontWeight: 600 },
-      buttonGhost: { padding: '2px 6px', borderRadius: 6, border: '1px solid transparent', background: 'transparent', color: 'inherit', cursor: 'pointer', font: 'inherit', fontSize: 11, opacity: 0.8 },
-      search: { width: '100%', padding: '6px 9px', borderRadius: 8, border: `1px solid ${tone(14)}`, background: tone(4), color: 'inherit', font: 'inherit', boxSizing: 'border-box' },
-      input: { width: '100%', padding: '5px 8px', borderRadius: 7, border: `1px solid ${tone(14)}`, background: tone(4), color: 'inherit', font: 'inherit', boxSizing: 'border-box', fontSize: 12 },
-      textarea: { width: '100%', minHeight: 90, padding: '6px 8px', borderRadius: 7, border: `1px solid ${tone(14)}`, background: tone(4), color: 'inherit', font: 'ui-monospace, SFMono-Regular, Consolas, monospace', fontSize: 11, boxSizing: 'border-box', resize: 'vertical' },
-      packageCard: { border: `1px solid ${tone(10)}`, borderRadius: 9, padding: '9px 11px', display: 'flex', flexDirection: 'column', gap: 5 },
-      packageHead: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+      button: { padding: '4px 9px', borderRadius: 8, border: `1px solid ${tone(16)}`, background: tone(6), color: 'inherit', cursor: 'pointer', font: 'inherit', fontSize: 12 },
+      buttonPrimary: { padding: '4px 10px', borderRadius: 8, border: `1px solid ${tone(30)}`, background: tone(16), color: 'inherit', cursor: 'pointer', font: 'inherit', fontSize: 12, fontWeight: 600 },
+      buttonGhost: { padding: '2px 5px', borderRadius: 6, border: '1px solid transparent', background: 'transparent', color: 'inherit', cursor: 'pointer', font: 'inherit', fontSize: 11, opacity: 0.8 },
+      search: { width: '100%', padding: '6px 9px', borderRadius: 9, border: `1px solid ${tone(14)}`, background: tone(4), color: 'inherit', font: 'inherit', boxSizing: 'border-box' },
+      input: { width: '100%', padding: '4px 7px', borderRadius: 7, border: `1px solid ${tone(14)}`, background: tone(4), color: 'inherit', font: 'inherit', boxSizing: 'border-box', fontSize: 12 },
+      textarea: { width: '100%', minHeight: 80, padding: '5px 7px', borderRadius: 7, border: `1px solid ${tone(14)}`, background: tone(4), color: 'inherit', font: 'ui-monospace, SFMono-Regular, Consolas, monospace', fontSize: 11, boxSizing: 'border-box', resize: 'vertical' },
+      packageCard: { border: `1px solid ${tone(10)}`, borderRadius: 10, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 5 },
+      packageHead: { display: 'flex', alignItems: 'flex-start', gap: 6, flexWrap: 'wrap' },
+      pkgBody: { flex: '1 1 150px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 },
       packageName: { flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 550 },
-      packageTitle: { flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600, fontSize: 12.5, background: 'transparent', border: 'none', color: 'inherit', textAlign: 'left', padding: 0, cursor: 'pointer' },
-      packageModule: { fontSize: 10, opacity: 0.55, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
-      packageDesc: { fontSize: 11.5, opacity: 0.68, lineHeight: 1.45, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' },
+      packageTitle: { flex: '1 1 auto', minWidth: 0, fontWeight: 625, fontSize: 12.5, background: 'transparent', border: 'none', color: 'inherit', textAlign: 'left', padding: 0, cursor: 'pointer', lineHeight: 1.35, wordBreak: 'break-word' },
+      packageModule: { fontSize: 10, opacity: 0.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+      packageDesc: { fontSize: 11.5, opacity: 0.7, lineHeight: 1.45, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' },
+      packageFoot: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 1 },
+      packageMeta: { fontSize: 10.5, opacity: 0.55 },
+      collectBtn: { padding: '3px 8px', borderRadius: 7, border: `1px solid ${tone(30)}`, background: 'transparent', color: 'inherit', cursor: 'pointer', font: 'inherit', fontSize: 11.5, fontWeight: 600 },
       muted: { opacity: 0.62, fontSize: 12 },
       empty: { padding: '18px 8px', opacity: 0.6, textAlign: 'center', fontSize: 12 },
       errorBox: { padding: '10px 12px', borderRadius: 8, background: tone(8), border: `1px solid ${tone(16)}`, fontSize: 12 },
       dot: { width: 7, height: 7, borderRadius: 999, background: 'currentColor', flex: '0 0 auto' },
-      group: { border: `1px dashed ${tone(18)}`, borderRadius: 9, padding: '6px 8px', display: 'flex', flexDirection: 'column', gap: 4 },
+      group: { border: `1px dashed ${tone(16)}`, borderRadius: 12, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 5 },
       groupHead: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
       toolbar: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-      menu: { position: 'absolute', zIndex: 20, marginTop: 4, background: 'var(--dsw-alias-bg-base, Canvas)', border: `1px solid ${tone(18)}`, borderRadius: 9, padding: 6, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 200, boxShadow: '0 8px 24px rgba(0,0,0,0.18)' },
-      menuItem: { padding: '5px 8px', borderRadius: 6, border: 'none', background: 'transparent', color: 'inherit', cursor: 'pointer', textAlign: 'left', font: 'inherit', fontSize: 12 },
-      saveBar: { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 9, border: `1px solid ${tone(16)}`, background: 'var(--dsw-alias-bg-base, Canvas)', flexWrap: 'wrap', position: 'sticky', top: 0, zIndex: 6 },
+      menu: { position: 'absolute', zIndex: 20, marginTop: 4, background: 'Canvas', border: `1px solid ${tone(18)}`, borderRadius: 12, padding: 6, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 210, boxShadow: '0 14px 36px rgba(0,0,0,0.18)' },
+      menuItem: { padding: '6px 9px', borderRadius: 7, border: 'none', background: 'transparent', color: 'inherit', cursor: 'pointer', textAlign: 'left', font: 'inherit', fontSize: 12 },
+      saveBar: { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 10, border: `1px solid ${tone(14)}`, background: 'var(--dsw-alias-bg-base, Canvas)', flexWrap: 'wrap', position: 'sticky', top: 0, zIndex: 6 },
       yaml: { margin: 0, padding: '10px 12px', borderRadius: 9, border: `1px solid ${tone(12)}`, background: tone(4), fontSize: 11, lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace', overflow: 'auto', maxHeight: '60vh' },
     }
 
@@ -416,6 +483,170 @@ window.__ModuleLoader__.load({
       return row.enabled === false && (row.disabled?.kind === 'static' || row.disabled?.kind === 'none')
     }
 
+    // ---------- presentation primitives ----------
+
+    function Icon({ name, size = 14, style }) {
+      const common = {
+        width: size, height: size, viewBox: '0 0 24 24', fill: 'none',
+        stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round',
+        style: { flex: '0 0 auto', ...style }, 'aria-hidden': true,
+      }
+      if (name === 'search') {
+        return h('svg', common, h('circle', { cx: 11, cy: 11, r: 7 }), h('path', { d: 'M16.5 16.5 21 21' }))
+      }
+      if (name === 'plus') return h('svg', common, h('path', { d: 'M12 5v14M5 12h14' }))
+      if (name === 'refresh') {
+        return h('svg', common, h('path', { d: 'M20 11a8 8 0 1 0-2.3 5.7' }), h('path', { d: 'M20 4v7h-7' }))
+      }
+      if (name === 'spark') {
+        return h('svg', common, h('path', { d: 'M12 3l1.7 5.3L19 10l-5.3 1.7L12 17l-1.7-5.3L5 10l5.3-1.7L12 3z' }),
+          h('path', { d: 'M18.5 16.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2z' }))
+      }
+      if (name === 'package') {
+        return h('svg', common, h('path', { d: 'M21 8.5 12 3 3 8.5v7L12 21l9-5.5v-7z' }),
+          h('path', { d: 'M3 8.5 12 14l9-5.5M12 14v7' }))
+      }
+      return h('svg', common, h('circle', { cx: 12, cy: 12, r: 9 }), h('path', { d: 'M12 11v5' }), h('path', { d: 'M12 7.5h.01' }))
+    }
+
+    const TERM_RE = /\b(tools?|skills?|personas?|personal|presets?|contexts?|workspaces?|sessions?|subagents?|agents?|plans?)\b|(工具|技能|人设|预设|上下文|工作区|会话|子代理)/gi
+    function termKind(word) {
+      const value = word.toLowerCase()
+      if (value.startsWith('tool') || word === '工具') return 'tool'
+      if (value.startsWith('skill') || word === '技能') return 'skill'
+      if (value.startsWith('person') || word === '人设') return 'persona'
+      return null
+    }
+    function termNodes(text) {
+      if (typeof text !== 'string' || text.length === 0) return text
+      const pattern = new RegExp(TERM_RE.source, 'gi')
+      const out = []
+      let last = 0
+      let match
+      let index = 0
+      while ((match = pattern.exec(text)) !== null) {
+        const kind = termKind(match[0])
+        if (kind === null) continue
+        if (match.index > last) out.push(text.slice(last, match.index))
+        out.push(h('span', { key: 'term-' + index, className: 'ps-term ps-term-' + kind }, match[0]))
+        index += 1
+        last = match.index + match[0].length
+      }
+      if (last < text.length) out.push(text.slice(last))
+      return out
+    }
+
+    /**
+     * A small "?" with a hover tooltip and click-to-pin popover. The popover is
+     * fixed-positioned so it escapes the drawer's scroll container.
+     */
+    function Help({ api, title, text, children, label, style }) {
+      const t = api.t
+      const [open, setOpen] = React.useState(false)
+      const [pinned, setPinned] = React.useState(false)
+      const [pos, setPos] = React.useState(null)
+      const ref = React.useRef(null)
+      const place = () => {
+        const node = ref.current
+        if (node === null) return
+        const rect = node.getBoundingClientRect()
+        const width = 300
+        const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8))
+        const below = rect.bottom + 8
+        if (below + 260 > window.innerHeight) {
+          setPos({ left, bottom: window.innerHeight - rect.top + 8 })
+        } else {
+          setPos({ left, top: below })
+        }
+      }
+      const show = () => {
+        place()
+        setOpen(true)
+      }
+      const hide = () => {
+        if (!pinned) setOpen(false)
+      }
+      React.useEffect(() => {
+        if (!open) return undefined
+        const close = () => {
+          setPinned(false)
+          setOpen(false)
+        }
+        const onPointerDown = (event) => {
+          if (ref.current !== null && !ref.current.contains(event.target) && !event.target.closest?.('.ps-tip')) close()
+        }
+        const onKey = (event) => {
+          if (event.key === 'Escape') close()
+        }
+        window.addEventListener('scroll', close, true)
+        window.addEventListener('resize', close)
+        document.addEventListener('pointerdown', onPointerDown, true)
+        document.addEventListener('keydown', onKey)
+        return () => {
+          window.removeEventListener('scroll', close, true)
+          window.removeEventListener('resize', close)
+          document.removeEventListener('pointerdown', onPointerDown, true)
+          document.removeEventListener('keydown', onKey)
+        }
+      }, [open])
+      const toggle = (event) => {
+        event.stopPropagation()
+        if (pinned) {
+          setPinned(false)
+          setOpen(false)
+        } else {
+          setPinned(true)
+          show()
+        }
+      }
+      const trigger = label !== undefined
+        ? h('button', {
+            type: 'button', ref, style: { ...styles.button, display: 'inline-flex', alignItems: 'center', gap: 5, ...style },
+            'aria-label': title ?? t('help'), 'aria-expanded': open,
+            onMouseEnter: show, onMouseLeave: hide, onFocus: show, onBlur: hide, onClick: toggle,
+          }, h(Icon, { name: 'info', size: 12 }), label)
+        : h('span', {
+            ref, role: 'button', tabIndex: 0, className: 'ps-help',
+            'aria-label': title ?? t('help'), 'aria-expanded': open,
+            onMouseEnter: show, onMouseLeave: hide, onFocus: show, onBlur: hide,
+            onClick: toggle,
+            onKeyDown: (event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                if (pinned) {
+                  setPinned(false)
+                  setOpen(false)
+                } else {
+                  setPinned(true)
+                  show()
+                }
+              }
+            },
+          }, '?')
+      return h('span', { style: { display: 'inline-flex', position: 'relative' } },
+        trigger,
+        open
+          ? h('div', {
+              role: 'tooltip', className: 'ps-tip',
+              style: { left: pos?.left ?? 8, ...(pos?.top !== undefined ? { top: pos.top } : { bottom: pos?.bottom ?? 8 }) },
+            },
+              title !== undefined ? h('div', { className: 'ps-tip-title' }, termNodes(title)) : null,
+              children ?? (text !== undefined ? h('div', null, termNodes(text)) : null))
+          : null)
+    }
+
+    function DesignNotes({ api }) {
+      const t = api.t
+      return h(Help, {
+        api, label: t('designButton'), title: t('designHelp'),
+        children: h('div', { style: { display: 'flex', flexDirection: 'column', gap: 6 } },
+          h('div', null, '• ', termNodes(t('designHost'))),
+          h('div', null, '• ', termNodes(t('designBundle'))),
+          h('div', null, '• ', termNodes(t('designCollect'))),
+          h('div', { style: { ...styles.muted, marginTop: 4 } }, termNodes(t('helpHighlight')))),
+      })
+    }
+
     function presetPayload(preset) {
       return {
         id: preset.id,
@@ -455,33 +686,36 @@ window.__ModuleLoader__.load({
       const active = preset.id === api.selectedId
       return h('button', {
         type: 'button',
-        className: 'ps-hover' + (active ? ' ps-item-active' : ''),
+        className: 'ps-hover ps-preset' + (active ? ' ps-preset-active' : ''),
         style: { ...styles.presetItem, ...(active ? styles.presetItemActive : {}) },
         onClick: () => api.selectPreset(preset.id),
       },
-        h('span', { style: styles.presetName },
-          name,
-          ...badges,
-          api.presetDirty(preset)
-            ? h('span', { style: styles.badgeWarn, title: t('unsaved') }, t('unsavedHere'))
-            : null),
-        h('span', { style: styles.presetMeta },
-          h('code', { style: styles.code }, preset.id),
-          preset.order !== undefined ? ' · ' + preset.order : ''))
+        h('span', { style: styles.presetTop },
+          h('span', { style: { flex: '1 1 auto', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 } },
+            h('span', { style: styles.presetName },
+              name,
+              ...badges,
+              api.presetDirty(preset)
+                ? h('span', { style: styles.badgeWarn, title: t('unsaved') }, t('unsavedHere'))
+                : null),
+            h('span', { style: styles.presetMeta },
+              h('code', { style: styles.code }, preset.id),
+              preset.order !== undefined ? ' · ' + preset.order : ''))))
     }
 
     function PresetColumn({ api }) {
-      const { t, draft, selectedId, dirty } = api
-      const official = api.officialPresets
-      const foreign = api.foreignPresets
+      const { t, draft } = api
+      const foreign = api.foreignPresets ?? []
+      const official = api.officialPresets ?? []
       const stateById = new Map((api.state?.presets ?? []).map((preset) => [preset.id, preset]))
       const customItems = [
         ...draft.map((preset) => ({ preset, managed: true })),
         ...foreign.map((preset) => ({ preset, managed: false })),
       ]
-      return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 10 } },
-        h('div', { className: 'ps-sticky', style: { position: 'sticky', top: 0, zIndex: 5, paddingBottom: 4, background: 'var(--dsw-alias-bg-base, Canvas)' } },
-          h('button', { type: 'button', style: { ...styles.buttonPrimary, width: '100%' }, onClick: () => api.setMenuOpen(!api.menuOpen) }, '+ ' + t('newPreset')),
+      return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 12 } },
+        h('div', { className: 'ps-sticky', style: { position: 'sticky', top: 0, zIndex: 5, paddingBottom: 6, background: 'var(--dsw-alias-bg-base, Canvas)' } },
+          h('button', { type: 'button', className: 'ps-new', style: { ...styles.buttonPrimary, width: '100%', padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }, onClick: () => api.setMenuOpen(!api.menuOpen) },
+            h(Icon, { name: 'plus', size: 14, style: { opacity: 0.9 } }), t('newPreset')),
           api.menuOpen ? h('div', { style: styles.menu },
             h('button', { type: 'button', style: styles.menuItem, onClick: () => api.createBlank() }, t('blank')),
             official.length > 0 ? h('div', { style: { ...styles.sectionTitle, marginTop: 4 } }, t('copyOfficial')) : null,
@@ -501,7 +735,9 @@ window.__ModuleLoader__.load({
           ) : null),
         official.length > 0
           ? h('div', { style: { display: 'flex', flexDirection: 'column', gap: 2 } },
-              h('div', { style: styles.sectionTitle }, t('official') + ' · ' + official.length),
+              h('div', { style: styles.sectionHead },
+                h('span', { style: styles.sectionTitle }, t('official') + ' · ' + official.length),
+                h(Help, { api, title: t('official'), text: t('officialHint') })),
               official.map((preset) => h(PresetItem, {
                 key: preset.id, api, preset,
                 name: preset.name || preset.id,
@@ -509,7 +745,9 @@ window.__ModuleLoader__.load({
               })))
           : null,
         h('div', { style: { display: 'flex', flexDirection: 'column', gap: 2 } },
-          h('div', { style: styles.sectionTitle }, t('custom') + ' · ' + customItems.length),
+          h('div', { style: styles.sectionHead },
+            h('span', { style: styles.sectionTitle }, t('custom') + ' · ' + customItems.length),
+            h(Help, { api, title: t('custom'), text: t('helpPresetKinds') })),
           customItems.length === 0 ? h('div', { style: styles.empty }, t('emptyPresets')) : null,
           customItems.map(({ preset }) => {
             const meta = stateById.get(preset.id)
@@ -816,40 +1054,58 @@ window.__ModuleLoader__.load({
       const officialUsable = usable.filter((entry) => entry.pkg.official === true)
       const officialHost = hostManaged.filter((entry) => entry.pkg.official === true)
       const empty = usable.length === 0 && hostManaged.length === 0
-      const section = { display: 'flex', flexDirection: 'column', gap: 8, marginTop: 6 }
+      const section = { display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }
       const activeOpen = showActive || query.trim().length > 0
-      return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 8, minHeight: 0, flex: '1 1 auto' } },
-        h('div', { style: { display: 'flex', flexDirection: 'column', gap: 8, paddingBottom: 8, borderBottom: `1px solid ${tone(9)}` } },
-          h('input', { style: styles.search, value: query, placeholder: t('searchPackages'), onChange: (event) => setQuery(event.target.value) }),
-          h('div', { style: { ...styles.muted, lineHeight: 1.4 } }, t('saveCheckHint') + (declared.size > 0 ? ' ' + t('filteredHint') : ''))),
-        h('div', { className: 'ps-scroll', style: { display: 'flex', flexDirection: 'column', gap: 8, minHeight: 0, flex: '1 1 auto', overflowY: 'auto', paddingRight: 6, paddingTop: 4, paddingBottom: 8 } },
+      const sectionHead = (label, count, helpTitle, helpText) => h('div', { style: styles.sectionHead },
+        h('span', { style: styles.sectionTitle }, label + ' · ' + count),
+        h(Help, { api, title: helpTitle, text: helpText }))
+      return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 10, minHeight: 0, flex: '1 1 auto' } },
+        h('div', { style: { display: 'flex', flexDirection: 'column', gap: 8, paddingBottom: 10, borderBottom: `1px solid ${tone(9)}` } },
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: 6, padding: '0 2px' } },
+            h('span', { style: { ...styles.sectionTitle, margin: 0 } }, t('packages')),
+            h('span', { style: styles.badge }, packages.length),
+            h('span', { style: { flex: '1 1 auto' } }),
+            h(Help, { api, title: t('designHelp'), text: t('designCollect') })),
+          h('div', { className: 'ps-search-wrap' },
+            h(Icon, { name: 'search', size: 13 }),
+            h('input', {
+              className: 'ps-search', style: styles.search, value: query,
+              placeholder: t('searchPackages'), 'aria-label': t('helpSearch'),
+              onChange: (event) => setQuery(event.target.value),
+            })),
+          declared.size > 0
+            ? h('div', { style: { ...styles.packageMeta, padding: '0 2px' } }, t('filteredHint'))
+            : null),
+        h('div', { className: 'ps-scroll', style: { display: 'flex', flexDirection: 'column', gap: 8, minHeight: 0, flex: '1 1 auto', overflowY: 'auto', paddingRight: 6, paddingTop: 2, paddingBottom: 8 } },
           empty
-            ? h('div', { style: styles.empty }, t('emptyPackages'))
+            ? h('div', { style: styles.empty },
+                h('div', { style: { display: 'flex', justifyContent: 'center', marginBottom: 8, opacity: 0.5 } }, h(Icon, { name: 'package', size: 26 })),
+                t('emptyPackages'))
             : h(React.Fragment, null,
                 thirdUsable.length > 0
                   ? h('div', { style: section },
-                      h('div', { style: styles.sectionTitle }, t('thirdPartyCollectable') + ' · ' + thirdUsable.length),
+                      sectionHead(t('thirdPartyCollectable'), thirdUsable.length, t('thirdPartyCollectable'), t('helpCollect')),
                       thirdUsable.map((entry) => h(PackageCard, { key: entry.pkg.name, api, pkg: entry.pkg, rows: entry.rows })))
                   : null,
                 thirdHost.length > 0
                   ? h('div', { style: section },
-                      h('div', { style: styles.sectionTitle }, t('thirdPartyHost') + ' · ' + thirdHost.length),
-                      h('div', { style: { ...styles.muted, lineHeight: 1.4 } }, t('thirdPartyHostHint')),
+                      sectionHead(t('thirdPartyHost'), thirdHost.length, t('thirdPartyHost'), t('thirdPartyHostHint')),
                       thirdHost.map((entry) => h(PackageCard, { key: entry.pkg.name, api, pkg: entry.pkg, rows: entry.rows })))
                   : null,
                 officialUsable.length > 0
                   ? h('div', { style: section },
-                      h('div', { style: styles.sectionTitle }, t('officialCollectable') + ' · ' + officialUsable.length),
+                      sectionHead(t('officialCollectable'), officialUsable.length, t('officialCollectable'), t('helpCollect')),
                       officialUsable.map((entry) => h(PackageCard, { key: entry.pkg.name, api, pkg: entry.pkg, rows: entry.rows })))
                   : null,
                 officialHost.length > 0
                   ? h('div', { style: section },
-                      h('button', {
-                        type: 'button',
-                        style: { ...styles.sectionTitle, background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer', textAlign: 'left', padding: 0 },
-                        onClick: () => setShowActive(!showActive),
-                      }, (activeOpen ? '▾ ' : '▸ ') + t('hostActiveSection') + ' · ' + officialHost.length),
-                      activeOpen ? h('div', { style: { ...styles.muted, lineHeight: 1.4 } }, t('hostActiveHint')) : null,
+                      h('div', { style: styles.sectionHead },
+                        h('button', {
+                          type: 'button',
+                          style: { ...styles.sectionTitle, background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer', textAlign: 'left', padding: 0, display: 'inline-flex', alignItems: 'center', gap: 4 },
+                          onClick: () => setShowActive(!showActive),
+                        }, (activeOpen ? '▾ ' : '▸ ') + t('hostActiveSection') + ' · ' + officialHost.length),
+                        h(Help, { api, title: t('hostActiveSection'), text: t('hostActiveHint') })),
                       activeOpen ? officialHost.map((entry) => h(PackageCard, { key: entry.pkg.name, api, pkg: entry.pkg, rows: entry.rows })) : null)
                   : null)))
     }
@@ -862,29 +1118,32 @@ window.__ModuleLoader__.load({
       const title = api.resolveText(pkg.titles) ?? pkg.title ?? pkg.name
       const description = api.resolveText(pkg.descriptions) ?? pkg.description ?? ''
       const displayName = title && title !== pkg.name ? title : pkg.name
-      return h('div', { className: 'ps-card', style: styles.packageCard },
+      return h('div', { className: 'ps-card ps-package', style: styles.packageCard },
         h('div', { style: styles.packageHead },
-          h('button', { type: 'button', style: styles.buttonGhost, onClick: () => setOpen(!open) }, open ? '▾' : '▸'),
-          h('button', { type: 'button', style: styles.packageTitle, title: pkg.name, onClick: () => setOpen(!open) }, displayName),
-          h('span', { style: pkg.official ? styles.badge : styles.badgeWarn }, pkg.official ? t('officialTag') : t('thirdParty')),
-          pkg.presetOnly === true ? h('span', { style: styles.badgeWarn, title: t('presetOnlyHint') }, t('presetOnly')) : null,
+          h('div', { style: styles.pkgBody },
+            h('button', { type: 'button', style: styles.packageTitle, title: pkg.name, onClick: () => setOpen(!open) }, termNodes(displayName)),
+            displayName !== pkg.name ? h('div', { style: styles.packageModule, title: pkg.name }, pkg.name) : null),
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap', marginLeft: 'auto' } },
+            h('span', { style: pkg.official ? styles.badge : styles.badgeWarn }, pkg.official ? t('officialTag') : t('thirdParty')),
+            pkg.presetOnly === true ? h('span', { style: styles.badgeWarn, title: t('presetOnlyHint') }, t('presetOnly')) : null,
+            collectable.length === 0
+              ? rows.some((row) => row.enabled)
+                ? h('span', { style: styles.badgeWarn, title: t('hostActiveHint') }, t('hostActive'))
+                : h('span', { style: styles.badgeWarn, title: t('conditionalHint') }, t('conditionalRow'))
+              : null,
+            h('button', { type: 'button', style: styles.buttonGhost, onClick: () => setOpen(!open), 'aria-label': open ? t('cancel') : t('config') }, open ? '▾' : '▸'))),
+        description.length > 0 ? h('div', { style: styles.packageDesc, title: description }, termNodes(description)) : null,
+        h('div', { style: styles.packageFoot },
+          h('span', { style: styles.packageMeta }, rows.length + ' ' + t('rows') + (collectable.length > 0 ? ' · ' + collectable.length + ' ' + t('collectableSection') : '')),
+          h('span', { style: { flex: '1 1 auto' } }),
           collectable.length === 0
-            ? rows.some((row) => row.enabled)
-              ? h('span', { style: styles.badgeWarn }, t('hostActive'))
-              : h('span', { style: styles.badgeWarn, title: t('conditionalHint') }, t('conditionalRow'))
-            : null,
-          h('span', { style: styles.badge }, rows.length + ' ' + t('rows'))),
-        displayName !== pkg.name ? h('div', { style: styles.packageModule, title: pkg.name }, pkg.name) : null,
-        description.length > 0 ? h('div', { style: styles.packageDesc, title: description }, description) : null,
-        h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap' } },
-          collectable.length === 0
-            ? h('div', { style: styles.muted }, t('collectNone'))
+            ? h('span', { style: { ...styles.muted, fontSize: 11 } }, t('collectNone'))
             : h('button', {
-                type: 'button', style: styles.button,
+                type: 'button', style: styles.collectBtn,
                 onClick: () => api.collectPackage(pkg, mixed ? collectable : undefined),
-              }, mixed ? t('collectUsable') : t('collect'))),
-        open ? h('div', { style: { display: 'flex', flexDirection: 'column', gap: 4 } },
-          rows.map((row) => h('div', { key: row.id + ':' + row.moduleName, style: { display: 'flex', gap: 6, alignItems: 'center', fontSize: 11, flexWrap: 'wrap' } },
+              }, h(Icon, { name: 'plus', size: 12, style: { marginRight: 3, verticalAlign: '-2px' } }), mixed ? t('collectUsable') : t('collect'))),
+        open ? h('div', { style: { display: 'flex', flexDirection: 'column', gap: 4, marginTop: 2 } },
+          rows.map((row) => h('div', { key: row.id + ':' + row.moduleName, style: { ...styles.rowLine, background: 'transparent', borderColor: tone(6), fontSize: 11 } },
             h('code', { style: { ...styles.code, flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, row.id || row.moduleName),
             row.enabled ? h('span', { style: styles.badgeWarn }, t('hostActive')) : null,
             row.disabled?.kind === 'platform' ? h('span', { style: styles.badgeWarn }, row.disabled.label) : null,
@@ -973,8 +1232,9 @@ window.__ModuleLoader__.load({
         const problem = api.renamePreset(preset.id, next)
         setError(problem ?? '')
       }
-      return h('div', { style: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' } },
+      return h('div', { style: { display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' } },
         h('span', { style: { ...styles.muted, fontSize: 11 } }, t('presetId')),
+        h(Help, { api, title: t('presetId'), text: t('helpId') }),
         h('input', {
           style: { ...styles.input, width: 170, fontSize: 11, fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace' },
           value: text,
@@ -989,16 +1249,16 @@ window.__ModuleLoader__.load({
             if (event.key === 'Enter') commit()
           },
         }),
-        error.length > 0
-          ? h('span', { style: { ...styles.badgeWarn, fontSize: 10 } }, error)
-          : h('span', { style: { ...styles.muted, fontSize: 10 } }, t('presetIdHint')))
+        error.length > 0 ? h('span', { style: { ...styles.badgeWarn, fontSize: 10 } }, error) : null)
     }
 
     function SaveBar({ api }) {
       const t = api.t
       const dirty = api.dirty
       return h('div', { style: styles.saveBar },
+        h('span', { style: { ...styles.dot, background: dirty ? '#f59e0b' : '#22c55e' } }),
         h('span', { style: dirty ? styles.badgeWarn : styles.badge }, dirty ? t('unsaved') : t('saved')),
+        h(Help, { api, title: t('save'), text: t('saveCheckHint') }),
         h('span', { style: { flex: '1 1 auto' } }),
         h('button', { type: 'button', style: styles.button, disabled: !dirty || api.saving, onClick: () => api.discard() }, t('discard')),
         h('button', { type: 'button', style: styles.buttonPrimary, disabled: !dirty || api.saving, onClick: () => api.save() }, api.saving ? t('saving') : t('save')))
@@ -1012,33 +1272,37 @@ window.__ModuleLoader__.load({
       const managed = preset.kind === 'managed'
       const locked = preset.locked === true
       const editable = managed && !locked
-      return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 12 } },
+      return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 10 } },
         h('div', { style: styles.card },
-          h('div', { style: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' } },
-            editable
-              ? h('input', { style: { ...styles.input, flex: '1 1 180px', minWidth: 120 }, value: preset.name ?? '', placeholder: t('name'), onChange: (event) => api.updatePreset(preset.id, { name: event.target.value }) })
-              : h('strong', { style: { flex: '1 1 180px', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, preset.name || preset.id),
-            editable
-              ? h('label', { style: { display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, opacity: 0.75 } },
-                  h('span', null, t('order')),
-                  h('input', { style: { ...styles.input, width: 64, flex: '0 0 64px' }, type: 'number', value: preset.order ?? '', placeholder: t('order'), onChange: (event) => api.updatePreset(preset.id, { order: event.target.value === '' ? undefined : Number(event.target.value) }) }))
-              : preset.order !== undefined ? h('span', { style: styles.badge }, 'order ' + preset.order) : null,
-            h('span', { style: { flex: '1 1 auto' } }),
-            !official && locked ? h('button', { type: 'button', style: styles.button, onClick: () => api.setLocked(preset.id, false) }, t('unlock')) : null,
-            !official && !locked ? h('button', { type: 'button', style: styles.button, onClick: () => api.setLocked(preset.id, true) }, t('lock')) : null,
-            !official && !locked ? h('button', { type: 'button', style: styles.button, onClick: () => api.deletePreset(preset.id) }, t('deletePreset')) : null,
-            !official && !managed && !locked && preset.canAdopt ? h('button', { type: 'button', style: styles.buttonPrimary, onClick: () => api.adoptPreset(preset.id) }, t('adopt')) : null),
-          h('div', { style: { display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' } },
-            api.canRenamePreset(preset.id)
-              ? h(PresetIdField, { api, preset })
-              : h('code', { style: styles.code }, preset.id),
-            official ? h('span', { style: styles.badge }, t('officialTag')) : null,
-            !official && !managed && !locked ? h('span', { style: styles.badge }, t('foreign')) : null,
-            locked ? h('span', { style: styles.badgeWarn }, t('locked')) : null,
-            preset.broken ? h('span', { style: styles.badgeWarn }, t('broken')) : null),
+          h('div', { style: { display: 'flex', gap: 8, alignItems: 'flex-start', flexWrap: 'wrap' } },
+            h('div', { style: { flex: '1 1 240px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 } },
+              editable
+                ? h('input', { style: { ...styles.input, fontSize: 14, fontWeight: 650, padding: '6px 9px' }, value: preset.name ?? '', placeholder: t('name'), onChange: (event) => api.updatePreset(preset.id, { name: event.target.value }) })
+                : h('strong', { style: { minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 15 } }, preset.name || preset.id),
+              h('div', { style: styles.badgeRow },
+                api.canRenamePreset(preset.id)
+                  ? h(PresetIdField, { api, preset })
+                  : h('code', { style: styles.code }, preset.id),
+                official ? h('span', { style: styles.badge }, t('officialTag')) : null,
+                !official && !managed && !locked ? h('span', { style: styles.badge }, t('foreign')) : null,
+                locked ? h('span', { style: styles.badgeWarn }, t('locked')) : null,
+                preset.broken ? h('span', { style: styles.badgeWarn }, t('broken')) : null)),
+            h('div', { style: { display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginLeft: 'auto' } },
+              editable
+                ? h('label', { style: { display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, opacity: 0.8 } },
+                    h('span', null, t('order')),
+                    h('input', { style: { ...styles.input, width: 60, flex: '0 0 60px', padding: '4px 6px' }, type: 'number', value: preset.order ?? '', placeholder: t('order'), onChange: (event) => api.updatePreset(preset.id, { order: event.target.value === '' ? undefined : Number(event.target.value) }) }),
+                    h(Help, { api, title: t('order'), text: t('helpOrder') }))
+                : preset.order !== undefined ? h('span', { style: styles.badge }, 'order ' + preset.order) : null,
+              !official && locked ? h('button', { type: 'button', style: styles.button, onClick: () => api.setLocked(preset.id, false) }, t('unlock')) : null,
+              !official && !locked ? h('button', { type: 'button', style: styles.button, onClick: () => api.setLocked(preset.id, true) }, t('lock')) : null,
+              !official && !locked ? h('button', { type: 'button', style: styles.button, onClick: () => api.deletePreset(preset.id) }, t('deletePreset')) : null,
+              !official && !managed && !locked && preset.canAdopt ? h('button', { type: 'button', style: styles.buttonPrimary, onClick: () => api.adoptPreset(preset.id) }, t('adopt')) : null)),
           editable
-            ? h('textarea', { style: { ...styles.input, minHeight: 38, resize: 'vertical' }, value: preset.description ?? '', placeholder: t('description'), onChange: (event) => api.updatePreset(preset.id, { description: event.target.value }) })
-            : h('div', { style: styles.muted }, official ? t('officialHint') : locked ? t('lockedHint') : t('foreignHint')),
+            ? h('textarea', { style: { ...styles.input, minHeight: 38, resize: 'vertical', opacity: 0.9 }, value: preset.description ?? '', placeholder: t('description'), onChange: (event) => api.updatePreset(preset.id, { description: event.target.value }) })
+            : h('div', { style: { ...styles.muted, display: 'flex', alignItems: 'center', gap: 5 } },
+                official ? t('officialHint') : locked ? t('lockedHint') : t('foreignHint'),
+                h(Help, { api, title: official ? t('official') : locked ? t('locked') : t('foreign'), text: official ? t('officialHint') : locked ? t('lockedHint') : t('foreignHint') })),
           !editable && typeof preset.description === 'string' && preset.description.length > 0
             ? h('div', { style: styles.muted }, preset.description)
             : null,
@@ -1052,16 +1316,24 @@ window.__ModuleLoader__.load({
               h('div', { style: styles.muted }, t('brokenHint')))
           : null,
         api.notice !== null ? h('div', { style: styles.errorBox }, api.notice) : null,
-        h('div', { style: styles.toolbar },
-          h('button', { type: 'button', style: api.tab === 'compose' ? styles.buttonPrimary : styles.button, onClick: () => api.setTab('compose') }, t('composition')),
-          h('button', { type: 'button', style: api.tab === 'yaml' ? styles.buttonPrimary : styles.button, onClick: () => api.setTab('yaml') }, t('yaml')),
-          api.tab === 'compose' && managed ? h('span', { style: { width: 12 } }) : null,
-          api.tab === 'compose' && managed ? h('button', { type: 'button', style: api.view === 'structure' ? styles.buttonPrimary : styles.button, onClick: () => api.setView('structure') }, t('viewStructure')) : null,
-          api.tab === 'compose' && managed ? h('button', { type: 'button', style: api.view === 'package' ? styles.buttonPrimary : styles.button, onClick: () => api.setView('package') }, t('viewPackage')) : null,
-          api.tab === 'compose' && managed ? h('span', { style: { flex: '1 1 auto' } }) : null,
-          api.tab === 'compose' && managed && !locked ? h('span', { style: styles.muted }, api.selectedGroupId === null ? t('targetRoot') : t('targetGroup', { id: api.selectedGroupId })) : null,
-          api.tab === 'compose' && editable ? h('button', { type: 'button', style: styles.button, onClick: () => api.setAddRowOpen(!api.addRowOpen) }, t('addRow')) : null,
-          api.tab === 'compose' && editable ? h('button', { type: 'button', style: styles.button, onClick: () => api.addGroup(preset.id) }, t('addGroup')) : null),
+        h('div', { style: { ...styles.toolbar, justifyContent: 'space-between' } },
+          h('div', { className: 'ps-seg' },
+            h('button', { type: 'button', 'data-active': api.tab === 'compose', onClick: () => api.setTab('compose') }, t('composition')),
+            h('button', { type: 'button', 'data-active': api.tab === 'yaml', onClick: () => api.setTab('yaml') }, t('yaml'))),
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' } },
+            api.tab === 'compose' && managed
+              ? h('div', { className: 'ps-seg' },
+                  h('button', { type: 'button', 'data-active': api.view === 'structure', onClick: () => api.setView('structure') }, t('viewStructure')),
+                  h('button', { type: 'button', 'data-active': api.view === 'package', onClick: () => api.setView('package') }, t('viewPackage')))
+              : null,
+            api.tab === 'compose' && managed && !locked ? h('span', { style: { ...styles.muted, fontSize: 11 } }, api.selectedGroupId === null ? t('targetRoot') : t('targetGroup', { id: api.selectedGroupId })) : null,
+            api.tab === 'compose' && editable
+              ? h('button', { type: 'button', style: { ...styles.button, display: 'inline-flex', alignItems: 'center', gap: 4 }, onClick: () => api.setAddRowOpen(!api.addRowOpen) },
+                  h(Icon, { name: 'plus', size: 12 }), t('addRow'))
+              : null,
+            api.tab === 'compose' && editable
+              ? h('button', { type: 'button', style: styles.button, onClick: () => api.addGroup(preset.id) }, t('addGroup'))
+              : null)),
         editable && api.tab === 'compose' && api.addRowOpen ? h(AddRowView, { api, preset }) : null,
         api.tab === 'yaml'
           ? h(YAMLView, { api, preset })
@@ -1454,17 +1726,24 @@ window.__ModuleLoader__.load({
       }
 
       return h('div', { className: 'ps-root', style: styles.root },
-        h('div', { style: styles.topbar },
-          h('h1', { style: styles.title }, t('title')),
-          h('p', { style: styles.subtitle }, t('subtitle')),
-          state?.profile?.name ? h('span', { style: styles.badge }, 'profile: ' + state.profile.name) : null,
+        h('div', { className: 'ps-topbar', style: styles.topbar },
+          h('div', { style: styles.brand },
+            h('span', { style: styles.logo }, h(Icon, { name: 'spark', size: 16 })),
+            h('div', { style: { display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 } },
+              h('h1', { style: styles.title }, t('title')),
+              h('p', { style: styles.subtitle }, t('subtitle')))),
+          h('span', { style: { flex: '1 1 auto' } }),
+          state?.profile?.name ? h('span', { style: styles.profileChip }, h('span', { style: styles.profileDot }), 'profile: ' + state.profile.name) : null,
           state?.hmr === false ? h('span', { style: styles.badgeWarn }, 'HMR off') : null,
-          h('button', { type: 'button', style: styles.button, onClick: () => void load() }, t('refresh'))),
+          h(DesignNotes, { api }),
+          h('button', {
+            type: 'button', style: styles.iconButton, title: t('refresh'), 'aria-label': t('refresh'),
+            onClick: () => void load(),
+          }, h(Icon, { name: 'refresh', size: 14 }))),
         h('div', { style: styles.body },
           h('aside', { className: 'ps-scroll', style: { ...styles.column, ...styles.left } }, h(PresetColumn, { api })),
           h('main', { className: 'ps-scroll', style: { ...styles.column, ...styles.middle } }, h(Editor, { api })),
           h('aside', { style: { ...styles.right, display: 'flex', flexDirection: 'column', minHeight: 0 } },
-            h('div', { style: styles.sectionTitle }, (t('packages') + ' · ' + (state?.packages?.length ?? 0))),
             h(Drawer, { api }))))
     }
 
