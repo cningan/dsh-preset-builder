@@ -3,7 +3,8 @@
   "version": "0.6.0",
   "type": "module",
   "scripts": {
-    "check": "node --check client.js && node --check index.js && node --check lib/inventory.mjs && node --check lib/rules.mjs && node --check lib/diff.mjs",
+    "lint": "eslint .",
+    "check": "eslint . && node --check client.js && node --check index.js && node --check lib/inventory.mjs && node --check lib/rules.mjs && node --check lib/diff.mjs && node --check ../test/ui-smoke.mjs",
     "test": "node ../test/unit.mjs"
   },
   "description": "Build custom Agent presets in the DSH Web UI: collect package rows, edit groups and config, save as ordinary preset declarations.",
@@ -50,5 +51,8 @@
         "@deepseek-ai/dsh-client-ui-sidebar"
       ]
     }
+  },
+  "devDependencies": {
+    "eslint": "^10.14.0"
   }
 }

@@ -1,42 +1,47 @@
 # 隔离 UI 冒烟检查
 
-CI 只跑纯函数和 HTTP 契约；界面行为用手动隔离实例验证，避免污染桌面 profile。以下流程在 Windows + 本机 DSH 安装下使用。
+CI 只跑纯函数和 HTTP 契约；界面行为用隔离实例验证，避免污染桌面 profile。结构/布局问题优先跑脚本，密度和美观仍要人看截图。
 
-## 准备隔离 profile
+## 自动冒烟（推荐）
+
+前置条件：
+
+- Windows，PATH 里有 `dsh`、`pnpm`、`ego-browser`。
+- `ego-browser` 需要 **full access / danger-full-access** 终端；默认文件沙箱下它无法连接 bootstrap。
+- 脚本会在仓库下建 `.tmp-ui-smoke`、选空闲端口、建临时 profile，正常结束后清理。
 
 ```powershell
-$dshHome = Join-Path $env:TEMP 'dsh-preset-builder-smoke'
-Remove-Item -Recurse -Force $dshHome -ErrorAction SilentlyContinue
-
-$env:DSH_HOME = $dshHome
-dsh --profile verify --from-default-profile web --dump-config | Out-Null
-
-$profileDir = Join-Path $dshHome 'profiles\verify'
-@'
-{
-  "name": "dsh-profile-verify",
-  "private": true,
-  "dependencies": {
-    "dsh-preset-builder": "link:D:/Work/Plugin-DSH/dsh-preset-builder/bundle"
-  },
-  "dsh": {
-    "profile": {
-      "bundles": ["@deepseek-ai/dsh-base", "@deepseek-ai/dsh-web-app", "dsh-preset-builder"]
-    }
-  }
-}
-'@ | Set-Content (Join-Path $profileDir 'package.json') -Encoding utf8
-
-Push-Location $profileDir
-pnpm install --ignore-scripts
-Pop-Location
-
-dsh --profile verify --host 127.0.0.1 --port 57390 --no-open
+pwsh test/ui-smoke.ps1                 # 结构断言
+pwsh test/ui-smoke.ps1 -Screenshots    # 另存 compare.png / simple.png
+pwsh test/ui-smoke.ps1 -Keep           # 保留日志与截图，便于失败排查
 ```
 
-打开打印出的 URL（带 token），进入「预设工坊」。
+脚本当前断言：
 
-## 必查断言
+- 1366×839 视口下，侧栏展开与折叠时 `document.documentElement.scrollWidth === innerWidth`（无横向溢出）。
+- 对比页标准 vs 修改过 persona 的草稿：至少 20 行、配置摘要 > 0、配置 diffbar > 0；展开后字段值出现；折叠侧栏后表格宽度 ≥ 1100。
+- 简易页复制 → 清空 ID：输入框保持为空、placeholder 含「留空自动生成」、提示含「当前将使用」、保存按钮可用。
+- 非法 ID 显示错误并禁用保存；保存成功后真实 ID 回填且输入框只读。
+- 捕获窗口 `error` / `unhandledrejection`。
+
+`ego-browser` 不继承任意环境变量，所以 wrapper 把 URL 通过 `globalThis.__UI_SMOKE_CONFIG__` 注入脚本，而不是依赖 `$env:UI_SMOKE_URL`。手工直跑时：
+
+```powershell
+$config = @{ url = 'http://127.0.0.1:<port>/?token=...' } | ConvertTo-Json -Compress
+$source = "globalThis.__UI_SMOKE_CONFIG__ = $config`n" + (Get-Content test/ui-smoke.mjs -Raw)
+$source | ego-browser nodejs
+```
+
+## 视觉评审（脚本兜不住）
+
+用 `-Screenshots` 后在 `.tmp-ui-smoke/screenshots/` 查看 `compare.png` 和 `simple.png`，逐项看：
+
+- 对比页是否真正用满可用宽度，而不是把内容挤在中间一条；行高、字号、留白是否适合连续看 30 行。
+- 简易页的空 ID 是否以浅色 placeholder 呈现，hint 是否给出实际将使用的 ID；保存后是否显示真实 ID。
+- 顶栏三页胶囊是否居中，副标题是否在放不下时省略，右侧操作是否被挤出。
+- 1366×839 下侧栏展开/折叠两种状态都看一遍；窗口最小化时截图会失败，先恢复窗口。
+
+## 手动回归（脚本之外）
 
 1. 新建空白预设，添加行：
    - 模块 `@deepseek-ai/dsh-skill-filesystem`，行 id `skill-filesystem` → **不出现**红色 Host 冲突。
@@ -47,21 +52,17 @@ dsh --profile verify --host 127.0.0.1 --port 57390 --no-open
    - 抽屉出现「未开 Bundle」组；
    - 收录其中默认启用的行 → 编辑器出现黄色框、黄边行和「未开 Bundle」；
    - 保存不阻断，但刷新后再次显示黄色提示。
-4. 窄窗口/小屏：警告框、列表、按钮换行不溢出；`?` 气泡不被抽屉裁切。
-5. 深浅色：红/黄警告的正文、徽标仍可读；宿主 token 缺失时回退色仍可读。
-6. 顶栏三页胶囊导航「简易 / 标准 / 对比」居中，副标题随页变化且放不下时省略；左侧预设项的排序数字 `#n` 右对齐。
-7. 简易页：选 official standard →「复制并编辑」生成副本；清空 ID 后输入框保持为空并显示浅色「留空自动生成」，提示当前将使用的 ID；改名称、ID、描述与人设 → 保存 → `/preset-source?id=<副本>` 的 `prefix` 与描述一致，刷新后仍在且 ID 只读；输入非法 ID 时显示错误并禁用保存；放弃副本后选择框回到可用状态。
-8. 对比页选 A=standard、B=ptc：左右并排、默认全部行；相同行不铺底色、标记列为绿色 `=`；`tool-schedule` 为仅右侧绿色并在末尾；状态差异为琥珀色；每侧模块名后显示配置摘要。
-9. 简易页复制 Standard 并改 persona 后进对比页：A 侧标「含未保存草稿」，配置行显示蓝色 `Δ` 与整行 diffbar「1 项配置不同」，展开后按 `prefix` 显示 A/B 值；勾选「只看差异」只剩差异行；交换 A/B 后左右互换。
-10. 1366px 视口（侧栏折叠）：对比页内容不横向溢出、顶部右操作不被挤出；行高约 49px，配置摘要可见；表宽随可用空间扩展。
+4. 深浅色主题：红/黄警告的正文、徽标仍可读；宿主 token 缺失时回退色仍可读。
+5. 对比页勾选「只看差异」只剩差异行；交换 A/B 后左右互换且草稿标识跟随；`?` 气泡不被抽屉裁切。
+6. 详情页锁定/解锁、放弃改动、删除预设后选择框回到可用状态。
 
-## 清理
+脚本已覆盖导航、对比页和简易页的结构部分；改动 UI 布局或简易页字段时，优先跑脚本，再按上面的视觉清单抽查。
 
-```powershell
-Get-NetTCPConnection -LocalPort 57390 -State Listen -ErrorAction SilentlyContinue |
-  ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }
-Remove-Item -Recurse -Force $dshHome -ErrorAction SilentlyContinue
-Remove-Item Env:DSH_HOME
-```
+## 排查
+
+- `ElementResolutionError` / 元素被遮挡：弹窗先关，侧栏先展开；定位用 `aria-label`、`.ps-topnav button:nth-child(n)`、`role`，不要用 `text=中文`（「简易」会同时匹配预设名）。
+- `Cannot capture a screenshot while the window is minimized`：恢复 ego 窗口，或先不带 `-Screenshots` 跑断言。
+- `ego-browser` 报无法连接 bootstrap：换 full access 终端；这是沙箱边界，不是脚本问题。
+- 失败时加 `-Keep`，看 `.tmp-ui-smoke/dsh.out.log`、`dsh.err.log`；确认端口进程已清理。
 
 不要用桌面 profile 做破坏性检查；不要删除 `~/.dsh/profiles` 下的已有配置。

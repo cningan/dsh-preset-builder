@@ -68,14 +68,13 @@ jobs:
             }
           ' "$npm_version"
 
-      - name: Install runtime dependencies
+      - name: Install dependencies
         working-directory: bundle
         run: npm install --no-audit --no-fund
 
       - name: Check
-        run: |
-          node --check bundle/client.js
-          node --check bundle/index.js
+        working-directory: bundle
+        run: npm run check
 
       - name: Test
         run: node test/unit.mjs

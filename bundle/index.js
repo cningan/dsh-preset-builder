@@ -126,15 +126,6 @@ function sendJson(res, body, status = 200) {
   res.end(text)
 }
 
-function sendText(res, text, status = 200) {
-  res.writeHead(status, {
-    'content-type': 'text/plain; charset=utf-8',
-    'cache-control': 'no-store',
-    'content-length': Buffer.byteLength(text),
-  })
-  res.end(text)
-}
-
 function loopbackName(name) {
   return name === 'localhost' || name === '127.0.0.1' || name === '[::1]' || name === '::1'
 }

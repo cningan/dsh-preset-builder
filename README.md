@@ -67,18 +67,22 @@ v0.6.0 installable. Verified in an **isolated DSH instance** (separate `DSH_HOME
 ## Verification
 
 - `node test/unit.mjs`: managed-block round trip, empty-root insertion, idempotence, platform expression parsing, `!!js` tags, the adoption/tombstone/lock model, multiline block scalars, preset-only package merging, and the comparison contract (group-state inheritance, row-id alignment, state/config/path classification, field-level config flattening, duplicate ids, key-order-independent configs).
-- `ci.yml`: install, syntax checks, 20 unit checks, and `npm pack --dry-run` on push/PR.
+- `ci.yml`: install, ESLint + syntax checks, 20 unit checks, and `npm pack --dry-run` on push/PR.
+- `pwsh test/ui-smoke.ps1`: isolated UI smoke (temporary `DSH_HOME` + profile) asserting the 1366px layout, compare previews/diffbar, and the Simple-page ID empty-state/validation/save path. Add `-Screenshots` for the visual review.
 - HTTP smoke: `/state`, `/preset-source`, `/save`, `/presets/delete` and `/presets/lock`; deletion removes the preset from the registry immediately, and a locked preset ignores save payloads.
 
 ## Release
 
 Day-to-day releases run in GitHub Actions; do not publish by hand:
 
-- `ci.yml`: install, syntax checks, 20 unit checks, and `npm pack --dry-run` on push/PR.
+- `ci.yml`: install, ESLint + syntax checks, 20 unit checks, and `npm pack --dry-run` on push/PR.
 - `publish.yml`: a `v*` tag publishes through GitHub OIDC (Trusted Publishing) and opens a GitHub Release with the tgz; the tag must equal `bundle/package.json`'s version or the run fails first.
 - Release flow: change code → `npm version patch|minor|major` inside `bundle/` → `git push --follow-tags`.
 - Only the very first publish of a new package is allowed to run `npm publish` manually.
+- **After a repository rename**, npm's trusted-publisher relationship still points at the old owner/repo. Run `npm trust list dsh-preset-builder` and re-point it (or publish a `vX.Y.Z-rc.1` first); a pushed tag that failed must not be reused. Keep `bundle/package.json`'s `repository.url` on the current repository.
 
 ## Development
 
-Requires the DSH desktop app with a profile. Prepare the bundle directory, then install it with `plugin_manager` `install_bundle` against this package directory (`bundle/`). See [SPEC.md](SPEC.md) for the contract, [GLOSSARY.md](GLOSSARY.md) for the domain vocabulary, and [test/ui-smoke.md](test/ui-smoke.md) for the isolated UI smoke procedure.
+Requires the DSH desktop app with a profile. Prepare the bundle directory, then install it with `plugin_manager` `install_bundle` against this package directory (`bundle/`).
+
+Commands run inside `bundle/`: `npm install`, `npm run check` (ESLint + syntax), `npm test` (20 unit checks). The UI smoke runs from the repository root: `pwsh test/ui-smoke.ps1` (needs `dsh`, `pnpm`, `ego-browser`, and a full-access shell). See [SPEC.md](SPEC.md) for the contract, [GLOSSARY.md](GLOSSARY.md) for the domain vocabulary, and [test/ui-smoke.md](test/ui-smoke.md) for the isolated UI smoke procedure.

@@ -101,6 +101,8 @@ DSH 的 Agent 预设决定新会话可用的工具与运行方式。当前 Web �
 - 条件行验证：独立 profile 插入一条 `disabled: !!js process.env.PRESET_STUDIO_PROBE !== '1'` 的探针行后，同一包内只有静态行显示「收录此行」，条件行标「条件启用」且无收录按钮；「收录可用行」保存结果只含静态行，条件行未被写入。
 - YAML 预览验证：独立实例新建空白预设，切到 YAML 直接看到 `- id: preset-studio-preset`、`name: "新预设"` 与 `plugins: []`，并标注「草稿预览」；未保存时不再出现「读取 YAML 失败」。`/state` 同时返回 `titles.zh` 与 `titles.en`，客户端按界面语言解析。
 - 对比契约单测（`bundle/lib/diff.mjs` 为 golden contract）：组状态继承（禁用组 → 子行禁用，条件组 → 子行条件）、按 row id 对齐、只在一边/启停/配置/分组路径的分类与计数、重复 id 的稳定键、配置键序无关、相同预设全为 same、`configFields` 的叶子路径与数组下标、`configFieldDiff` 的 added/removed/changed。
+- 静态检查：`bundle/` 的 `npm run check` 先跑 ESLint（`no-unused-vars`、`no-undef`、`no-dupe-keys`、`no-unreachable`），再做语法检查；CI 通过同一条命令执行。
+- UI 冒烟：`pwsh test/ui-smoke.ps1` 启动临时 `DSH_HOME`/profile/动态端口，断言 1366×839 下侧栏开合无横向溢出、对比页行/配置摘要/diffbar、简易页 ID 的空值占位/非法校验/保存回填；脚本只做结构断言，密度与美观由 `test/ui-smoke.md` 的截图清单人工评审。
 - 对比页验证：独立实例中 official standard vs ptc 左右并排、默认渲染全部行（29 行与 30 行），相同行不铺底色且标记列为绿色 `=`，`tool-schedule` 显示为仅右侧绿色并追加在末尾；状态差异为琥珀色；每侧显示配置摘要，1366px 视口无横向溢出。
 - 字段级差异验证：简易页复制 Standard 并改 persona 后进对比页，A 侧标「含未保存草稿」，配置行显示蓝色 `Δ` 与整行 diffbar「1 项配置不同」；展开后按 `prefix` 显示 A/B 值，可收起。勾选「只看差异」后只剩差异行，交换 A/B 后左右互换且草稿标识跟随到 B。
 - 简易页验证：独立实例中选择 official standard →「复制并编辑」生成 `standard 简易版`，ID 为 `standard-simple`；清空 ID 后输入框为空且显示「留空自动生成」占位与当前 ID 提示，保存仍成功；改名称、描述、persona 后保存，`/preset-source?id=standard-simple` 的字段与输入一致，刷新后仍在且 ID 变为只读。输入非法 ID 时显示错误并禁用保存；放弃副本后选择框回到可用状态。

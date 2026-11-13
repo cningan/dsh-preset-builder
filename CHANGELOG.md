@@ -1,5 +1,12 @@
 # 变更记录
 
+## 未发布 — 开发护栏
+
+- 新增 `test/ui-smoke.mjs` + `test/ui-smoke.ps1`：临时 `DSH_HOME`、动态端口、临时 profile，自动关弹窗/开侧栏，断言 1366px 无横向溢出、对比页配置摘要/diffbar，以及简易页 ID 的清空占位、非法校验和保存回填；`-Screenshots` 供视觉评审。
+- `bundle/client.js` / `bundle/index.js` 接入 ESLint（`no-unused-vars`、`no-undef`、`no-dupe-keys`、`no-unreachable`），并修掉 lint 发现的重复 `cancel` i18n 键和两处死代码；`npm run check` 先跑 lint，CI 同步生效。
+- 发布文档补仓库改名后的 npm Trusted Publishing 重配步骤，以及 `-rc` 验证建议；README 开发段明确命令目录。
+- 无 shipped 行为变化，未发布新的 npm 版本。
+
 ## 0.6.0 — 对比信息密度与简易页字段
 
 - 对比页改为真正利用横向空间：内容区上限 1440px，补上 `box-sizing` 修复侧栏展开时的横向溢出；行高、字号和间距整体放大，不再挤成细线。

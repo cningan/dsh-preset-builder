@@ -132,7 +132,6 @@ window.__ModuleLoader__.load({
       isolate: 'isolate',
       isolateHint: 'JSON，例如 {"planMode": true}',
       apply: '应用',
-      cancel: '取消',
       enable: '启用',
       disable: '禁用',
       remove: '移出',
@@ -356,7 +355,6 @@ window.__ModuleLoader__.load({
       isolate: 'isolate',
       isolateHint: 'JSON, e.g. {"planMode": true}',
       apply: 'Apply',
-      cancel: 'Cancel',
       enable: 'Enable',
       disable: 'Disable',
       remove: 'Remove',
@@ -2478,12 +2476,6 @@ window.__ModuleLoader__.load({
         mutate(plugins)
         return { ...preset, plugins }
       }))
-
-      const usedRowIds = (preset) => {
-        const used = new Set()
-        walkRows(preset.plugins, (row) => { if (typeof row.id === 'string') used.add(row.id) })
-        return used
-      }
 
       const nextOrder = () => {
         const values = draft.map((preset) => typeof preset.order === 'number' ? preset.order : 0)

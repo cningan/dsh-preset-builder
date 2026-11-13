@@ -67,17 +67,22 @@ v0.6.0 可安装。已在**独立 DSH 实例**（独立 `DSH_HOME` 与临时 pro
 ## 验证
 
 - `node test/unit.mjs`：托管块往返、空根替换、幂等、平台表达式解析、`!!js` 标签、接管/墓碑/锁定模型、多行块标量、仅预设包归并，以及对比契约（组状态继承、按 row id 对齐、启停/配置/分组差异分类、字段级配置摊平、重复 id、配置键序无关）。
+- `ci.yml`：push/PR 安装依赖、ESLint + 语法检查、20 项单测、`npm pack --dry-run`。
+- `pwsh test/ui-smoke.ps1`：隔离 UI 冒烟（临时 `DSH_HOME` + profile），断言 1366px 布局、对比页配置摘要/diffbar、简易页 ID 的清空/校验/保存链路；加 `-Screenshots` 另存视觉评审截图。
 - HTTP 冒烟：`/state`、`/preset-source`、`/save`、`/presets/delete`、`/presets/lock` 均通过；删除后 registry 立即消失，锁定期间保存载荷被忽略。
 
 ## 发布
 
 日常发布由 GitHub Actions 完成，不手工 `npm publish`：
 
-- `ci.yml`：push/PR 安装依赖、语法检查、20 项单测、`npm pack --dry-run`。
+- `ci.yml`：push/PR 安装依赖、ESLint + 语法检查、20 项单测、`npm pack --dry-run`。
 - `publish.yml`：推 `v*` tag 触发，经 GitHub OIDC（Trusted Publishing）发布到 npm，并自动创建带 tgz 的 GitHub Release；tag 必须等于 `bundle/package.json` 的 version，否则先失败。
 - 发布动作：改代码 → 在 `bundle/` 下 `npm version patch|minor|major` → `git push --follow-tags`。
 - 只有首次建包允许人工 `npm publish`。
+- **仓库改名后**，npm 的 trusted publisher 仍指向旧 owner/repo；先跑 `npm trust list dsh-preset-builder` 并重配（或先发一个 `vX.Y.Z-rc.1` 验证 OIDC），失败过的 tag 不要复用。`bundle/package.json` 的 `repository.url` 保持与当前仓库一致。
 
 ## 开发
 
-需要带 profile 的 DSH 桌面端。准备好 bundle 目录后，用 `plugin_manager` 的 `install_bundle` 指向本仓库的 `bundle/` 安装。契约见 [SPEC.md](SPEC.md)，领域词汇见 [GLOSSARY.md](GLOSSARY.md)，隔离 UI 冒烟步骤见 [test/ui-smoke.md](test/ui-smoke.md)。
+需要带 profile 的 DSH 桌面端。准备好 bundle 目录后，用 `plugin_manager` 的 `install_bundle` 指向本仓库的 `bundle/` 安装。
+
+命令在 `bundle/` 下运行：`npm install`、`npm run check`（ESLint + 语法）、`npm test`（20 项单测）。UI 冒烟从仓库根运行：`pwsh test/ui-smoke.ps1`（需要 `dsh`、`pnpm`、`ego-browser`，以及 full-access 终端）。契约见 [SPEC.md](SPEC.md)，领域词汇见 [GLOSSARY.md](GLOSSARY.md)，隔离 UI 冒烟步骤见 [test/ui-smoke.md](test/ui-smoke.md)。
