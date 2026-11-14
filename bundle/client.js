@@ -950,6 +950,61 @@ window.__ModuleLoader__.load({
       return { items, summary }
     }
 
+    // ---------- view memory ----------
+
+    /**
+     * Where the user was looking. The panel unmounts whenever another sidebar
+     * entry takes the main slot, so React state alone cannot survive a trip to
+     * the Conversation and back. Only the view is remembered here; every mount
+     * still reloads `/state` from the Host, and a remembered id that no longer
+     * exists falls back to the same default the component would have picked.
+     */
+    const MEMORY_KEY = 'dsh.preset-studio.view.v1'
+    const MEMORY_PAGES = ['simple', 'standard', 'compare']
+    const MEMORY_VIEWS = ['structure', 'package']
+    const MEMORY_TABS = ['compose', 'yaml']
+
+    /** Last successful `/state` body, reused while the panel remounts. */
+    let warmState = null
+
+    function memoryObject(value) {
+      return value !== null && typeof value === 'object' && !Array.isArray(value) ? value : {}
+    }
+
+    function readMemory() {
+      try {
+        const raw = window.localStorage?.getItem(MEMORY_KEY)
+        if (typeof raw !== 'string' || raw.length === 0) return {}
+        const value = memoryObject(JSON.parse(raw))
+        return value.v === 1 ? value : {}
+      } catch {
+        // Storage disabled, full, or a record written by another version: start clean.
+        return {}
+      }
+    }
+
+    function writeMemory(patch) {
+      try {
+        window.localStorage?.setItem(MEMORY_KEY, JSON.stringify({ ...readMemory(), ...patch, v: 1 }))
+      } catch {
+        // A full or unavailable store only costs the next restore.
+      }
+    }
+
+    function memoryText(value) {
+      return typeof value === 'string' && value.length > 0 ? value : null
+    }
+
+    function memoryOneOf(value, allowed, fallback) {
+      return allowed.includes(value) ? value : fallback
+    }
+
+    function memoryFlags(value) {
+      const flags = {}
+      for (const [key, flag] of Object.entries(memoryObject(value))) if (flag === true) flags[key] = true
+      return flags
+    }
+
     // ---------- presentation primitives ----------
 
     function Icon({ name, size = 14, style }) {
@@ -1879,11 +1934,13 @@ window.__ModuleLoader__.load({
 
     function SimplePage({ api }) {
       const t = api.t
+      const remembered = React.useMemo(() => readMemory(), [])
+      const rememberedSimple = memoryObject(remembered.simple)
       const initialManaged = api.selected?.kind === 'managed'
         ? api.selected.id
         : (api.draft.find((preset) => preset.locked !== true)?.id ?? null)
-      const [workingId, setWorkingId] = React.useState(initialManaged)
-      const [baseId, setBaseId] = React.useState(initialManaged ?? api.selectedId ?? api.presetChoices[0]?.id ?? null)
+      const [workingId, setWorkingId] = React.useState(() => memoryText(rememberedSimple.workingId) ?? initialManaged)
+      const [baseId, setBaseId] = React.useState(() => memoryText(rememberedSimple.baseId) ?? (initialManaged ?? api.selectedId ?? api.presetChoices[0]?.id ?? null))
       const [notice, setNotice] = React.useState(null)
       const [copying, setCopying] = React.useState(false)
       const [idText, setIdText] = React.useState(initialManaged ?? '')
@@ -1912,6 +1969,10 @@ window.__ModuleLoader__.load({
         setBaseId(next)
         setWorkingId(api.localPreset(next) !== null ? next : null)
       }, [base, api.presetChoices, api.draft])
+
+      React.useEffect(() => {
+        writeMemory({ simple: { workingId, baseId } })
+      }, [workingId, baseId])
 
       const pick = (id) => {
         setNotice(null)
@@ -2222,13 +2283,24 @@ window.__ModuleLoader__.load({
         return choices.find((choice) => choice.id !== left)?.id ?? left
       }
       const initialLeft = api.selectedId ?? choices[0]?.id ?? null
-      const [leftId, setLeftId] = React.useState(initialLeft)
-      const [rightId, setRightId] = React.useState(() => preferredRight(initialLeft))
-      const [onlyDiff, setOnlyDiff] = React.useState(false)
+      const remembered = React.useMemo(() => readMemory(), [])
+      const rememberedCompare = memoryObject(remembered.compare)
+      const rememberedLeft = memoryText(rememberedCompare.leftId)
+      const rememberedRight = memoryText(rememberedCompare.rightId)
+      // A remembered pair survives only while the workbench still selects the
+      // same preset; selecting another preset means this comparison is new.
+      const keepPair = rememberedLeft !== null && rememberedCompare.selectedId === api.selectedId
+      const [leftId, setLeftId] = React.useState(() => keepPair ? rememberedLeft : initialLeft)
+      const [rightId, setRightId] = React.useState(() => rememberedRight !== null ? rememberedRight : preferredRight(initialLeft))
+      const [onlyDiff, setOnlyDiff] = React.useState(() => rememberedCompare.onlyDiff === true)
       const [expanded, setExpanded] = React.useState({})
       const [reload, setReload] = React.useState(0)
       const [remoteLeft, setRemoteLeft] = React.useState({ status: 'idle' })
       const [remoteRight, setRemoteRight] = React.useState({ status: 'idle' })
+
+      React.useEffect(() => {
+        writeMemory({ compare: { leftId, rightId, onlyDiff, selectedId: api.selectedId } })
+      }, [leftId, rightId, onlyDiff])
 
       React.useEffect(() => {
         const ids = new Set(choices.map((choice) => choice.id))
@@ -2359,23 +2431,30 @@ window.__ModuleLoader__.load({
     }
 
     function StudioPage({ t, resolveText }) {
-      const [state, setState] = React.useState(null)
-      const [draft, setDraft] = React.useState([])
-      const [saved, setSaved] = React.useState([])
-      const [baseRevision, setBaseRevision] = React.useState('')
-      const [selectedId, setSelectedId] = React.useState(null)
-      const [view, setView] = React.useState('structure')
-      const [tab, setTab] = React.useState('compose')
+      const remembered = React.useMemo(() => readMemory(), [])
+      const warm = warmState
+      const [state, setState] = React.useState(() => warm === null ? null : warm.body)
+      const [draft, setDraft] = React.useState(() => warm === null ? [] : clone(warm.managed))
+      const [saved, setSaved] = React.useState(() => warm === null ? [] : clone(warm.managed))
+      const [baseRevision, setBaseRevision] = React.useState(() => warm === null ? '' : warm.revision)
+      const [selectedId, setSelectedId] = React.useState(() => {
+        const rememberedId = memoryText(remembered.selectedId)
+        if (rememberedId !== null) return rememberedId
+        const presets = warm === null ? [] : (warm.body.presets ?? [])
+        return presets.find((preset) => preset.kind !== 'official')?.id ?? presets[0]?.id ?? null
+      })
+      const [view, setView] = React.useState(() => memoryOneOf(remembered.view, MEMORY_VIEWS, 'structure'))
+      const [tab, setTab] = React.useState(() => memoryOneOf(remembered.tab, MEMORY_TABS, 'compose'))
       const [menuOpen, setMenuOpen] = React.useState(false)
       const [saving, setSaving] = React.useState(false)
       const [notice, setNotice] = React.useState(null)
-      const [status, setStatus] = React.useState({ phase: 'loading', message: '' })
-      const [collapsed, setCollapsed] = React.useState({})
+      const [status, setStatus] = React.useState(() => warm === null ? { phase: 'loading', message: '' } : { phase: 'ready', message: '' })
+      const [collapsed, setCollapsed] = React.useState(() => memoryFlags(remembered.collapsedGroups))
       const [configEditorId, setConfigEditorId] = React.useState(null)
       const [isolateEditorId, setIsolateEditorId] = React.useState(null)
-      const [selectedGroupId, setSelectedGroupId] = React.useState(null)
+      const [selectedGroupId, setSelectedGroupId] = React.useState(() => memoryText(remembered.targetGroupId))
       const [addRowOpen, setAddRowOpen] = React.useState(false)
-      const [page, setPage] = React.useState('standard')
+      const [page, setPage] = React.useState(() => memoryOneOf(remembered.page, MEMORY_PAGES, 'standard'))
       const [dataVersion, setDataVersion] = React.useState(0)
       const compareCache = React.useRef(new Map())
 
@@ -2399,6 +2478,7 @@ window.__ModuleLoader__.load({
           setDraft(managed)
           setSaved(clone(managed))
           setBaseRevision(body.revision ?? '')
+          warmState = { body, managed: clone(managed), revision: body.revision ?? '' }
           compareCache.current.clear()
           setDataVersion((value) => value + 1)
           setSelectedId((current) => (body.presets ?? []).some((preset) => preset.id === current)
@@ -2412,6 +2492,14 @@ window.__ModuleLoader__.load({
 
       React.useEffect(() => { void load() }, [load])
 
+      React.useEffect(() => {
+        writeMemory({
+          page, selectedId, view, tab,
+          collapsedGroups: collapsed,
+          targetGroupId: selectedGroupId,
+        })
+      }, [page, selectedId, view, tab, collapsed, selectedGroupId])
+
       const selected = React.useMemo(() => {
         const own = draft.find((preset) => preset.id === selectedId)
         if (own !== undefined) {
@@ -2421,6 +2509,14 @@ window.__ModuleLoader__.load({
         const meta = (state?.presets ?? []).find((preset) => preset.id === selectedId)
         return meta ?? null
       }, [draft, state, selectedId])
+
+      // A remembered target group may belong to another preset or to a group the
+      // user removed meanwhile; drop it rather than aim new rows at a dead id.
+      React.useEffect(() => {
+        if (selectedGroupId === null || selected === null || !Array.isArray(selected.plugins)) return
+        const found = locate(selected.plugins, selectedGroupId)
+        if (found === undefined || !isGroup(found.row)) setSelectedGroupId(null)
+      }, [selected, selectedGroupId])
 
       const officialPresets = React.useMemo(() => (state?.presets ?? []).filter((preset) => preset.kind === 'official'), [state])
       const foreignPresets = React.useMemo(() => (state?.presets ?? []).filter((preset) => preset.kind === 'foreign'), [state])

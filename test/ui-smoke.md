@@ -22,7 +22,9 @@ pwsh test/ui-smoke.ps1 -Keep           # 保留日志与截图，便于失败排
 - 对比页标准 vs 修改过 persona 的草稿：至少 20 行、配置摘要 > 0、配置 diffbar > 0；展开后字段值出现；折叠侧栏后表格宽度 ≥ 1100。
 - 简易页复制 → 清空 ID：输入框保持为空、placeholder 含「留空自动生成」、提示含「当前将使用」、保存按钮可用。
 - 非法 ID 显示错误并禁用保存；保存成功后真实 ID 回填且输入框只读。
-- 捕获窗口 `error` / `unhandledrejection`。
+- 界面记忆：切到另一个侧栏面板后工作台确实卸载；回来后仍在对比页，A/B 与「只看差异」保持，标准页的选中预设也不变。
+- 整页刷新后仍落在同一页、同一预设与同一对比组合；断言里用一个旧文档标记消失来确认页面真的重载了。
+- 捕获窗口 `error` / `unhandledrejection`（刷新后再捕获一次）。
 
 `ego-browser` 不继承任意环境变量，所以 wrapper 把 URL 通过 `globalThis.__UI_SMOKE_CONFIG__` 注入脚本，而不是依赖 `$env:UI_SMOKE_URL`。手工直跑时：
 
@@ -63,6 +65,7 @@ $source | ego-browser nodejs
 - `ElementResolutionError` / 元素被遮挡：弹窗先关，侧栏先展开；定位用 `aria-label`、`.ps-topnav button:nth-child(n)`、`role`，不要用 `text=中文`（「简易」会同时匹配预设名）。
 - `Cannot capture a screenshot while the window is minimized`：恢复 ego 窗口，或先不带 `-Screenshots` 跑断言。
 - `ego-browser` 报无法连接 bootstrap：换 full access 终端；这是沙箱边界，不是脚本问题。
+- 本机没装 `ego-browser` 时脚本无法启动；可临时用 Edge `--headless=new --remote-debugging-port` + CDP 手工执行同一组断言（2026-11 的界面记忆验证即如此），但不要为此替换仓库里的脚本。
 - 失败时加 `-Keep`，看 `.tmp-ui-smoke/dsh.out.log`、`dsh.err.log`；确认端口进程已清理。
 
 不要用桌面 profile 做破坏性检查；不要删除 `~/.dsh/profiles` 下的已有配置。

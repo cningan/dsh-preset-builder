@@ -9,6 +9,7 @@ DSH's Web UI can show a preset's configuration (read-only YAML) and make one the
 ## What it does
 
 - A three-page capsule nav in the top bar: **Simple**, **Standard**, **Compare**. Standard is the three-column workbench; Simple edits only the name and persona prompt; Compare puts any two presets side by side.
+- **View memory**: switching to another sidebar panel or reloading the page reopens the workshop on the page, preset, structure/package view, composition/YAML tab, collapsed groups and collection target you left it on; Compare keeps its A/B pair and the "only differences" filter, and Simple keeps its base and the preset it was editing. Only the position is remembered — every open still reloads state from the Host, and unsaved edits are not kept.
 - Simple page: pick any preset as the base, then change its name, ID, description and persona prompt and save; an official or foreign base is copied to a custom preset first. The ID is editable until the first save and falls back to an auto-generated one when left blank. Rows, groups, packages and YAML stay hidden to keep the first edit small.
 - Left-sidebar entry **预设工坊 / Preset Workshop** with a three-column workspace: preset list, composition area, package drawer.
 - Two categories only: the four official presets are permanently read-only; every other preset is a **custom** preset with the same management surface.
