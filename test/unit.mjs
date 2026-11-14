@@ -13,6 +13,7 @@ import { emitListItem, parseYaml } from '../bundle/lib/yaml.mjs'
 import { addInactiveBundlePackages, addPresetOnlyPackages, pickText, textMap } from '../bundle/lib/inventory.mjs'
 import { conflictUsage, inactiveUsage, isCollectableRow } from '../bundle/lib/rules.mjs'
 import { canonicalConfig, configFieldDiff, configFields, diffPresetRows, flattenPresetRows } from '../bundle/lib/diff.mjs'
+import { evaluateExpression, resolvePluginConfig, resolveValue } from '../bundle/lib/expressions.mjs'
 
 let passed = 0
 function test(name, fn) {
@@ -359,5 +360,84 @@ try {
 }
 passed += 1
 console.log(`ok ${passed} - inactive bundles expose their rows with bundle metadata`)
+
+test('removing the managed block keeps the profile patch a YAML array', () => {
+  const block = buildBlock([{ id: 'x', name: 'X', plugins: [] }])
+  const withBlock = replaceBlock('[]\n', block)
+  assert.equal(withBlock.includes(block), true)
+  assert.deepEqual(parseYaml(replaceBlock(withBlock, '')), [])
+  const commented = replaceBlock('# keep me\n[]\n', block)
+  const removed = replaceBlock(commented, '')
+  assert.deepEqual(parseYaml(removed), [])
+  assert.match(removed, /# keep me/)
+})
+
+test('config expressions resolve where the row is read; control keeps its expression', () => {
+  const scope = { baseUrl: 'file:///profile/cordis.patch.yml', answer: 40 }
+  const plugins = [
+    {
+      id: 'skill-filesystem',
+      name: '@deepseek-ai/dsh-skill-filesystem',
+      config: { customSkillDirs: [{ __js: "new URL('./skills', baseUrl).pathname" }, 'C:/plain'] },
+    },
+    { id: 'tool-pwsh', name: '@deepseek-ai/dsh-tool-pwsh', disabled: { __js: "process.platform !== 'win32'" }, config: { nested: { depth: [{ __js: 'answer + 2' }] } } },
+    {
+      id: 'group',
+      name: 'cordis:group',
+      group: true,
+      isolate: { timer: true },
+      config: [{ id: 'inside', name: '@deepseek-ai/x', config: { value: { __js: 'answer' } } }],
+    },
+  ]
+  const resolved = resolvePluginConfig(plugins, (expression) => evaluateExpression(scope, expression))
+  assert.deepEqual(resolved.failures, [])
+  assert.equal(resolved.plugins[0].config.customSkillDirs[0], '/profile/skills')
+  assert.equal(resolved.plugins[0].config.customSkillDirs[1], 'C:/plain')
+  assert.deepEqual(resolved.plugins[1].disabled, { __js: "process.platform !== 'win32'" })
+  assert.equal(resolved.plugins[1].config.nested.depth[0], 42)
+  assert.deepEqual(resolved.plugins[2].isolate, { timer: true })
+  assert.equal(resolved.plugins[2].config[0].config.value, 40)
+  assert.deepEqual(plugins[0].config.customSkillDirs[0], { __js: "new URL('./skills', baseUrl).pathname" })
+})
+
+test('an expression that cannot evaluate is reported and left in place', () => {
+  const resolved = resolvePluginConfig(
+    [{ id: 'row', name: '@deepseek-ai/x', config: { dirs: [{ __js: 'missingHelper(1)' }] } }],
+    (expression) => evaluateExpression({ baseUrl: 'file:///profile/cordis.patch.yml' }, expression),
+  )
+  assert.deepEqual(resolved.plugins[0].config.dirs[0], { __js: 'missingHelper(1)' })
+  assert.equal(resolved.failures.length, 1)
+  assert.match(resolved.failures[0].error, /missingHelper is not defined/)
+})
+
+test('a resolved absolute path survives the YAML round trip as a string', () => {
+  const path = 'C:\\Users\\u\\AppData\\Local\\Programs\\DeepSeek Harness\\resources\\app.asar\\dsh\\node_modules\\@deepseek-ai\\dsh-agent-preset\\skills'
+  const config = resolveValue({ customSkillDirs: [{ __js: 'process.execPath' }] }, () => path)
+  const block = buildBlock([{
+    id: 'cordis-copy',
+    name: 'Creator copy',
+    plugins: [{ id: 'skill-filesystem', name: '@deepseek-ai/dsh-skill-filesystem', config }],
+  }])
+  const parsed = readBlock(block)
+  assert.equal(parsed[0].plugins[0].config.customSkillDirs[0], path)
+  assert.equal(block.includes('!!js'), false)
+})
+
+test('a row that will not mount keeps its config and reports nothing', () => {
+  const scope = { baseUrl: 'file:///profile/cordis.patch.yml' }
+  const evaluate = (expression) => evaluateExpression(scope, expression)
+  const plugins = [
+    { id: 'off', name: '@deepseek-ai/x', disabled: true, config: { dirs: [{ __js: 'missingHelper(1)' }] } },
+    { id: 'conditional', name: '@deepseek-ai/y', disabled: { __js: 'true' }, config: { dirs: [{ __js: 'missingHelper(2)' }] } },
+    { id: 'group', name: 'cordis:group', group: true, disabled: true, config: [{ id: 'inner', name: '@deepseek-ai/z', config: { dirs: [{ __js: 'missingHelper(3)' }] } }] },
+    { id: 'on', name: '@deepseek-ai/w', config: { dirs: [{ __js: 'missingHelper(4)' }] } },
+  ]
+  const resolved = resolvePluginConfig(plugins, evaluate, { skipDisabled: true })
+  assert.deepEqual(resolved.plugins[0].config, { dirs: [{ __js: 'missingHelper(1)' }] })
+  assert.deepEqual(resolved.plugins[1].config, { dirs: [{ __js: 'missingHelper(2)' }] })
+  assert.deepEqual(resolved.plugins[2].config[0].config, { dirs: [{ __js: 'missingHelper(3)' }] })
+  assert.equal(resolved.failures.length, 1)
+  assert.match(resolved.failures[0].error, /missingHelper is not defined/)
+})
 
 console.log(`\n${passed} checks passed`)

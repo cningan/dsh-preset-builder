@@ -1005,6 +1005,182 @@ window.__ModuleLoader__.load({
       return flags
     }
 
+    /**
+     * Restore and remember the scroll offset of every container marked with
+     * `data-ps-scroll`. Containers appear and disappear with the page, so the
+     * hook rescans whenever the panel subtree changes.
+     *
+     * Content arrives asynchronously and a re-render can reset an offset at any
+     * moment, so the user's own scrolls are told apart from the page's resets: a
+     * jump to the top right after a content change is undone, while a scroll
+     * preceded by wheel/touch/pointer/key input is remembered.
+     */
+    function useScrollMemory(rootRef, enabled) {
+      const bound = React.useRef(new Set())
+      React.useEffect(() => {
+        const root = rootRef.current
+        if (!enabled || root === null) return undefined
+        let alive = true
+        let timer = null
+        const pending = new Set()
+        // element -> { value, seen, lastInput }: the offset to keep, the last
+        // offset the user scrolled to, and when the user last touched it.
+        const records = new Map()
+        const readScroll = () => memoryObject(readMemory().scroll)
+        const persist = (element) => {
+          const record = records.get(element)
+          if (record === undefined || record.seen === undefined) return
+          const key = element.dataset.psScroll
+          if (typeof key !== 'string' || key.length === 0) return
+          writeMemory({ scroll: { ...readScroll(), [key]: Math.round(record.seen) } })
+        }
+        const flush = () => {
+          timer = null
+          for (const element of pending) persist(element)
+          pending.clear()
+        }
+        const schedule = (element) => {
+          pending.add(element)
+          if (timer === null) timer = setTimeout(flush, 300)
+        }
+        /** The user scrolled this container in the last moment. */
+        const userRecent = (record) => Date.now() - record.lastInput < 600
+        /**
+         * Put a container back when a re-render resets it to the top. The page
+         * does that on its own schedule, so the offset is restored whenever the
+         * container returns to zero while the user is not the one scrolling.
+         */
+        const apply = (element) => {
+          const record = records.get(element)
+          if (record === undefined || !element.isConnected) return
+          if (record.value === undefined || record.value <= 0) return
+          if (userRecent(record)) return
+          if (element.scrollTop !== 0) return
+          const max = Math.max(0, element.scrollHeight - element.clientHeight)
+          if (max < record.value - 1) return
+          element.scrollTop = record.value
+        }
+        // Timestamp of the last content change: a container that jumps back to
+        // zero right after one was reset by the page, not by the user.
+        let mutatedAt = 0
+        const onScroll = (event) => {
+          const element = event.currentTarget
+          const record = records.get(element)
+          if (record === undefined) return
+          const top = element.scrollTop
+          if (top === 0) {
+            const contentChanged = Date.now() - mutatedAt < 200
+            const recent = userRecent(record)
+            if (contentChanged) {
+              // The page re-rendered and dropped the offset: put it back unless
+              // the user is scrolling at this very moment.
+              if (!recent) apply(element)
+              return
+            }
+            if (recent) {
+              record.value = 0
+              record.seen = 0
+              schedule(element)
+              return
+            }
+            apply(element)
+            return
+          }
+          if (record.value !== undefined && Math.abs(top - record.value) <= 1) return
+          record.value = top
+          record.seen = top
+          schedule(element)
+        }
+        // Touching the area hands the position back to the user mid-restore.
+        const onInput = (event) => {
+          const record = records.get(event.currentTarget)
+          if (record !== undefined) record.lastInput = Date.now()
+        }
+        const sizing = new window.ResizeObserver((entries) => {
+          for (const entry of entries) apply(entry.target)
+        })
+        /**
+         * Put a container back after a remount. Content arrives in waves, so the
+         * offset is re-applied until it has stayed put for a moment.
+         */
+        const restore = (element) => {
+          const record = records.get(element)
+          if (record === undefined || record.value === undefined) return
+          const deadline = Date.now() + 4000
+          let settled = 0
+          const tick = () => {
+            if (!alive || !element.isConnected) return
+            const current = records.get(element)
+            if (current === undefined || userRecent(current)) return
+            const top = element.scrollTop
+            if (top !== 0 && Math.abs(top - current.value) > 1) return
+            const max = Math.max(0, element.scrollHeight - element.clientHeight)
+            if (max >= current.value - 1) {
+              if (top === 0) {
+                element.scrollTop = current.value
+                settled = 0
+              } else if (++settled > 30) {
+                return
+              }
+            }
+            if (Date.now() > deadline) return
+            requestAnimationFrame(tick)
+          }
+          requestAnimationFrame(tick)
+        }
+        const scan = () => {
+          for (const element of root.querySelectorAll('[data-ps-scroll]')) {
+            if (!bound.current.has(element)) {
+              bound.current.add(element)
+              element.addEventListener('scroll', onScroll, { passive: true })
+              for (const name of ['wheel', 'touchstart', 'pointerdown', 'keydown']) {
+                element.addEventListener(name, onInput, { passive: true })
+              }
+              sizing.observe(element)
+              const value = readScroll()[element.dataset.psScroll]
+              if (typeof value === 'number' && value > 0) {
+                records.set(element, { value, lastInput: -Infinity })
+                restore(element)
+              } else {
+                records.set(element, { lastInput: -Infinity })
+              }
+            }
+            apply(element)
+          }
+          for (const element of records.keys()) {
+            if (!element.isConnected) {
+              persist(element)
+              records.delete(element)
+              bound.current.delete(element)
+            }
+          }
+        }
+        scan()
+        const observer = new MutationObserver(() => { if (!alive) return; mutatedAt = Date.now(); scan() })
+        observer.observe(root, { childList: true, subtree: true })
+        // A reload unmounts nothing, so persist on the way out as well.
+        const onLeave = () => { for (const element of records.keys()) persist(element) }
+        window.addEventListener('pagehide', onLeave)
+        return () => {
+          alive = false
+          observer.disconnect()
+          sizing.disconnect()
+          window.removeEventListener('pagehide', onLeave)
+          if (timer !== null) clearTimeout(timer)
+          for (const element of bound.current) {
+            element.removeEventListener('scroll', onScroll)
+            for (const name of ['wheel', 'touchstart', 'pointerdown', 'keydown']) {
+              element.removeEventListener(name, onInput)
+            }
+            persist(element)
+          }
+          bound.current.clear()
+          records.clear()
+        }
+      }, [enabled, rootRef])
+      return rootRef
+    }
+
     // ---------- presentation primitives ----------
 
     function Icon({ name, size = 14, style }) {
@@ -1619,7 +1795,7 @@ window.__ModuleLoader__.load({
           declared.size > 0
             ? h('div', { style: { ...styles.packageMeta, padding: '0 2px' } }, t('filteredHint'))
             : null),
-        h('div', { className: 'ps-scroll', style: { display: 'flex', flexDirection: 'column', gap: 8, minHeight: 0, flex: '1 1 auto', overflowY: 'auto', paddingRight: 6, paddingTop: 2, paddingBottom: 8 } },
+        h('div', { className: 'ps-scroll', 'data-ps-scroll': 'drawer', style: { display: 'flex', flexDirection: 'column', gap: 8, minHeight: 0, flex: '1 1 auto', overflowY: 'auto', paddingRight: 6, paddingTop: 2, paddingBottom: 8 } },
           empty
             ? h('div', { style: styles.empty },
                 h('div', { style: { display: 'flex', justifyContent: 'center', marginBottom: 8, opacity: 0.5 } }, h(Icon, { name: 'package', size: 26 })),
@@ -2434,8 +2610,8 @@ window.__ModuleLoader__.load({
       const remembered = React.useMemo(() => readMemory(), [])
       const warm = warmState
       const [state, setState] = React.useState(() => warm === null ? null : warm.body)
-      const [draft, setDraft] = React.useState(() => warm === null ? [] : clone(warm.managed))
-      const [saved, setSaved] = React.useState(() => warm === null ? [] : clone(warm.managed))
+      const [draft, setDraft] = React.useState(() => warm === null ? [] : clone(warm.draft ?? warm.managed))
+      const [saved, setSaved] = React.useState(() => warm === null ? [] : clone(warm.saved ?? warm.managed))
       const [baseRevision, setBaseRevision] = React.useState(() => warm === null ? '' : warm.revision)
       const [selectedId, setSelectedId] = React.useState(() => {
         const rememberedId = memoryText(remembered.selectedId)
@@ -2457,10 +2633,26 @@ window.__ModuleLoader__.load({
       const [page, setPage] = React.useState(() => memoryOneOf(remembered.page, MEMORY_PAGES, 'standard'))
       const [dataVersion, setDataVersion] = React.useState(0)
       const compareCache = React.useRef(new Map())
+      const rootRef = React.useRef(null)
+      useScrollMemory(rootRef, state !== null)
 
       const dirty = React.useMemo(() => JSON.stringify(draft) !== JSON.stringify(saved), [draft, saved])
 
-      const load = React.useCallback(async () => {
+      // Read by `load` and handed to the next mount, so that switching panels
+      // neither discards unsaved drafts nor forgets the dirty baseline.
+      const draftRef = React.useRef(draft)
+      const savedRef = React.useRef(saved)
+      React.useEffect(() => {
+        draftRef.current = draft
+        savedRef.current = saved
+        if (warmState !== null) {
+          warmState.draft = draft
+          warmState.saved = saved
+        }
+      }, [draft, saved])
+
+      const load = React.useCallback(async (options) => {
+        const resetDraft = options?.resetDraft !== false
         setStatus({ phase: 'loading', message: '' })
         try {
           const body = await requestJson('/state')
@@ -2475,13 +2667,22 @@ window.__ModuleLoader__.load({
               locked: preset.locked === true,
             }))
           setState(body)
-          setDraft(managed)
-          setSaved(clone(managed))
+          if (resetDraft) {
+            setDraft(managed)
+            setSaved(clone(managed))
+          }
           setBaseRevision(body.revision ?? '')
-          warmState = { body, managed: clone(managed), revision: body.revision ?? '' }
+          warmState = {
+            body,
+            managed: clone(managed),
+            draft: resetDraft ? clone(managed) : clone(draftRef.current),
+            saved: resetDraft ? clone(managed) : clone(savedRef.current),
+            revision: body.revision ?? '',
+          }
           compareCache.current.clear()
           setDataVersion((value) => value + 1)
           setSelectedId((current) => (body.presets ?? []).some((preset) => preset.id === current)
+            || draftRef.current.some((preset) => preset.id === current)
             ? current
             : ((body.presets ?? []).find((preset) => preset.kind !== 'official')?.id ?? (body.presets ?? [])[0]?.id ?? null))
           setStatus({ phase: 'ready', message: '' })
@@ -2490,7 +2691,9 @@ window.__ModuleLoader__.load({
         }
       }, [])
 
-      React.useEffect(() => { void load() }, [load])
+      // A remount (another panel took the main slot) keeps the local draft; a
+      // cold start reads it from the Host.
+      React.useEffect(() => { void load({ resetDraft: warm === null }) }, [load, warm])
 
       React.useEffect(() => {
         writeMemory({
@@ -2573,8 +2776,12 @@ window.__ModuleLoader__.load({
         return { ...preset, plugins }
       }))
 
+      // Take the number after every preset the user can already see, including
+      // official ones: the shipped presets own 1–4, so a new preset starts at 5.
       const nextOrder = () => {
-        const values = draft.map((preset) => typeof preset.order === 'number' ? preset.order : 0)
+        const values = [...(state?.presets ?? []), ...draft]
+          .map((preset) => typeof preset.order === 'number' && Number.isFinite(preset.order) ? preset.order : null)
+          .filter((value) => value !== null)
         return values.length === 0 ? 1 : Math.max(...values) + 1
       }
 
@@ -2942,7 +3149,7 @@ window.__ModuleLoader__.load({
           h('button', { type: 'button', style: styles.button, onClick: () => void load() }, t('retry')))
       }
 
-      return h('div', { className: 'ps-root', style: styles.root },
+      return h('div', { className: 'ps-root', ref: rootRef, style: styles.root },
         h('div', { className: 'ps-topbar', style: styles.topbar },
           h('div', { className: 'ps-brand', style: styles.brand },
             h('span', { style: styles.logo }, h(Icon, { name: 'spark', size: 16 })),
@@ -2965,13 +3172,13 @@ window.__ModuleLoader__.load({
         h('div', { style: styles.body },
           page === 'standard'
             ? h(React.Fragment, null,
-                h('aside', { className: 'ps-scroll', style: { ...styles.column, ...styles.left } }, h(PresetColumn, { api })),
-                h('main', { className: 'ps-scroll', style: { ...styles.column, ...styles.middle } }, h(Editor, { api })),
+                h('aside', { className: 'ps-scroll', 'data-ps-scroll': 'left', style: { ...styles.column, ...styles.left } }, h(PresetColumn, { api })),
+                h('main', { className: 'ps-scroll', 'data-ps-scroll': 'editor', style: { ...styles.column, ...styles.middle } }, h(Editor, { api })),
                 h('aside', { style: { ...styles.right, display: 'flex', flexDirection: 'column', minHeight: 0 } },
                   h(Drawer, { api })))
             : page === 'compare'
-              ? h('main', { className: 'ps-scroll', style: { ...styles.column, flex: '1 1 auto', padding: 0 } }, h(ComparePage, { api }))
-              : h('main', { className: 'ps-scroll', style: { ...styles.column, flex: '1 1 auto', padding: 0 } }, h(SimplePage, { api }))))
+              ? h('main', { className: 'ps-scroll', 'data-ps-scroll': 'page', style: { ...styles.column, flex: '1 1 auto', padding: 0 } }, h(ComparePage, { api }))
+              : h('main', { className: 'ps-scroll', 'data-ps-scroll': 'page', style: { ...styles.column, flex: '1 1 auto', padding: 0 } }, h(SimplePage, { api }))))
     }
 
     async function sidebarEntryEnabled() {

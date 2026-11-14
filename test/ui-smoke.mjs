@@ -274,6 +274,99 @@ try {
   expect('the compare pair survives the round trip',
     compareAfter.a === compareBefore.a && compareAfter.b === compareBefore.b, { compareBefore, compareAfter })
   expect('the compare filter survives the round trip', compareAfter.onlyDiff === true, compareAfter)
+  // 滚动位置：对比页与其他滚动列在换面板后回到原处。
+  const PAGE_SCROLL = 900
+  const scrolled = await page.evaluate((top) => {
+    const node = document.querySelector('[data-ps-scroll="page"]')
+    if (!node) return null
+    node.dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaY: 1 }))
+    node.scrollTop = top
+    return { top: Math.round(node.scrollTop), max: Math.round(node.scrollHeight - node.clientHeight) }
+  }, PAGE_SCROLL)
+  expect('the compare page scrolls', scrolled !== null && scrolled.top > 200, scrolled)
+  await wait(700)
+  const storedScroll = await page.evaluate(() => JSON.parse(localStorage.getItem('dsh.preset-studio.view.v1') ?? 'null')?.scroll ?? null)
+  expect('the compare scroll offset is remembered', storedScroll?.page === scrolled?.top, { storedScroll, scrolled })
+
+  if (otherPanel !== null && scrolled !== null) {
+    await page.evaluate((label) => {
+      const button = [...document.querySelectorAll('nav button[aria-label]')]
+        .find((node) => node.getAttribute('aria-label') === label)
+      if (button) button.click()
+    }, otherPanel)
+    await wait(1200)
+    await page.click('css=button[aria-label="预设工坊"]')
+    await wait(2000)
+    const restoredScroll = await page.evaluate(() => {
+      const node = document.querySelector('[data-ps-scroll="page"]')
+      return node === null ? null : Math.round(node.scrollTop)
+    })
+    expect('the compare page keeps its scroll offset after a panel switch',
+      restoredScroll !== null && Math.abs(restoredScroll - scrolled.top) <= 2, { restoredScroll, target: scrolled.top })
+  }
+
+  // 序号：新预设接在已有预设之后，而不是又从 1 开始。
+  await page.click('css=.ps-topnav button:nth-child(2)')
+  await wait(900)
+  const orderBefore = await page.evaluate(() => {
+    const numbers = [...document.querySelectorAll('.ps-preset')]
+      .map((node) => Number((/#(\d+)/.exec(node.textContent || '') ?? [])[1]))
+      .filter((value) => Number.isFinite(value))
+    return numbers.length === 0 ? 0 : Math.max(...numbers)
+  })
+  await page.click('css=.ps-new')
+  await wait(400)
+  const blankCreated = await page.evaluate(() => {
+    const button = [...document.querySelectorAll('button')]
+      .find((node) => (node.textContent || '').trim() === '空白预设')
+    if (!button) return false
+    button.click()
+    return true
+  })
+  expect('the new-preset menu offers a blank preset', blankCreated)
+  await wait(700)
+  const newOrder = await page.evaluate(() => {
+    const text = document.querySelector('.ps-preset-active')?.textContent ?? ''
+    return Number((/#(\d+)/.exec(text) ?? [])[1])
+  })
+  expect('a new preset takes the number after the shipped presets', newOrder === orderBefore + 1, { orderBefore, newOrder })
+
+  // 复制官方预设：配置里的 `!!js` 在复制时落成具体值，保存不再被插件 schema 拒绝。
+  await page.click('css=.ps-new')
+  await wait(400)
+  const creatorCopied = await page.evaluate(() => {
+    const button = [...document.querySelectorAll('button')]
+      .find((node) => (node.textContent || '').trim() === 'cordis')
+    if (!button) return false
+    button.click()
+    return true
+  })
+  expect('the Creator preset can be copied from the menu', creatorCopied)
+  await wait(2500)
+  const copySkillPath = await page.evaluate(() => {
+    const node = [...document.querySelectorAll('*')]
+      .find((element) => element.children.length === 0 && /customSkillDirs/.test(element.textContent || ''))
+    return node === null ? null : node.textContent
+  })
+  expect('the copied row stores a concrete skill directory', /dsh-agent-preset/.test(String(copySkillPath)), copySkillPath)
+  const saveClicked = await page.evaluate(() => {
+    const button = [...document.querySelectorAll('button')]
+      .find((node) => (node.textContent || '').trim() === '保存' && !node.disabled)
+    if (!button) return false
+    button.click()
+    return true
+  })
+  expect('the copied preset can be saved', saveClicked)
+  await wait(2600)
+  const saveFailure = await page.evaluate(() => {
+    const node = [...document.querySelectorAll('*')]
+      .find((element) => element.children.length === 0 && /保存失败/.test(element.textContent || ''))
+    return node === null ? null : node.textContent
+  })
+  expect('saving the copy reports no failure', saveFailure === null, saveFailure)
+  expect('saving the copy reports success',
+    await page.evaluate(() => [...document.querySelectorAll('*')]
+      .some((node) => node.children.length === 0 && (node.textContent || '').trim() === '已保存')))
 
   const jsErrors = await page.evaluate(() => window.__uiSmokeErrors || [])
   checks.push({ name: 'page errors', ok: jsErrors.length === 0, detail: jsErrors })

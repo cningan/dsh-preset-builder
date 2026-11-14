@@ -8,7 +8,9 @@
  */
 import { readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import Schema from '@deepseek-ai/schemastery'
+import { evaluateExpression, resolvePluginConfig } from './lib/expressions.mjs'
 import { addInactiveBundlePackages, addPresetOnlyPackages, buildInventory } from './lib/inventory.mjs'
 import {
   AGENT_PRESET,
@@ -196,6 +198,20 @@ function patchPathOf(ctx) {
   return profile.patchPath
 }
 
+/**
+ * Scope for `!!js` evaluation, mirroring a Loader entry: `baseUrl` is the file
+ * URL the declaration lives in, and `ctx` answers `ctx.get(...)` probes.
+ */
+function expressionScope(ctx, file) {
+  let baseUrl
+  try {
+    if (typeof file === 'string' && file.length > 0) baseUrl = pathToFileURL(file).href
+  } catch {
+    baseUrl = undefined
+  }
+  return { baseUrl, ctx, process }
+}
+
 async function readPatch(path) {
   try {
     return await readFile(path, 'utf8')
@@ -233,16 +249,30 @@ async function listRegistryPresets(ctx) {
  * The registry activates a definition eagerly and keeps its diagnostic, so a
  * failed probe is exactly the failure a session would meet. The probe is
  * disposed before returning; a registry without `register`/`resolve` skips.
+ *
+ * `!!js` config values are evaluated first, anchored at the file that will
+ * declare them: the Loader does the same before it registers a row, and a
+ * config expression left raw would only meet the plugin's schema as an object.
  */
 async function probePresets(ctx, presets) {
   const registry = ctx.get('agentPresets')
   if (registry === undefined || typeof registry.register !== 'function' || typeof registry.resolve !== 'function') {
     return []
   }
+  const scope = expressionScope(ctx, patchPathOf(ctx))
+  const evaluate = (expression) => evaluateExpression(scope, expression)
   const problems = []
   for (const preset of presets) {
+    const resolved = resolvePluginConfig(preset.plugins, evaluate, { skipDisabled: true })
+    if (resolved.failures.length > 0) {
+      for (const failure of resolved.failures) {
+        const row = typeof failure.row === 'string' && failure.row.length > 0 ? `row ${failure.row}: ` : ''
+        problems.push(`${preset.id}: ${row}config expression cannot run from the profile patch — ${failure.expression} — ${failure.error}. Re-copy the shipped preset or replace the expression with a plain value.`)
+      }
+      continue
+    }
     const probeId = `preset-studio-probe-${Date.now().toString(36)}`
-    const registration = registry.register({ id: probeId, plugins: preset.plugins })
+    const registration = registry.register({ id: probeId, plugins: resolved.plugins })
     const guarded = registration.then((dispose) => ({ dispose }), (error) => ({ error }))
     const outcome = await Promise.race([
       guarded,
@@ -417,6 +447,11 @@ async function presetSource(ctx, id) {
   if (typeof id !== 'string' || id.length === 0) throw new Error('id is required')
   const builtIn = await readBuiltInPreset(id)
   if (builtIn !== null) {
+    // The copy will be declared in the profile patch, so expressions that
+    // resolve against the shipped preset file are materialized here instead of
+    // travelling with the expression and breaking at the new anchor.
+    const scope = expressionScope(ctx, builtIn.source)
+    const resolved = resolvePluginConfig(builtIn.plugins, (expression) => evaluateExpression(scope, expression))
     return {
       ok: true,
       id,
@@ -424,7 +459,8 @@ async function presetSource(ctx, id) {
       name: builtIn.name,
       description: builtIn.description,
       order: builtIn.order,
-      plugins: cleanValue(builtIn.plugins),
+      plugins: cleanValue(resolved.plugins),
+      ...(resolved.failures.length > 0 ? { unresolved: resolved.failures } : {}),
       source: builtIn.source,
     }
   }

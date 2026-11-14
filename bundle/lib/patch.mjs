@@ -48,15 +48,33 @@ export function extractBlock(text) {
 export function replaceBlock(text, blockText) {
   const located = locateBlock(text)
   if (located.found) {
-    return text.slice(0, located.start) + blockText + text.slice(located.end)
+    return ensureArrayRoot(text.slice(0, located.start) + blockText + text.slice(located.end))
   }
   const emptyRoot = /^[ \t]*\[[ \t]*\][ \t]*$/m
   const match = emptyRoot.exec(text)
   if (match !== null) {
-    return text.slice(0, match.index) + blockText + text.slice(match.index + match[0].length)
+    return ensureArrayRoot(text.slice(0, match.index) + blockText + text.slice(match.index + match[0].length))
   }
   const separator = text.length === 0 || text.endsWith('\n') ? '' : '\n'
-  return text + separator + blockText
+  return ensureArrayRoot(text + separator + blockText)
+}
+
+/**
+ * Keep the profile patch a top-level YAML array.
+ *
+ * Removing the last managed entry can leave an empty document (or comments
+ * only); Loader refuses such a file, so an explicit `[]` anchors it again.
+ */
+function ensureArrayRoot(text) {
+  if (text.trim().length === 0) return '[]\n'
+  let parsed
+  try {
+    parsed = parseYaml(text)
+  } catch {
+    return text
+  }
+  if (parsed !== null && parsed !== undefined) return text
+  return text + (text.endsWith('\n') ? '' : '\n') + '[]\n'
 }
 
 function presetOf(config, rowId, adopted) {
