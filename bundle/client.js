@@ -607,8 +607,8 @@ window.__ModuleLoader__.load({
       iconButton: { width: 26, height: 26, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, border: `1px solid ${tone(14)}`, background: tone(5), color: 'inherit', cursor: 'pointer', padding: 0 },
       body: { display: 'flex', flex: '1 1 auto', minHeight: 0 },
       column: { display: 'flex', flexDirection: 'column', minHeight: 0, overflowY: 'auto', scrollbarGutter: 'stable' },
-      left: { width: 248, flex: '0 0 248px', borderRight: `1px solid ${tone(10)}`, padding: '10px 8px', gap: 9 },
-      middle: { flex: '1 1 auto', padding: '14px 16px', gap: 10 },
+      left: { width: 248, flex: '0 0 248px', borderRight: `1px solid ${tone(10)}`, padding: '0 8px', gap: 9 },
+      middle: { flex: '1 1 auto', padding: '0 16px', gap: 10 },
       right: { width: 332, flex: '0 0 332px', borderLeft: `1px solid ${tone(10)}`, padding: '10px 10px', gap: 8 },
       sectionTitle: { fontSize: 10.5, letterSpacing: '0.03em', opacity: 0.55, margin: '3px 4px 1px', fontWeight: 650 },
       sectionHead: { display: 'flex', alignItems: 'center', gap: 5, margin: '4px 2px 1px' },
@@ -1011,8 +1011,7 @@ window.__ModuleLoader__.load({
 
     const SCROLL_KEYS = ['left', 'editor', 'drawer', 'page']
     const SCROLL_INPUT_WINDOW = 400
-    const SCROLL_SETTLE_MS = 220
-    const SCROLL_GIVE_UP_MS = 6000
+    const SCROLL_CORRECT_WINDOW = 1500
 
     function rememberOffset(value) {
       if (typeof value !== 'number' || Number.isFinite(value) !== true) return null
@@ -1039,13 +1038,17 @@ window.__ModuleLoader__.load({
       return now - lastInputAt < SCROLL_INPUT_WINDOW
     }
 
-    /** A remembered offset is applied exactly once, after the page settles. */
-    function shouldApplyScroll({ offset, max, quietFor, restoring, touched }) {
-      if (restoring !== true || touched === true) return false
+    /**
+     * Write a remembered offset before the frame is painted; afterwards only a
+     * short window of corrections is allowed so resets cannot cause oscillation.
+     */
+    function shouldApplyScroll({ offset, max, touched, appliedAt, now }) {
+      if (touched === true) return false
       const value = rememberOffset(offset)
       if (value === null || value <= 0) return false
       if (typeof max !== 'number' || Number.isFinite(max) !== true || max < value) return false
-      return quietFor >= SCROLL_SETTLE_MS
+      if (appliedAt === null) return true
+      return now - appliedAt < SCROLL_CORRECT_WINDOW
     }
 
     /**
@@ -1063,7 +1066,7 @@ window.__ModuleLoader__.load({
         let alive = true
         let writeTimer = null
         const pendingWrite = new Set()
-        // element -> { stored, applied, touched, lastInput, seen, quietAt, bornAt, attempt }
+        // element -> { stored, appliedAt, touched, lastInput, seen }
         const entries = new Map()
         const readOffsets = () => scrollOffsets(memoryObject(readMemory().scroll))
 
@@ -1083,39 +1086,26 @@ window.__ModuleLoader__.load({
           if (writeTimer === null) writeTimer = setTimeout(flush, 300)
         }
 
-        /** One attempt: apply when the content is tall enough and has settled. */
-        const attemptRestore = (element) => {
+        /**
+         * Put the remembered offset in place while the browser has not painted
+         * the frame yet: the first frame showing the content is already at the
+         * position, so nothing jumps.
+         */
+        const place = (element) => {
           const entry = entries.get(element)
-          if (entry === undefined || alive !== true || !element.isConnected) return
-          entry.attempt = null
-          if (entry.applied === true || entry.touched === true) return
+          if (entry === undefined || alive !== true || entry.touched === true) return
+          if (!element.isConnected) return
           const max = element.scrollHeight - element.clientHeight
-          if (shouldApplyScroll({ offset: entry.stored, max, quietFor: Date.now() - entry.quietAt, restoring: true, touched: false })) {
-            entry.applied = true
-            element.scrollTop = entry.stored
-            return
-          }
-          if (Date.now() - entry.bornAt > SCROLL_GIVE_UP_MS) {
-            // Never settled: take the offset now if the container allows it.
-            entry.applied = true
-            if (max >= entry.stored) element.scrollTop = entry.stored
-            return
-          }
-          entry.attempt = setTimeout(() => attemptRestore(element), SCROLL_SETTLE_MS)
-        }
-        const settle = (element) => {
-          const entry = entries.get(element)
-          if (entry === undefined) return
-          entry.quietAt = Date.now()
-          if (entry.applied === true || entry.attempt !== null) return
-          entry.attempt = setTimeout(() => attemptRestore(element), SCROLL_SETTLE_MS + 20)
+          if (!shouldApplyScroll({ offset: entry.stored, max, touched: false, appliedAt: entry.appliedAt, now: Date.now() })) return
+          entry.appliedAt = Date.now()
+          element.scrollTop = entry.stored
         }
 
         const onScroll = (event) => {
           const element = event.currentTarget
           const entry = entries.get(element)
           if (entry === undefined) return
-          const restoring = entry.applied !== true && entry.touched !== true
+          const restoring = entry.appliedAt === null && entry.touched !== true
           if (!rememberScrollEvent({ offset: element.scrollTop, lastInputAt: entry.lastInput, now: Date.now(), restoring })) return
           entry.seen = Math.round(element.scrollTop)
           scheduleWrite(element)
@@ -1125,14 +1115,9 @@ window.__ModuleLoader__.load({
           if (entry === undefined) return
           entry.lastInput = Date.now()
           entry.touched = true
-          entry.applied = true
-          if (entry.attempt !== null) {
-            clearTimeout(entry.attempt)
-            entry.attempt = null
-          }
         }
         const sizing = new window.ResizeObserver((records) => {
-          for (const record of records) settle(record.target)
+          for (const record of records) place(record.target)
         })
 
         const bind = (element) => {
@@ -1147,25 +1132,21 @@ window.__ModuleLoader__.load({
           const stored = typeof key === 'string' && key.length > 0 ? readOffsets()[key] : undefined
           entries.set(element, {
             stored: stored === undefined ? 0 : stored,
-            applied: stored === undefined || stored <= 0,
+            appliedAt: stored === undefined || stored <= 0 ? Date.now() : null,
             touched: false,
             lastInput: -Infinity,
             seen: undefined,
-            quietAt: Date.now(),
-            bornAt: Date.now(),
-            attempt: null,
           })
-          settle(element)
         }
         const scan = () => {
           for (const element of root.querySelectorAll('[data-ps-scroll]')) {
             bind(element)
-            settle(element)
+            // The frame that lands this content is the one to position.
+            place(element)
           }
           for (const [element, entry] of entries) {
             if (element.isConnected) continue
             if (entry.seen !== undefined) scheduleWrite(element)
-            if (entry.attempt !== null) clearTimeout(entry.attempt)
             entries.delete(element)
             bound.current.delete(element)
           }
@@ -1173,7 +1154,7 @@ window.__ModuleLoader__.load({
 
         scan()
         const observer = new MutationObserver(() => { if (alive) scan() })
-        observer.observe(root, { childList: true, subtree: true })
+        observer.observe(root, { childList: true, subtree: true, characterData: true })
         const onLeave = () => { for (const element of entries.keys()) scheduleWrite(element) }
         window.addEventListener('pagehide', onLeave)
         return () => {
@@ -1187,7 +1168,6 @@ window.__ModuleLoader__.load({
             for (const name of ['wheel', 'touchstart', 'pointerdown', 'keydown']) {
               element.removeEventListener(name, onInput)
             }
-            if (entry.attempt !== null) clearTimeout(entry.attempt)
             if (entry.seen !== undefined) pendingWrite.add(element)
           }
           flush()
@@ -1433,7 +1413,7 @@ window.__ModuleLoader__.load({
         ...draft.map((preset) => ({ preset, managed: true })),
         ...foreign.map((preset) => ({ preset, managed: false })),
       ]
-      return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 12 } },
+      return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 12, padding: '10px 0 12px' } },
         h('div', { className: 'ps-sticky', style: { position: 'sticky', top: 0, zIndex: 5, paddingBottom: 6, background: 'var(--dsw-alias-bg-base, Canvas)' } },
           h('button', { type: 'button', className: 'ps-new', style: { ...styles.buttonPrimary, width: '100%', padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }, onClick: () => api.setMenuOpen(!api.menuOpen) },
             h(Icon, { name: 'plus', size: 14, style: { opacity: 0.9 } }), t('newPreset')),
@@ -2026,7 +2006,7 @@ window.__ModuleLoader__.load({
       const inactive = api.inactiveUsage(preset)
       const inactiveBundles = [...new Set(inactive.map((item) => item.bundle).filter((name) => name.length > 0))]
       const conflicts = api.conflictUsage(preset)
-      return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 10 } },
+      return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 10, padding: '14px 0 16px' } },
         h('div', { style: styles.card },
           h('div', { style: { display: 'flex', gap: 8, alignItems: 'flex-start', flexWrap: 'wrap' } },
             h('div', { style: { flex: '1 1 240px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 } },

@@ -300,6 +300,16 @@ try {
   expect('the compare scroll offset is remembered', storedScroll?.page === scrolled?.top, { storedScroll, scrolled })
 
   if (otherPanel !== null && scrolled !== null) {
+    // 还原应当「本来就在」：内容出现的那一帧就已经在记录位置，不先闪 0。
+    await page.evaluate(() => {
+      window.__psFrames = []
+      const sample = () => {
+        const node = document.querySelector('[data-ps-scroll="page"]')
+        if (node) window.__psFrames.push([Math.round(node.scrollTop), Math.round(node.scrollHeight - node.clientHeight)])
+        requestAnimationFrame(sample)
+      }
+      requestAnimationFrame(sample)
+    })
     await page.evaluate((label) => {
       const button = [...document.querySelectorAll('nav button[aria-label]')]
         .find((node) => node.getAttribute('aria-label') === label)
@@ -308,6 +318,10 @@ try {
     await wait(1200)
     await page.click('css=button[aria-label="预设工坊"]')
     await wait(2000)
+    const frames = await page.evaluate(() => window.__psFrames ?? [])
+    const reachable = frames.filter(([, max]) => max >= PAGE_SCROLL)
+    expect('the remembered offset is in place on the first painted frame',
+      reachable.length > 5 && reachable.every(([top]) => top > 0), { frames: frames.length, reachable: reachable.length, atZero: reachable.filter(([top]) => top === 0).length })
     const restoredScroll = await page.evaluate(() => {
       const node = document.querySelector('[data-ps-scroll="page"]')
       return node === null ? null : Math.round(node.scrollTop)
@@ -349,6 +363,28 @@ try {
 
   // 序号：新预设接在已有预设之后，而不是又从 1 开始。
   await page.click('css=.ps-topnav button:nth-child(2)')
+  // 滚动列没有「死区」：内容滚动到列顶，粘性头部贴着列的边缘。
+  const layout = await page.evaluate(() => {
+    const editor = document.querySelector('[data-ps-scroll="editor"]')
+    const left = document.querySelector('[data-ps-scroll="left"]')
+    const sticky = left ? left.querySelector('.ps-sticky') : null
+    const out = { editorGap: null, stickyGap: null }
+    if (editor !== null && editor.scrollHeight > editor.clientHeight + 220) {
+      editor.dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaY: 1 }))
+      editor.scrollTop = 200
+      const card = editor.firstElementChild
+      if (card !== null && editor.scrollTop > 0) out.editorGap = Math.round(card.getBoundingClientRect().top - editor.getBoundingClientRect().top)
+    }
+    if (left !== null && sticky !== null && left.scrollHeight > left.clientHeight + 140) {
+      left.dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaY: 1 }))
+      left.scrollTop = 120
+      if (left.scrollTop > 0) out.stickyGap = Math.round(sticky.getBoundingClientRect().top - left.getBoundingClientRect().top)
+    }
+    return out
+  })
+  if (layout.editorGap !== null) expect('a scrolled column paints against its top edge', layout.editorGap <= 0, layout)
+  if (layout.stickyGap !== null) expect('the sticky preset header pins to the column edge', Math.abs(layout.stickyGap) <= 1, layout)
+
   await wait(900)
   const orderBefore = await page.evaluate(() => {
     const numbers = [...document.querySelectorAll('.ps-preset')]

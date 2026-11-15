@@ -14,7 +14,7 @@ import { addInactiveBundlePackages, addPresetOnlyPackages, pickText, textMap } f
 import { conflictUsage, inactiveUsage, isCollectableRow } from '../bundle/lib/rules.mjs'
 import { canonicalConfig, configFieldDiff, configFields, diffPresetRows, flattenPresetRows } from '../bundle/lib/diff.mjs'
 import { evaluateExpression, resolvePluginConfig, resolveValue } from '../bundle/lib/expressions.mjs'
-import { INPUT_WINDOW, SETTLE_MS, rememberOffset, rememberScroll, shouldApply, shouldRemember } from '../bundle/lib/scroll-memory.mjs'
+import { CORRECT_WINDOW, INPUT_WINDOW, rememberOffset, rememberScroll, shouldApply, shouldRemember } from '../bundle/lib/scroll-memory.mjs'
 
 let passed = 0
 function test(name, fn) {
@@ -470,18 +470,20 @@ test('a page reset is not remembered, the user scrolling to the top is', () => {
   assert.ok(INPUT_WINDOW > 0)
 })
 
-test('an offset is applied once, after the content has settled', () => {
-  const base = { offset: 900, max: 1200, restoring: true, touched: false }
-  // Content is tall enough right away, but the page is still rendering.
-  assert.equal(shouldApply({ ...base, quietFor: 40 }), false)
-  // Quiet long enough: apply.
-  assert.equal(shouldApply({ ...base, quietFor: SETTLE_MS + 1 }), true)
-  // Not enough content yet, however quiet: wait.
-  assert.equal(shouldApply({ ...base, max: 400, quietFor: SETTLE_MS + 1 }), false)
-  // Nothing remembered, already applied, or the user took over: do nothing.
-  assert.equal(shouldApply({ ...base, offset: 0, quietFor: SETTLE_MS + 1 }), false)
-  assert.equal(shouldApply({ ...base, restoring: false, quietFor: SETTLE_MS + 1 }), false)
-  assert.equal(shouldApply({ ...base, touched: true, quietFor: SETTLE_MS + 1 }), false)
+test('an offset is applied before the page paints, and late resets stay bounded', () => {
+  const now = 10_000
+  const base = { offset: 900, max: 1200, touched: false, appliedAt: null, now }
+  // The content tall enough on the frame it lands: position it now, not after a delay.
+  assert.equal(shouldApply(base), true)
+  // Not enough content yet: wait until it grows.
+  assert.equal(shouldApply({ ...base, max: 400 }), false)
+  // Nothing remembered, or the user took over: do nothing.
+  assert.equal(shouldApply({ ...base, offset: 0 }), false)
+  assert.equal(shouldApply({ ...base, touched: true }), false)
+  // A re-render that resets to the top is corrected only inside the window, so a
+  // page that keeps resetting cannot make the container oscillate forever.
+  assert.equal(shouldApply({ ...base, appliedAt: now - 300 }), true)
+  assert.equal(shouldApply({ ...base, appliedAt: now - CORRECT_WINDOW - 1 }), false)
 })
 
 console.log(`\n${passed} checks passed`)
