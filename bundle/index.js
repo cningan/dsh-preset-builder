@@ -19,6 +19,7 @@ import {
   buildBlock,
   cleanValue,
   extractBlock,
+  locateBlock,
   parseBlock,
   replaceBlock,
   validatePresets,
@@ -358,6 +359,7 @@ function liveTombstones(ctx, model) {
 async function buildState(ctx, config) {
   const path = ctx.get('profileContext')?.patchPath
   const text = typeof path === 'string' && path.length > 0 ? await readPatch(path) : '[]\n'
+  const located = locateBlock(text)
   const model = parseBlock(extractBlock(text))
   const registry = await listRegistryPresets(ctx)
   const declarations = presetDeclarations(ctx)
@@ -432,6 +434,10 @@ async function buildState(ctx, config) {
     profile: profileFacts(ctx),
     config: { sidebarEntry: config?.sidebarEntry !== false },
     revision: blockRevision(extractBlock(text) ?? ''),
+    // broken = the patch still carries one of the block markers without the
+    // other (usually a hand edit dropped the BEGIN line): the rows below are
+    // no longer managed, and saving would declare the same row ids twice.
+    block: { found: located.found === true, broken: located.broken === true },
     hmr: Boolean(ctx.get('hmr')?.reconcileProfile),
     presets,
     locks: model.locks,
@@ -549,6 +555,16 @@ function conflictOf(body, blockText) {
 
 /** Write a new block, reconcile the profile, and roll back on failure. */
 async function applyAndReconcile(ctx, path, previous, nextBlock) {
+  // Writing while the block is broken appends a second complete block, so the
+  // same row ids would be declared twice. Refuse and let the user restore the
+  // marker line first.
+  if (locateBlock(previous).broken === true) {
+    return {
+      ok: false,
+      brokenBlock: true,
+      error: 'the managed block is missing its opening marker line; restore it before saving',
+    }
+  }
   await writePatch(path, replaceBlock(previous, nextBlock))
   const hmr = ctx.get('hmr')
   if (hmr === undefined || typeof hmr.reconcileProfile !== 'function' || typeof hmr.runExclusive !== 'function') {

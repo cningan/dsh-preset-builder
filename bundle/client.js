@@ -42,6 +42,7 @@ window.__ModuleLoader__.load({
       foreignHint: '这个预设由其它插件声明。接管后，它的组合在这里可编辑，声明也会写入本 profile。',
       officialHint: '官方预设只读；可以复制一份再改。',
       emptyPresets: '还没有自定义预设。',
+      blockBroken: 'profile 补丁里的托管块缺少起始标记行（# >>> dsh-preset-studio managed block …）。工坊已不再管理其中的预设，保存也会被拒绝；补回该行后刷新即可恢复。',
       emptyComposition: '选择左侧的预设，或新建一个。',
       composition: '组合',
       yaml: 'YAML',
@@ -265,6 +266,7 @@ window.__ModuleLoader__.load({
       foreignHint: 'Another layer declares this preset. Adopt it to edit its composition; the declaration is then owned by this profile.',
       officialHint: 'Official presets are read-only; copy one to edit.',
       emptyPresets: 'No custom preset yet.',
+      blockBroken: 'The managed block in the profile patch lost its opening marker line (# >>> dsh-preset-studio managed block …). The Workshop no longer manages those presets and refuses to save; restore that line and refresh.',
       emptyComposition: 'Pick a preset on the left or create one.',
       composition: 'Composition',
       yaml: 'YAML',
@@ -683,6 +685,31 @@ window.__ModuleLoader__.load({
       let index = 2
       while (used.has(base + '-' + index)) index += 1
       return base + '-' + index
+    }
+
+    /**
+     * Rows of the custom-preset column: the local drafts first, then the
+     * declarations the Host reports as foreign.
+     *
+     * One preset id may sit in both lists: a warm draft outlives a Host reload,
+     * so the page can still hold its copy while the Host already reports the
+     * same id as an external declaration (the managed block lost its marker, or
+     * another layer started declaring the id). Concatenating the two lists put
+     * one preset in the column twice, and because selection is by id, clicking
+     * either row highlighted both. One id gets one row; the draft keeps it
+     * because that is the copy being edited.
+     *
+     * Golden contract: `bundle/lib/presets.mjs` `mergeCustomRows`.
+     */
+    function mergeCustomRows(draft, foreign) {
+      const taken = new Set()
+      const rows = []
+      for (const preset of [...draft, ...foreign]) {
+        if (taken.has(preset.id)) continue
+        taken.add(preset.id)
+        rows.push(preset)
+      }
+      return rows
     }
 
     function clone(value) {
@@ -1409,10 +1436,7 @@ window.__ModuleLoader__.load({
       const foreign = api.foreignPresets ?? []
       const official = api.officialPresets ?? []
       const stateById = new Map((api.state?.presets ?? []).map((preset) => [preset.id, preset]))
-      const customItems = [
-        ...draft.map((preset) => ({ preset, managed: true })),
-        ...foreign.map((preset) => ({ preset, managed: false })),
-      ]
+      const customItems = mergeCustomRows(draft, foreign)
       return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 12, padding: '10px 0 12px' } },
         h('div', { className: 'ps-sticky', style: { position: 'sticky', top: 0, zIndex: 5, paddingBottom: 6, background: 'var(--dsw-alias-bg-base, Canvas)' } },
           h('button', { type: 'button', className: 'ps-new', style: { ...styles.buttonPrimary, width: '100%', padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }, onClick: () => api.setMenuOpen(!api.menuOpen) },
@@ -1450,7 +1474,7 @@ window.__ModuleLoader__.load({
             h('span', { style: styles.sectionTitle }, t('custom') + ' · ' + customItems.length),
             h(Help, { api, title: t('custom'), text: t('helpPresetKinds') })),
           customItems.length === 0 ? h('div', { style: styles.empty }, t('emptyPresets')) : null,
-          customItems.map(({ preset }) => {
+          customItems.map((preset) => {
             const meta = stateById.get(preset.id)
             const locked = preset.locked === true || meta?.locked === true
             return h(PresetItem, {
@@ -2725,8 +2749,12 @@ window.__ModuleLoader__.load({
       const updatePreset = (id, patch) => setDraft((prev) => prev.map((preset) => preset.id === id ? { ...preset, ...patch } : preset))
 
       const savedById = React.useMemo(() => new Map(saved.map((preset) => [preset.id, preset])), [saved])
+      // Only the draft entry itself can be dirty: any other row carrying the same
+      // id (a stale warm copy, or a declaration the Host now reports as foreign)
+      // compares against a baseline it was never built from and would always
+      // read 未保存.
       const presetDirty = (preset) => {
-        if (!draft.some((entry) => entry.id === preset.id)) return false
+        if (!draft.some((entry) => entry === preset)) return false
         const base = savedById.get(preset.id)
         return base === undefined || JSON.stringify(base) !== JSON.stringify(preset)
       }
@@ -2784,7 +2812,12 @@ window.__ModuleLoader__.load({
       }
 
       const createPreset = (source) => {
-        const used = new Set(draft.map((preset) => preset.id))
+        // A copy must not take an id another layer already declares: that
+        // collision is exactly what puts one preset in the column twice.
+        const used = new Set([
+          ...draft.map((preset) => preset.id),
+          ...(state?.presets ?? []).map((preset) => preset.id),
+        ])
         const id = uniqueName(slugify((source?.id ?? 'preset') + (source === undefined ? '' : '-copy')), used)
         const preset = {
           id,
@@ -3167,6 +3200,9 @@ window.__ModuleLoader__.load({
               type: 'button', style: styles.iconButton, title: t('refresh'), 'aria-label': t('refresh'),
               onClick: () => void load(),
             }, h(Icon, { name: 'refresh', size: 14 })))),
+        state?.block?.broken === true
+          ? h('div', { className: 'ps-banner-warn', role: 'alert', style: { ...styles.inactiveWarnBox, margin: '0 12px 8px' } }, t('blockBroken'))
+          : null,
         h('div', { style: styles.body },
           page === 'standard'
             ? h(React.Fragment, null,

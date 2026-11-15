@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs'
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { buildBlock, parseBlock, readBlock, replaceBlock, extractBlock, validatePresets, blockRevision } from '../bundle/lib/patch.mjs'
+import { BEGIN, END, buildBlock, parseBlock, readBlock, replaceBlock, extractBlock, locateBlock, validatePresets, blockRevision } from '../bundle/lib/patch.mjs'
 import { describeDisabledExpression } from '../bundle/lib/platform.mjs'
 import { emitListItem, parseYaml } from '../bundle/lib/yaml.mjs'
 import { addInactiveBundlePackages, addPresetOnlyPackages, pickText, textMap } from '../bundle/lib/inventory.mjs'
@@ -15,6 +15,7 @@ import { conflictUsage, inactiveUsage, isCollectableRow } from '../bundle/lib/ru
 import { canonicalConfig, configFieldDiff, configFields, diffPresetRows, flattenPresetRows } from '../bundle/lib/diff.mjs'
 import { evaluateExpression, resolvePluginConfig, resolveValue } from '../bundle/lib/expressions.mjs'
 import { CORRECT_WINDOW, INPUT_WINDOW, rememberOffset, rememberScroll, shouldApply, shouldRemember } from '../bundle/lib/scroll-memory.mjs'
+import { mergeCustomRows } from '../bundle/lib/presets.mjs'
 
 let passed = 0
 function test(name, fn) {
@@ -484,6 +485,48 @@ test('an offset is applied before the page paints, and late resets stay bounded'
   // page that keeps resetting cannot make the container oscillate forever.
   assert.equal(shouldApply({ ...base, appliedAt: now - 300 }), true)
   assert.equal(shouldApply({ ...base, appliedAt: now - CORRECT_WINDOW - 1 }), false)
+})
+
+test('one preset id gets one row, and a stale draft keeps it', () => {
+  const draft = [
+    { id: 'cordis-copy', name: 'PTC 创造模式', order: 5, plugins: [] },
+    { id: 'ptc-mini', name: '简易 PTC 模式', order: 6, plugins: [] },
+  ]
+  // The Host still reports the same ids as foreign declarations (the managed
+  // block lost its marker while the page held its warm draft). Rendering both
+  // lists put each preset in the column twice and made one click select two rows.
+  const foreign = [
+    { id: 'cordis-copy', kind: 'foreign' },
+    { id: 'mini-external', kind: 'foreign' },
+  ]
+  const rows = mergeCustomRows(draft, foreign)
+  assert.deepEqual(rows.map((preset) => preset.id), ['cordis-copy', 'ptc-mini', 'mini-external'])
+  // The draft copy wins, not merely the first one with that id.
+  assert.equal(rows[0], draft[0])
+  // A clean split keeps every row and the draft-first order.
+  assert.deepEqual(mergeCustomRows([{ id: 'a' }], [{ id: 'b' }]).map((preset) => preset.id), ['a', 'b'])
+  assert.deepEqual(mergeCustomRows([], foreign).map((preset) => preset.id), ['cordis-copy', 'mini-external'])
+  assert.deepEqual(mergeCustomRows(draft, []).map((preset) => preset.id), ['cordis-copy', 'ptc-mini'])
+  // A duplicated id inside either list is still one row.
+  assert.deepEqual(
+    mergeCustomRows([], [{ id: 'x' }, { id: 'x', kind: 'foreign' }]).map((preset) => preset.id),
+    ['x'])
+})
+
+test('a managed block that lost its opening marker is reported, not ignored', () => {
+  const block = buildBlock([preset])
+  assert.equal(locateBlock(block).broken, undefined)
+  assert.equal(locateBlock(block).found, true)
+  // A hand edit that drops the BEGIN line leaves a block the plugin can no
+  // longer find; the rows below read as foreign declarations of the same ids.
+  const half = block.slice(block.indexOf(END))
+  assert.equal(locateBlock(half).found, false)
+  assert.equal(locateBlock(half).broken, true)
+  assert.equal(extractBlock(half), null)
+  assert.ok(half.startsWith(END))
+  assert.ok(block.startsWith(BEGIN))
+  // A patch that never had a block is not broken.
+  assert.equal(locateBlock('- insert: []\n').broken, undefined)
 })
 
 console.log(`\n${passed} checks passed`)

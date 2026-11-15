@@ -106,3 +106,27 @@ export async function readRegistryDocument(ctx, id) {
     return null
   }
 }
+
+/**
+ * Rows of the custom-preset column: managed drafts first, then the declarations
+ * the Host reports as foreign.
+ *
+ * One preset id may sit in both lists. A warm client draft outlives a Host
+ * reload, so the page can still hold its copy while the Host already reports the
+ * same id as an external declaration; concatenating the two lists renders one
+ * preset twice, and because the column selects by id, clicking either row
+ * highlights both. One id gets one row, and the draft keeps it because that is
+ * the copy the user is editing.
+ *
+ * Golden contract for the synced copy in `client.js`; exercised by test/unit.mjs.
+ */
+export function mergeCustomRows(draft, foreign) {
+  const taken = new Set()
+  const rows = []
+  for (const preset of [...draft, ...foreign]) {
+    if (taken.has(preset.id)) continue
+    taken.add(preset.id)
+    rows.push(preset)
+  }
+  return rows
+}

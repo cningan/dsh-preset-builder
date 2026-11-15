@@ -29,7 +29,14 @@ export function blockRevision(blockText) {
 /** Locate the managed block by its marker lines. */
 export function locateBlock(text) {
   const beginAt = text.indexOf(BEGIN)
-  if (beginAt < 0) return { found: false, start: -1, end: -1 }
+  if (beginAt < 0) {
+    // An END marker without its BEGIN marker means a hand edit or a partial
+    // write broke the block. The rows are now plain declarations the plugin no
+    // longer manages; say so instead of behaving as if no block ever existed.
+    return text.includes(END)
+      ? { found: false, start: -1, end: -1, broken: true }
+      : { found: false, start: -1, end: -1 }
+  }
   const endAt = text.indexOf(END, beginAt)
   if (endAt < 0) return { found: false, start: -1, end: -1, broken: true }
   let end = endAt + END.length
