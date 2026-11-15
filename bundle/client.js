@@ -42,7 +42,10 @@ window.__ModuleLoader__.load({
       foreignHint: '这个预设由其它插件声明。接管后，它的组合在这里可编辑，声明也会写入本 profile。',
       officialHint: '官方预设只读；可以复制一份再改。',
       emptyPresets: '还没有自定义预设。',
-      blockBroken: 'profile 补丁里的托管块缺少起始标记行（# >>> dsh-preset-studio managed block …）。工坊已不再管理其中的预设，保存也会被拒绝；补回该行后刷新即可恢复。',
+      blockBroken: 'profile 补丁里的托管块缺少起始标记行（# >>> dsh-preset-studio managed block …）。工坊已不再管理其中的预设，保存也会被拒绝。',
+      blockBrokenAuto: '这些行确实是工坊写的，可以一键补回。',
+      blockBrokenFix: '修复标记',
+      blockBrokenDone: '标记已补回，预设重新归工坊管理。',
       emptyComposition: '选择左侧的预设，或新建一个。',
       composition: '组合',
       yaml: 'YAML',
@@ -266,7 +269,10 @@ window.__ModuleLoader__.load({
       foreignHint: 'Another layer declares this preset. Adopt it to edit its composition; the declaration is then owned by this profile.',
       officialHint: 'Official presets are read-only; copy one to edit.',
       emptyPresets: 'No custom preset yet.',
-      blockBroken: 'The managed block in the profile patch lost its opening marker line (# >>> dsh-preset-studio managed block …). The Workshop no longer manages those presets and refuses to save; restore that line and refresh.',
+      blockBroken: 'The managed block in the profile patch lost its opening marker line (# >>> dsh-preset-studio managed block …). The Workshop no longer manages those presets and refuses to save.',
+      blockBrokenAuto: 'These rows are provably the Workshop\'s, so the marker can be restored here.',
+      blockBrokenFix: 'Repair marker',
+      blockBrokenDone: 'Marker restored; the Workshop manages those presets again.',
       emptyComposition: 'Pick a preset on the left or create one.',
       composition: 'Composition',
       yaml: 'YAML',
@@ -2900,6 +2906,22 @@ window.__ModuleLoader__.load({
         }
       }
 
+      /** Put the BEGIN marker back after another tool ate it (Host verifies ownership). */
+      const repairBlockMarker = async () => {
+        if (!guardDirty()) return
+        try {
+          const body = await requestJson('/presets/repair-block', {
+            method: 'POST',
+            body: JSON.stringify({ revision: baseRevision }),
+          })
+          if (body.needsRestart) setNotice(t('needsRestart'))
+          else setNotice(t('blockBrokenDone'))
+          await load()
+        } catch (cause) {
+          setNotice(String(cause && cause.message ? cause.message : cause))
+        }
+      }
+
       const adoptPreset = async (id) => {
         if (!window.confirm(t('adoptConfirm'))) return
         if (!guardDirty()) return
@@ -3159,7 +3181,7 @@ window.__ModuleLoader__.load({
         load, selectPreset: (id) => setSelectedId(id),
         brokenOf: (id) => (state?.presets ?? []).find((preset) => preset.id === id)?.broken,
         createBlank: () => createPreset(undefined), copyPreset, simpleCopy, setPersona,
-        deletePreset, adoptPreset, setLocked,
+        deletePreset, adoptPreset, setLocked, repairBlock: repairBlockMarker,
         updatePreset, save, discard,
         presetDirty, canRenamePreset, renamePreset,
         toggleRow, removeRow, moveRow, applyRowConfig, resetRowConfig,
@@ -3201,7 +3223,13 @@ window.__ModuleLoader__.load({
               onClick: () => void load(),
             }, h(Icon, { name: 'refresh', size: 14 })))),
         state?.block?.broken === true
-          ? h('div', { className: 'ps-banner-warn', role: 'alert', style: { ...styles.inactiveWarnBox, margin: '0 12px 8px' } }, t('blockBroken'))
+          ? h('div', { className: 'ps-banner-warn', role: 'alert', style: { ...styles.inactiveWarnBox, margin: '0 12px 8px', alignItems: 'center' } },
+              h('span', { style: { flex: '1 1 auto' } },
+                t('blockBroken'),
+                state?.block?.recoverable === true ? ' ' + t('blockBrokenAuto') : ''),
+              state?.block?.recoverable === true
+                ? h('button', { type: 'button', style: { ...styles.button, flex: '0 0 auto' }, onClick: () => void api.repairBlock() }, t('blockBrokenFix'))
+                : null)
           : null,
         h('div', { style: styles.body },
           page === 'standard'

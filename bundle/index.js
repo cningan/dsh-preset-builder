@@ -19,6 +19,8 @@ import {
   buildBlock,
   cleanValue,
   extractBlock,
+  findOrphanBlock,
+  insertBeginMarker,
   locateBlock,
   parseBlock,
   replaceBlock,
@@ -103,6 +105,10 @@ async function dispatch(ctx, config, server, req, res) {
     if (req.method === 'POST' && route === '/presets/lock') {
       if (!sameOrigin(server, req)) return sendJson(res, { ok: false, error: 'cross-origin request rejected' }, 403)
       return sendJson(res, await lockPreset(ctx, await readJsonBody(req)))
+    }
+    if (req.method === 'POST' && route === '/presets/repair-block') {
+      if (!sameOrigin(server, req)) return sendJson(res, { ok: false, error: 'cross-origin request rejected' }, 403)
+      return sendJson(res, await repairBlock(ctx, await readJsonBody(req)))
     }
     if (req.method === 'POST' && route === '/save') {
       if (!sameOrigin(server, req)) return sendJson(res, { ok: false, error: 'cross-origin request rejected' }, 403)
@@ -360,6 +366,7 @@ async function buildState(ctx, config) {
   const path = ctx.get('profileContext')?.patchPath
   const text = typeof path === 'string' && path.length > 0 ? await readPatch(path) : '[]\n'
   const located = locateBlock(text)
+  const orphan = located.broken === true ? findOrphanBlock(text) : null
   const model = parseBlock(extractBlock(text))
   const registry = await listRegistryPresets(ctx)
   const declarations = presetDeclarations(ctx)
@@ -435,9 +442,16 @@ async function buildState(ctx, config) {
     config: { sidebarEntry: config?.sidebarEntry !== false },
     revision: blockRevision(extractBlock(text) ?? ''),
     // broken = the patch still carries one of the block markers without the
-    // other (usually a hand edit dropped the BEGIN line): the rows below are
+    // other (usually another tool dropped the BEGIN line): the rows below are
     // no longer managed, and saving would declare the same row ids twice.
-    block: { found: located.found === true, broken: located.broken === true },
+    // recoverable = the orphan rows are provably ours, so the marker can be
+    // put back from the UI instead of asking the user to edit YAML.
+    block: {
+      found: located.found === true,
+      broken: located.broken === true,
+      recoverable: orphan !== null,
+      line: orphan === null ? null : orphan.line + 1,
+    },
     hmr: Boolean(ctx.get('hmr')?.reconcileProfile),
     presets,
     locks: model.locks,
@@ -556,16 +570,21 @@ function conflictOf(body, blockText) {
 /** Write a new block, reconcile the profile, and roll back on failure. */
 async function applyAndReconcile(ctx, path, previous, nextBlock) {
   // Writing while the block is broken appends a second complete block, so the
-  // same row ids would be declared twice. Refuse and let the user restore the
-  // marker line first.
+  // same row ids would be declared twice. Refuse and point at the repair.
   if (locateBlock(previous).broken === true) {
     return {
       ok: false,
       brokenBlock: true,
-      error: 'the managed block is missing its opening marker line; restore it before saving',
+      error: 'the managed block is missing its opening marker line; repair the block first',
     }
   }
-  await writePatch(path, replaceBlock(previous, nextBlock))
+  return applyTextAndReconcile(ctx, path, previous, replaceBlock(previous, nextBlock))
+}
+
+/** Write already-rendered patch text, reconcile the profile, roll back on failure. */
+async function applyTextAndReconcile(ctx, path, previous, nextText) {
+  await writePatch(path, nextText)
+  const revision = blockRevision(extractBlock(nextText) ?? '')
   const hmr = ctx.get('hmr')
   if (hmr === undefined || typeof hmr.reconcileProfile !== 'function' || typeof hmr.runExclusive !== 'function') {
     return {
@@ -573,7 +592,7 @@ async function applyAndReconcile(ctx, path, previous, nextBlock) {
       applied: false,
       appliedNow: false,
       needsRestart: true,
-      revision: blockRevision(nextBlock),
+      revision,
       message: 'saved; HMR is unavailable, restart the application to apply',
     }
   }
@@ -586,7 +605,7 @@ async function applyAndReconcile(ctx, path, previous, nextBlock) {
       needsRestart: result?.restartReason !== undefined,
       restartReason: result?.restartReason ?? null,
       warnings: Array.isArray(result?.warnings) ? result.warnings : [],
-      revision: blockRevision(nextBlock),
+      revision,
     }
   } catch (error) {
     let rolledBack = false
@@ -718,6 +737,27 @@ async function adoptPreset(ctx, body) {
     adopted: true,
   })
   return applyAndReconcile(ctx, path, previous, buildBlock(model))
+}
+
+/**
+ * Put the BEGIN marker back on a managed block that lost it.
+ *
+ * This is the recovery path for damage done by another tool: the rows are
+ * provably ours (see findOrphanBlock), so the user does not have to hand-edit
+ * YAML. Nothing else in the file is touched, and the write goes through the
+ * same reconcile + rollback as a save.
+ */
+async function repairBlock(ctx, body) {
+  const path = patchPathOf(ctx)
+  const previous = await readPatch(path)
+  const conflict = conflictOf(body, extractBlock(previous) ?? '')
+  if (conflict !== null) return conflict
+  if (findOrphanBlock(previous) === null) {
+    return { ok: false, error: 'nothing to repair: no recognisable managed block is missing its marker' }
+  }
+  const next = insertBeginMarker(previous)
+  if (next === null) return { ok: false, error: 'nothing to repair' }
+  return applyTextAndReconcile(ctx, path, previous, next)
 }
 
 /** Lock or unlock a custom preset; locked presets are never rewritten. */

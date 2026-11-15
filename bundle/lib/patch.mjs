@@ -51,6 +51,69 @@ export function extractBlock(text) {
   return text.slice(located.start, located.end)
 }
 
+/**
+ * Find a managed block whose BEGIN marker is gone.
+ *
+ * Ownership is provable from content, not from the marker: a top-level
+ * `- insert:` group whose every row is `preset-studio-<id>` and names this
+ * plugin's preset module can only have been written here. That is what makes
+ * a damaged block repairable instead of degrading into "someone else's
+ * declarations" that the user has to hand-fix.
+ *
+ * Only that shape is recovered on purpose. Override rows (written by adopt,
+ * they reuse another layer's row id) and tombstones look exactly like a
+ * hand-written declaration, so a block containing them is left alone and the
+ * manual path stays available.
+ *
+ * @returns `{ line, rows }` — 0-based line the BEGIN marker belongs above, and
+ *   the row ids found — or null when ownership cannot be proven.
+ */
+export function findOrphanBlock(text) {
+  if (typeof text !== 'string' || text.length === 0) return null
+  if (text.includes(BEGIN)) return null
+  const eol = text.includes('\r\n') ? '\r\n' : '\n'
+  const lines = text.split(eol)
+  const endLines = lines.map((line, index) => (line.trim() === END ? index : -1)).filter((index) => index >= 0)
+  // Exactly one END and no BEGIN: a single block lost its head. Anything else
+  // is a shape this rule was not designed for.
+  if (endLines.length !== 1) return null
+  const endAt = endLines[0]
+  let last = endAt - 1
+  while (last >= 0 && lines[last].trim() === '') last -= 1
+  if (last < 0) return null
+  let start = last
+  while (start > 0 && !/^- \S/.test(lines[start])) start -= 1
+  if (!/^- insert:\s*$/.test(lines[start])) return null
+  let parsed
+  try {
+    parsed = parseYaml(lines.slice(start, last + 1).join(eol))
+  } catch {
+    return null
+  }
+  if (!Array.isArray(parsed) || parsed.length !== 1) return null
+  const group = parsed[0]
+  if (group === null || typeof group !== 'object' || !Array.isArray(group.insert) || group.insert.length === 0) return null
+  for (const row of group.insert) {
+    if (row === null || typeof row !== 'object') return null
+    if (row.name !== AGENT_PRESET) return null
+    if (typeof row.id !== 'string' || !row.id.startsWith(ROW_PREFIX)) return null
+  }
+  // A `# locks:` line belongs to the block too; the marker goes above it.
+  let line = start
+  while (line > 0 && /^#\s*locks:/.test(lines[line - 1])) line -= 1
+  return { line, rows: group.insert.map((row) => row.id) }
+}
+
+/** Put the BEGIN marker back above a recognisable orphan block. */
+export function insertBeginMarker(text) {
+  const found = findOrphanBlock(text)
+  if (found === null) return null
+  const eol = text.includes('\r\n') ? '\r\n' : '\n'
+  const lines = text.split(eol)
+  lines.splice(found.line, 0, BEGIN)
+  return lines.join(eol)
+}
+
 /** Replace (or create) the managed block without touching the rest. */
 export function replaceBlock(text, blockText) {
   const located = locateBlock(text)

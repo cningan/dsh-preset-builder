@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs'
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { BEGIN, END, buildBlock, parseBlock, readBlock, replaceBlock, extractBlock, locateBlock, validatePresets, blockRevision } from '../bundle/lib/patch.mjs'
+import { BEGIN, END, buildBlock, parseBlock, readBlock, replaceBlock, extractBlock, findOrphanBlock, insertBeginMarker, locateBlock, validatePresets, blockRevision } from '../bundle/lib/patch.mjs'
 import { describeDisabledExpression } from '../bundle/lib/platform.mjs'
 import { emitListItem, parseYaml } from '../bundle/lib/yaml.mjs'
 import { addInactiveBundlePackages, addPresetOnlyPackages, pickText, textMap } from '../bundle/lib/inventory.mjs'
@@ -527,6 +527,70 @@ test('a managed block that lost its opening marker is reported, not ignored', ()
   assert.ok(block.startsWith(BEGIN))
   // A patch that never had a block is not broken.
   assert.equal(locateBlock('- insert: []\n').broken, undefined)
+})
+
+test('an orphaned managed block is recovered from its own rows', () => {
+  const orphan = [
+    '- insert:',
+    '    - id: preset-studio-x',
+    '      name: "@deepseek-ai/dsh-agent-preset"',
+    '      config:',
+    '        id: x',
+    END,
+    '',
+  ].join('\n')
+  const found = findOrphanBlock(orphan)
+  assert.notEqual(found, null)
+  assert.deepEqual(found.rows, ['preset-studio-x'])
+  const repaired = insertBeginMarker(orphan)
+  assert.equal(repaired.startsWith(BEGIN + '\n'), true)
+  assert.equal(locateBlock(repaired).found, true)
+  assert.deepEqual(parseBlock(extractBlock(repaired)).presets.map((entry) => entry.id), ['x'])
+  // Nothing to recover once the marker is back.
+  assert.equal(findOrphanBlock(repaired), null)
+})
+
+test('recovery refuses rows it cannot prove are its own', () => {
+  const group = (id, name) => [
+    '- insert:',
+    '    - id: ' + id,
+    '      name: "' + name + '"',
+    '      config:',
+    '        id: x',
+    END,
+    '',
+  ].join('\n')
+  // A row id outside the plugin's own namespace belongs to someone else.
+  assert.equal(findOrphanBlock(group('someone-elses-row', '@deepseek-ai/dsh-agent-preset')), null)
+  // Same for a row that is not an Agent preset declaration.
+  assert.equal(findOrphanBlock(group('preset-studio-x', 'some-other-module')), null)
+  // An override row (adopt reuses the original row id) is indistinguishable
+  // from a hand-written declaration, so the block is left alone.
+  const override = ['- id: preset-x', '  name: "@deepseek-ai/dsh-agent-preset"', '  config:', '    id: x', END, ''].join('\n')
+  assert.equal(findOrphanBlock(override), null)
+  // No END marker at all: not the shape this rule handles.
+  assert.equal(findOrphanBlock('- insert:\n    - id: preset-studio-x\n      name: "@deepseek-ai/dsh-agent-preset"\n'), null)
+  // Intact block: nothing to do.
+  assert.equal(findOrphanBlock(buildBlock([preset])), null)
+})
+
+test('the lock line stays inside the block the marker is restored to', () => {
+  const orphan = [
+    '# locks: x',
+    '- insert:',
+    '    - id: preset-studio-x',
+    '      name: "@deepseek-ai/dsh-agent-preset"',
+    '      config:',
+    '        id: x',
+    END,
+    '',
+  ].join('\n')
+  const repaired = insertBeginMarker(orphan)
+  assert.equal(repaired.split('\n')[0], BEGIN)
+  assert.equal(repaired.split('\n')[1], '# locks: x')
+  const model = parseBlock(extractBlock(repaired))
+  assert.deepEqual(model.locks, ['x'])
+  assert.deepEqual(model.presets.map((entry) => entry.id), ['x'])
 })
 
 console.log(`\n${passed} checks passed`)
