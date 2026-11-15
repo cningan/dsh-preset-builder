@@ -102,6 +102,14 @@ try {
     window.__uiSmokeErrors = []
     addEventListener('error', (event) => window.__uiSmokeErrors.push(String(event.message || event.error || 'error')))
     addEventListener('unhandledrejection', (event) => window.__uiSmokeErrors.push('unhandledrejection: ' + String(event.reason)))
+    // 打开工作台只应读一次状态：依赖环会让它每秒重读十几次并导致页面闪动。
+    window.__uiSmokeFetches = []
+    const originalFetch = window.fetch
+    window.fetch = function (input) {
+      const url = typeof input === 'string' ? input : (input && input.url) || ''
+      window.__uiSmokeFetches.push(url)
+      return originalFetch.apply(this, arguments)
+    }
   })
   await dismissDialogs()
   await page.cdp('Emulation.setDeviceMetricsOverride', { width: 1366, height: 839, deviceScaleFactor: 1, mobile: false })
@@ -114,6 +122,9 @@ try {
   await page.click('css=button[aria-label="预设工坊"]')
   await wait(1400)
   expect('workshop opens', await page.evaluate(() => Boolean(document.querySelector('.ps-topnav'))))
+  await wait(1200)
+  const stateReads = await page.evaluate(() => (window.__uiSmokeFetches ?? []).filter((url) => url.includes('/preset-studio/state')).length)
+  expect('opening the workshop reads state once', stateReads === 1, stateReads)
 
   await page.click('css=.ps-topnav button:nth-child(1)')
   await wait(600)
@@ -305,6 +316,37 @@ try {
       restoredScroll !== null && Math.abs(restoredScroll - scrolled.top) <= 2, { restoredScroll, target: scrolled.top })
   }
 
+  // 归零分两种：用户自己滚到顶部要记住，页面重排归零不能覆盖记录。
+  if (scrolled !== null) {
+    const topScroll = await page.evaluate(() => {
+      const node = document.querySelector('[data-ps-scroll="page"]')
+      if (!node) return null
+      node.dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaY: 1 }))
+      node.scrollTop = 0
+      return Math.round(node.scrollTop)
+    })
+    await wait(700)
+    const storedTop = await page.evaluate(() => JSON.parse(localStorage.getItem('dsh.preset-studio.view.v1') ?? 'null')?.scroll ?? null)
+    expect('scrolling to the top is remembered', topScroll === 0 && storedTop?.page === 0, { topScroll, storedTop })
+
+    const restoredAgain = await page.evaluate((top) => {
+      const node = document.querySelector('[data-ps-scroll="page"]')
+      if (!node) return null
+      node.dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaY: 1 }))
+      node.scrollTop = top
+      return Math.round(node.scrollTop)
+    }, PAGE_SCROLL)
+    await wait(700)
+    await page.evaluate(() => {
+      const node = document.querySelector('[data-ps-scroll="page"]')
+      if (node) node.scrollTop = 0
+    })
+    await wait(400)
+    const storedAfterReset = await page.evaluate(() => JSON.parse(localStorage.getItem('dsh.preset-studio.view.v1') ?? 'null')?.scroll ?? null)
+    expect('a re-render reset does not overwrite the remembered offset',
+      restoredAgain === PAGE_SCROLL && storedAfterReset?.page === PAGE_SCROLL, { restoredAgain, storedAfterReset })
+  }
+
   // 序号：新预设接在已有预设之后，而不是又从 1 开始。
   await page.click('css=.ps-topnav button:nth-child(2)')
   await wait(900)
@@ -378,6 +420,14 @@ try {
     window.__uiSmokeErrors = []
     addEventListener('error', (event) => window.__uiSmokeErrors.push(String(event.message || event.error || 'error')))
     addEventListener('unhandledrejection', (event) => window.__uiSmokeErrors.push('unhandledrejection: ' + String(event.reason)))
+    // 打开工作台只应读一次状态：依赖环会让它每秒重读十几次并导致页面闪动。
+    window.__uiSmokeFetches = []
+    const originalFetch = window.fetch
+    window.fetch = function (input) {
+      const url = typeof input === 'string' ? input : (input && input.url) || ''
+      window.__uiSmokeFetches.push(url)
+      return originalFetch.apply(this, arguments)
+    }
   })
   await wait(2600)
   await dismissDialogs()

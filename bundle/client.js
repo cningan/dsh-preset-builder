@@ -1005,15 +1005,55 @@ window.__ModuleLoader__.load({
       return flags
     }
 
+    // ---------- scroll memory ----------
+    // Golden contract: bundle/lib/scroll-memory.mjs, exercised by test/unit.mjs.
+    // The client ships as one plain-JS file, so keep this small copy in sync.
+
+    const SCROLL_KEYS = ['left', 'editor', 'drawer', 'page']
+    const SCROLL_INPUT_WINDOW = 400
+    const SCROLL_SETTLE_MS = 220
+    const SCROLL_GIVE_UP_MS = 6000
+
+    function rememberOffset(value) {
+      if (typeof value !== 'number' || Number.isFinite(value) !== true) return null
+      const offset = Math.round(value)
+      return offset >= 0 ? offset : null
+    }
+
+    function scrollOffsets(value) {
+      const record = {}
+      if (value === null || typeof value !== 'object' || Array.isArray(value)) return record
+      for (const key of SCROLL_KEYS) {
+        const offset = rememberOffset(value[key])
+        if (offset !== null) record[key] = offset
+      }
+      return record
+    }
+
+    /** A scroll event is stored only when it is the user's own scroll. */
+    function rememberScrollEvent({ offset, lastInputAt, now, restoring }) {
+      if (restoring === true) return false
+      const value = rememberOffset(offset)
+      if (value === null) return false
+      if (value > 0) return true
+      return now - lastInputAt < SCROLL_INPUT_WINDOW
+    }
+
+    /** A remembered offset is applied exactly once, after the page settles. */
+    function shouldApplyScroll({ offset, max, quietFor, restoring, touched }) {
+      if (restoring !== true || touched === true) return false
+      const value = rememberOffset(offset)
+      if (value === null || value <= 0) return false
+      if (typeof max !== 'number' || Number.isFinite(max) !== true || max < value) return false
+      return quietFor >= SCROLL_SETTLE_MS
+    }
+
     /**
-     * Restore and remember the scroll offset of every container marked with
-     * `data-ps-scroll`. Containers appear and disappear with the page, so the
-     * hook rescans whenever the panel subtree changes.
+     * Remember where the user scrolled to and put it back on the next mount.
      *
-     * Content arrives asynchronously and a re-render can reset an offset at any
-     * moment, so the user's own scrolls are told apart from the page's resets: a
-     * jump to the top right after a content change is undone, while a scroll
-     * preceded by wheel/touch/pointer/key input is remembered.
+     * Containers are marked with `data-ps-scroll`; the hook binds them as the
+     * page renders, without any cooperation from the pages themselves. The rules
+     * live in `scroll-memory.mjs`; this function is the DOM adapter.
      */
     function useScrollMemory(rootRef, enabled) {
       const bound = React.useRef(new Set())
@@ -1021,166 +1061,142 @@ window.__ModuleLoader__.load({
         const root = rootRef.current
         if (!enabled || root === null) return undefined
         let alive = true
-        let timer = null
-        const pending = new Set()
-        // element -> { value, seen, lastInput }: the offset to keep, the last
-        // offset the user scrolled to, and when the user last touched it.
-        const records = new Map()
-        const readScroll = () => memoryObject(readMemory().scroll)
-        const persist = (element) => {
-          const record = records.get(element)
-          if (record === undefined || record.seen === undefined) return
-          const key = element.dataset.psScroll
-          if (typeof key !== 'string' || key.length === 0) return
-          writeMemory({ scroll: { ...readScroll(), [key]: Math.round(record.seen) } })
-        }
+        let writeTimer = null
+        const pendingWrite = new Set()
+        // element -> { stored, applied, touched, lastInput, seen, quietAt, bornAt, attempt }
+        const entries = new Map()
+        const readOffsets = () => scrollOffsets(memoryObject(readMemory().scroll))
+
         const flush = () => {
-          timer = null
-          for (const element of pending) persist(element)
-          pending.clear()
+          writeTimer = null
+          for (const element of pendingWrite) {
+            const entry = entries.get(element)
+            if (entry === undefined || entry.seen === undefined) continue
+            const key = element.dataset.psScroll
+            if (typeof key !== 'string' || key.length === 0) continue
+            writeMemory({ scroll: { ...readOffsets(), [key]: entry.seen } })
+          }
+          pendingWrite.clear()
         }
-        const schedule = (element) => {
-          pending.add(element)
-          if (timer === null) timer = setTimeout(flush, 300)
+        const scheduleWrite = (element) => {
+          pendingWrite.add(element)
+          if (writeTimer === null) writeTimer = setTimeout(flush, 300)
         }
-        /** The user scrolled this container in the last moment. */
-        const userRecent = (record) => Date.now() - record.lastInput < 600
-        /**
-         * Put a container back when a re-render resets it to the top. The page
-         * does that on its own schedule, so the offset is restored whenever the
-         * container returns to zero while the user is not the one scrolling.
-         */
-        const apply = (element) => {
-          const record = records.get(element)
-          if (record === undefined || !element.isConnected) return
-          if (record.value === undefined || record.value <= 0) return
-          if (userRecent(record)) return
-          if (element.scrollTop !== 0) return
-          const max = Math.max(0, element.scrollHeight - element.clientHeight)
-          if (max < record.value - 1) return
-          element.scrollTop = record.value
-        }
-        // Timestamp of the last content change: a container that jumps back to
-        // zero right after one was reset by the page, not by the user.
-        let mutatedAt = 0
-        const onScroll = (event) => {
-          const element = event.currentTarget
-          const record = records.get(element)
-          if (record === undefined) return
-          const top = element.scrollTop
-          if (top === 0) {
-            const contentChanged = Date.now() - mutatedAt < 200
-            const recent = userRecent(record)
-            if (contentChanged) {
-              // The page re-rendered and dropped the offset: put it back unless
-              // the user is scrolling at this very moment.
-              if (!recent) apply(element)
-              return
-            }
-            if (recent) {
-              record.value = 0
-              record.seen = 0
-              schedule(element)
-              return
-            }
-            apply(element)
+
+        /** One attempt: apply when the content is tall enough and has settled. */
+        const attemptRestore = (element) => {
+          const entry = entries.get(element)
+          if (entry === undefined || alive !== true || !element.isConnected) return
+          entry.attempt = null
+          if (entry.applied === true || entry.touched === true) return
+          const max = element.scrollHeight - element.clientHeight
+          if (shouldApplyScroll({ offset: entry.stored, max, quietFor: Date.now() - entry.quietAt, restoring: true, touched: false })) {
+            entry.applied = true
+            element.scrollTop = entry.stored
             return
           }
-          if (record.value !== undefined && Math.abs(top - record.value) <= 1) return
-          record.value = top
-          record.seen = top
-          schedule(element)
-        }
-        // Touching the area hands the position back to the user mid-restore.
-        const onInput = (event) => {
-          const record = records.get(event.currentTarget)
-          if (record !== undefined) record.lastInput = Date.now()
-        }
-        const sizing = new window.ResizeObserver((entries) => {
-          for (const entry of entries) apply(entry.target)
-        })
-        /**
-         * Put a container back after a remount. Content arrives in waves, so the
-         * offset is re-applied until it has stayed put for a moment.
-         */
-        const restore = (element) => {
-          const record = records.get(element)
-          if (record === undefined || record.value === undefined) return
-          const deadline = Date.now() + 4000
-          let settled = 0
-          const tick = () => {
-            if (!alive || !element.isConnected) return
-            const current = records.get(element)
-            if (current === undefined || userRecent(current)) return
-            const top = element.scrollTop
-            if (top !== 0 && Math.abs(top - current.value) > 1) return
-            const max = Math.max(0, element.scrollHeight - element.clientHeight)
-            if (max >= current.value - 1) {
-              if (top === 0) {
-                element.scrollTop = current.value
-                settled = 0
-              } else if (++settled > 30) {
-                return
-              }
-            }
-            if (Date.now() > deadline) return
-            requestAnimationFrame(tick)
+          if (Date.now() - entry.bornAt > SCROLL_GIVE_UP_MS) {
+            // Never settled: take the offset now if the container allows it.
+            entry.applied = true
+            if (max >= entry.stored) element.scrollTop = entry.stored
+            return
           }
-          requestAnimationFrame(tick)
+          entry.attempt = setTimeout(() => attemptRestore(element), SCROLL_SETTLE_MS)
+        }
+        const settle = (element) => {
+          const entry = entries.get(element)
+          if (entry === undefined) return
+          entry.quietAt = Date.now()
+          if (entry.applied === true || entry.attempt !== null) return
+          entry.attempt = setTimeout(() => attemptRestore(element), SCROLL_SETTLE_MS + 20)
+        }
+
+        const onScroll = (event) => {
+          const element = event.currentTarget
+          const entry = entries.get(element)
+          if (entry === undefined) return
+          const restoring = entry.applied !== true && entry.touched !== true
+          if (!rememberScrollEvent({ offset: element.scrollTop, lastInputAt: entry.lastInput, now: Date.now(), restoring })) return
+          entry.seen = Math.round(element.scrollTop)
+          scheduleWrite(element)
+        }
+        const onInput = (event) => {
+          const entry = entries.get(event.currentTarget)
+          if (entry === undefined) return
+          entry.lastInput = Date.now()
+          entry.touched = true
+          entry.applied = true
+          if (entry.attempt !== null) {
+            clearTimeout(entry.attempt)
+            entry.attempt = null
+          }
+        }
+        const sizing = new window.ResizeObserver((records) => {
+          for (const record of records) settle(record.target)
+        })
+
+        const bind = (element) => {
+          if (bound.current.has(element)) return
+          bound.current.add(element)
+          element.addEventListener('scroll', onScroll, { passive: true })
+          for (const name of ['wheel', 'touchstart', 'pointerdown', 'keydown']) {
+            element.addEventListener(name, onInput, { passive: true })
+          }
+          sizing.observe(element)
+          const key = element.dataset.psScroll
+          const stored = typeof key === 'string' && key.length > 0 ? readOffsets()[key] : undefined
+          entries.set(element, {
+            stored: stored === undefined ? 0 : stored,
+            applied: stored === undefined || stored <= 0,
+            touched: false,
+            lastInput: -Infinity,
+            seen: undefined,
+            quietAt: Date.now(),
+            bornAt: Date.now(),
+            attempt: null,
+          })
+          settle(element)
         }
         const scan = () => {
           for (const element of root.querySelectorAll('[data-ps-scroll]')) {
-            if (!bound.current.has(element)) {
-              bound.current.add(element)
-              element.addEventListener('scroll', onScroll, { passive: true })
-              for (const name of ['wheel', 'touchstart', 'pointerdown', 'keydown']) {
-                element.addEventListener(name, onInput, { passive: true })
-              }
-              sizing.observe(element)
-              const value = readScroll()[element.dataset.psScroll]
-              if (typeof value === 'number' && value > 0) {
-                records.set(element, { value, lastInput: -Infinity })
-                restore(element)
-              } else {
-                records.set(element, { lastInput: -Infinity })
-              }
-            }
-            apply(element)
+            bind(element)
+            settle(element)
           }
-          for (const element of records.keys()) {
-            if (!element.isConnected) {
-              persist(element)
-              records.delete(element)
-              bound.current.delete(element)
-            }
+          for (const [element, entry] of entries) {
+            if (element.isConnected) continue
+            if (entry.seen !== undefined) scheduleWrite(element)
+            if (entry.attempt !== null) clearTimeout(entry.attempt)
+            entries.delete(element)
+            bound.current.delete(element)
           }
         }
+
         scan()
-        const observer = new MutationObserver(() => { if (!alive) return; mutatedAt = Date.now(); scan() })
+        const observer = new MutationObserver(() => { if (alive) scan() })
         observer.observe(root, { childList: true, subtree: true })
-        // A reload unmounts nothing, so persist on the way out as well.
-        const onLeave = () => { for (const element of records.keys()) persist(element) }
+        const onLeave = () => { for (const element of entries.keys()) scheduleWrite(element) }
         window.addEventListener('pagehide', onLeave)
         return () => {
           alive = false
           observer.disconnect()
           sizing.disconnect()
           window.removeEventListener('pagehide', onLeave)
-          if (timer !== null) clearTimeout(timer)
-          for (const element of bound.current) {
+          if (writeTimer !== null) clearTimeout(writeTimer)
+          for (const [element, entry] of entries) {
             element.removeEventListener('scroll', onScroll)
             for (const name of ['wheel', 'touchstart', 'pointerdown', 'keydown']) {
               element.removeEventListener(name, onInput)
             }
-            persist(element)
+            if (entry.attempt !== null) clearTimeout(entry.attempt)
+            if (entry.seen !== undefined) pendingWrite.add(element)
           }
+          flush()
           bound.current.clear()
-          records.clear()
+          entries.clear()
         }
       }, [enabled, rootRef])
       return rootRef
     }
-
     // ---------- presentation primitives ----------
 
     function Icon({ name, size = 14, style }) {
@@ -2692,8 +2708,10 @@ window.__ModuleLoader__.load({
       }, [])
 
       // A remount (another panel took the main slot) keeps the local draft; a
-      // cold start reads it from the Host.
-      React.useEffect(() => { void load({ resetDraft: warm === null }) }, [load, warm])
+      // cold start reads it from the Host. The mode is decided once: `warmState`
+      // is rewritten by `load()`, so watching it would re-run this effect.
+      const warmStart = React.useRef(warm === null)
+      React.useEffect(() => { void load({ resetDraft: warmStart.current }) }, [load])
 
       React.useEffect(() => {
         writeMemory({

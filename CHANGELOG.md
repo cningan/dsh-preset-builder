@@ -1,5 +1,13 @@
 # 变更记录
 
+## 0.6.3 — 对比页不再闪动，滚动记忆重写
+
+- **修复：打开工作台会反复重读状态、页面闪动**。0.6.2 让 `load()` 的副作用依赖 `warmState`，而 `warmState` 会在 `load()` 里被重新赋值，依赖每轮都「变化」，于是形成每秒十几次的 `/state` 请求循环；对比页因此反复重渲染、停在「读取中…」。改为挂载时定一次冷启动/暖启动，打开工作台只读一次状态。
+- **滚动记忆重构**：原来的实现靠「武装位置 / 重排时间戳 / 多轮还原」几条补丁互相配合，容易出现来回跳。现在规则抽成 `bundle/lib/scroll-memory.mjs`（纯函数，`test/unit.mjs` 覆盖），`client.js` 只留一层 DOM 适配器：
+  - 只记用户自己的滚动——非零位置，或 400ms 内确有 wheel/touch/pointer/key 输入（所以「用户滚到顶部」会记住，页面重排归零不会覆盖记录）；
+  - 记住的位置只在内容停止变化 220ms 后写入一次，之后不再纠正，不与页面重排互相拉扯。
+- 隔离实例断言：打开工作台只读一次状态、重开对比页最多两次写入且不出现 0↔900 来回、滚到顶部会记住、重排归零不覆盖记录、包抽屉跨页保位。`test/unit.mjs` 增至 28 项。
+
 ## 0.6.2 — 复制官方预设可保存、滚动位置也记住
 
 - **修复：复制 Creator（创造模式）后无法保存**。内置预设的 `customSkillDirs` 是依赖「声明所在文件」的 `!!js` 表达式；复制到本 profile 后表达式仍指向原 bundle，预挂载时既求不出值、又通不过 `skill-filesystem` 的 schema，于是报 `$.customSkillDirs[0] expected string but got [object Object]`。现在 `/preset-source` 读取内置预设时按来源文件求值，副本里落成具体路径（如 `…\app.asar\dsh\node_modules\@deepseek-ai\dsh-agent-preset\skills`），复制即可保存；`disabled`/`isolate` 这类控制值仍是表达式，不落成字面量。

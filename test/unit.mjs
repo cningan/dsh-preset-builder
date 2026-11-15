@@ -14,6 +14,7 @@ import { addInactiveBundlePackages, addPresetOnlyPackages, pickText, textMap } f
 import { conflictUsage, inactiveUsage, isCollectableRow } from '../bundle/lib/rules.mjs'
 import { canonicalConfig, configFieldDiff, configFields, diffPresetRows, flattenPresetRows } from '../bundle/lib/diff.mjs'
 import { evaluateExpression, resolvePluginConfig, resolveValue } from '../bundle/lib/expressions.mjs'
+import { INPUT_WINDOW, SETTLE_MS, rememberOffset, rememberScroll, shouldApply, shouldRemember } from '../bundle/lib/scroll-memory.mjs'
 
 let passed = 0
 function test(name, fn) {
@@ -438,6 +439,49 @@ test('a row that will not mount keeps its config and reports nothing', () => {
   assert.deepEqual(resolved.plugins[2].config[0].config, { dirs: [{ __js: 'missingHelper(3)' }] })
   assert.equal(resolved.failures.length, 1)
   assert.match(resolved.failures[0].error, /missingHelper is not defined/)
+})
+
+test('a stored scroll offset is whitelisted', () => {
+  assert.equal(rememberOffset(0), 0)
+  assert.equal(rememberOffset(914.6), 915)
+  assert.equal(rememberOffset(-3), null)
+  assert.equal(rememberOffset(Number.NaN), null)
+  assert.equal(rememberOffset(Number.POSITIVE_INFINITY), null)
+  assert.equal(rememberOffset('900'), null)
+  assert.equal(rememberOffset(undefined), null)
+  assert.deepEqual(
+    rememberScroll({ left: 12.4, editor: -1, drawer: 'x', page: 900, extra: 5 }),
+    { left: 12, page: 900 },
+  )
+  assert.deepEqual(rememberScroll(null), {})
+})
+
+test('a page reset is not remembered, the user scrolling to the top is', () => {
+  const now = 10_000
+  // The container jumped to the top during a re-render: no input, so it is not
+  // the user's position and must not overwrite the remembered offset.
+  assert.equal(shouldRemember({ offset: 0, lastInputAt: now - 5000, now, restoring: false }), false)
+  // The user wheeled to the top a moment ago: remember the top.
+  assert.equal(shouldRemember({ offset: 0, lastInputAt: now - 120, now, restoring: false }), true)
+  // A non-zero offset is worth keeping even without recent input.
+  assert.equal(shouldRemember({ offset: 240, lastInputAt: now - 5000, now, restoring: false }), true)
+  // While a remembered offset is still being restored, nothing is the user's.
+  assert.equal(shouldRemember({ offset: 240, lastInputAt: now - 10, now, restoring: true }), false)
+  assert.ok(INPUT_WINDOW > 0)
+})
+
+test('an offset is applied once, after the content has settled', () => {
+  const base = { offset: 900, max: 1200, restoring: true, touched: false }
+  // Content is tall enough right away, but the page is still rendering.
+  assert.equal(shouldApply({ ...base, quietFor: 40 }), false)
+  // Quiet long enough: apply.
+  assert.equal(shouldApply({ ...base, quietFor: SETTLE_MS + 1 }), true)
+  // Not enough content yet, however quiet: wait.
+  assert.equal(shouldApply({ ...base, max: 400, quietFor: SETTLE_MS + 1 }), false)
+  // Nothing remembered, already applied, or the user took over: do nothing.
+  assert.equal(shouldApply({ ...base, offset: 0, quietFor: SETTLE_MS + 1 }), false)
+  assert.equal(shouldApply({ ...base, restoring: false, quietFor: SETTLE_MS + 1 }), false)
+  assert.equal(shouldApply({ ...base, touched: true, quietFor: SETTLE_MS + 1 }), false)
 })
 
 console.log(`\n${passed} checks passed`)
