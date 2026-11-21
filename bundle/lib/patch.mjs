@@ -115,7 +115,7 @@ export function insertBeginMarker(text) {
 }
 
 const TOP_LEVEL_ROW = /^-(?:[ \t]|$)/
-const TOP_LEVEL_COMMENT = /^#/
+const COMMENT_LINE = /^[ \t]*#/
 const LOCK_COMMENT = /^#\s*locks:/
 
 /**
@@ -132,11 +132,14 @@ function isOwnedEntry(entry) {
     return entry.insert.every((row) => row !== null && typeof row === 'object' && !Array.isArray(row)
       && row.name === AGENT_PRESET
       && typeof row.id === 'string'
-      && row.id.startsWith(ROW_PREFIX))
+      && row.id.startsWith(ROW_PREFIX)
+      && row.config !== null && typeof row.config === 'object' && typeof row.config.id === 'string')
   }
   if (typeof entry.id !== 'string' || entry.id.length === 0) return false
-  if (entry.name === AGENT_PRESET) return true
-  return entry.disabled === true && entry.name === undefined
+  if (entry.name === AGENT_PRESET) {
+    return entry.config !== null && typeof entry.config === 'object' && typeof entry.config.id === 'string'
+  }
+  return entry.disabled === true && entry.name === undefined && entry.config === undefined
 }
 
 /**
@@ -166,7 +169,7 @@ export function foreignBlockEntries(regionText) {
     if (trimmed === BEGIN || trimmed === END) { flush(); continue }
     if (trimmed === '') { if (current !== null) current.push(line); continue }
     if (TOP_LEVEL_ROW.test(line)) { flush(); current = [line]; continue }
-    if (TOP_LEVEL_COMMENT.test(line)) {
+    if (COMMENT_LINE.test(line)) {
       if (LOCK_COMMENT.test(line)) { flush(); continue }
       flush()
       groups.push([line])

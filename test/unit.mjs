@@ -129,6 +129,24 @@ test('removing the last managed preset keeps rows that were appended inside the 
   assert.deepEqual(parseYaml(after), [{ id: 'llm-pi-ai', name: '@deepseek-ai/dsh-llm-pi-ai' }])
 })
 
+test('an agent-preset row without a config id is preserved as foreign', () => {
+  const block = buildBlock([preset])
+  const injected = '- id: preset-studio-orphan\n  name: "@deepseek-ai/dsh-agent-preset"\n'
+  const before = block.slice(0, block.indexOf(END)) + injected + block.slice(block.indexOf(END))
+  const after = replaceBlock(before, buildBlock([preset]))
+  assert.ok(after.includes('- id: preset-studio-orphan'))
+  assert.ok(after.indexOf('- id: preset-studio-orphan') < after.indexOf(BEGIN))
+})
+
+test('a comment nested inside an owned row moves out instead of being dropped', () => {
+  const block = buildBlock([preset])
+  const row = '    - id: preset-studio-my-mode\n'
+  const injected = block.replace(row, row + '      # 用户注释\n')
+  const after = replaceBlock(injected, buildBlock([preset]))
+  assert.ok(after.includes('      # 用户注释'))
+  assert.ok(after.indexOf('# 用户注释') < after.indexOf(BEGIN))
+})
+
 test('a broken marker pair is not treated as a managed block', () => {
   const text = '# >>> dsh-preset-studio managed block — 预设工坊维护，请勿手改标记内部\n[]\n'
   const next = replaceBlock(text, buildBlock([preset]))

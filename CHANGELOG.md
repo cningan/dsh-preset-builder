@@ -5,7 +5,7 @@
 - **修复：保存预设会静默删除托管块内的非本插件行**（上游 issue #1）。DSH 设置页添加模型提供方时，官方 `configEditor` 用 `document.add()` 把 `- id: llm-pi-ai` 这类行追加到 YAML 序列末尾；而托管块的 `# <<< …` 结束标记在 YAML 里是尾部注释，永远排在文件最后，于是新行落在 BEGIN 与 END 之间。`replaceBlock()` 此前把整个标记区间当作本插件独占区域整体重写，下一次「保存预设」就把这些行直接丢掉——文件仍是合法 YAML、密钥还在 `~/.dsh/.credentials.yaml`，没有任何日志，用户只能重建提供方。
 - **修法：按内容判定归属，外来行移到块上方**。`foreignBlockEntries()` 只把本插件可能写出的三种形状留在块内（全为 `preset-studio-<id>` 且 `name` 为 `@deepseek-ai/dsh-agent-preset` 的 `- insert:` 组、该模块的覆盖条目、`disabled: true` 且无 `name` 的墓碑）；其余顶层行与注释按原顺序原样移到 BEGIN 之上，再写新块。外来行 id 与块内行 id 不冲突，位置调整不改变合成优先级；第二次保存不再移动任何东西（幂等）。删除最后一条预设、块整体移除时同样保留外来行。
 - 边界：块内被误判为本插件的行只会「不再被管理」，声明仍在文件里，不会丢；外来 `- insert:` 组、顶层注释、CRLF 块都有回归。已被吞掉的历史行无法自动恢复——本机 desktop profile 当前没有残留。
-- `test/unit.mjs` 33 → 38 项（外来行保留/上移/幂等、外来 insert 组与注释、接管与墓碑不被上移、CRLF、块移除后保留）。
+- `test/unit.mjs` 33 → 40 项（外来行保留/上移/幂等、外来 insert 组与注释、缺 `config.id` 的 agent-preset 行、缩进注释、接管与墓碑不被上移、CRLF、块移除后保留）。
 
 ## 0.6.5 — 一个预设只占一行
 
