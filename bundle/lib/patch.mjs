@@ -114,11 +114,89 @@ export function insertBeginMarker(text) {
   return lines.join(eol)
 }
 
+const TOP_LEVEL_ROW = /^-(?:[ \t]|$)/
+const TOP_LEVEL_COMMENT = /^#/
+const LOCK_COMMENT = /^#\s*locks:/
+
+/**
+ * Whether a top-level patch entry can only have been written by this plugin.
+ *
+ * Ownership is decided from content, not from position: the block region is
+ * also where other tools append rows, so anything that is not provably ours
+ * must move out of the block instead of being overwritten.
+ */
+function isOwnedEntry(entry) {
+  if (entry === null || typeof entry !== 'object' || Array.isArray(entry)) return false
+  if (Array.isArray(entry.insert)) {
+    if (entry.insert.length === 0) return false
+    return entry.insert.every((row) => row !== null && typeof row === 'object' && !Array.isArray(row)
+      && row.name === AGENT_PRESET
+      && typeof row.id === 'string'
+      && row.id.startsWith(ROW_PREFIX))
+  }
+  if (typeof entry.id !== 'string' || entry.id.length === 0) return false
+  if (entry.name === AGENT_PRESET) return true
+  return entry.disabled === true && entry.name === undefined
+}
+
+/**
+ * Top-level entries inside the managed block that this plugin did not write.
+ *
+ * The block is not the only writer of its own region: DSH's config editor
+ * appends rows with document.add(), and the END marker is a trailing YAML
+ * comment, so those rows land between BEGIN and END. Rewriting the block must
+ * carry them out to safety instead of dropping them.
+ *
+ * @returns {string[]} entry text in file order, without trailing blank lines.
+ */
+export function foreignBlockEntries(regionText) {
+  if (typeof regionText !== 'string' || regionText.length === 0) return []
+  const eol = regionText.includes('\r\n') ? '\r\n' : '\n'
+  const lines = regionText.split(eol)
+  const groups = []
+  let current = null
+  const flush = () => {
+    if (current === null) return
+    while (current.length > 0 && current[current.length - 1].trim() === '') current.pop()
+    if (current.length > 0) groups.push(current)
+    current = null
+  }
+  for (const line of lines) {
+    const trimmed = line.trim()
+    if (trimmed === BEGIN || trimmed === END) { flush(); continue }
+    if (trimmed === '') { if (current !== null) current.push(line); continue }
+    if (TOP_LEVEL_ROW.test(line)) { flush(); current = [line]; continue }
+    if (TOP_LEVEL_COMMENT.test(line)) {
+      if (LOCK_COMMENT.test(line)) { flush(); continue }
+      flush()
+      groups.push([line])
+      continue
+    }
+    if (current !== null) current.push(line)
+    else groups.push([line])
+  }
+  flush()
+  const foreign = []
+  for (const group of groups) {
+    if (TOP_LEVEL_ROW.test(group[0])) {
+      let parsed
+      try { parsed = parseYaml(group.join(eol)) } catch { parsed = null }
+      if (Array.isArray(parsed) && parsed.length === 1 && isOwnedEntry(parsed[0])) continue
+    }
+    foreign.push(group.join(eol))
+  }
+  return foreign
+}
+
 /** Replace (or create) the managed block without touching the rest. */
 export function replaceBlock(text, blockText) {
   const located = locateBlock(text)
   if (located.found) {
-    return ensureArrayRoot(text.slice(0, located.start) + blockText + text.slice(located.end))
+    const head = text.slice(0, located.start)
+    const foreign = foreignBlockEntries(text.slice(located.start, located.end))
+    const moved = foreign.length === 0 ? '' : foreign.join('\n') + '\n'
+    const prefix = head.length > 0 && !head.endsWith('\n') ? head + '\n' : head
+    return ensureArrayRoot(prefix + moved + blockText + text.slice(located.end))
   }
   const emptyRoot = /^[ \t]*\[[ \t]*\][ \t]*$/m
   const match = emptyRoot.exec(text)

@@ -72,6 +72,63 @@ test('replacement is idempotent and leaves unrelated rows byte-identical', () =>
   assert.ok(second.includes('- id: something\n  disabled: false'))
 })
 
+test('rows another tool appended inside the block move above it instead of being deleted', () => {
+  const foreign = '- id: llm-pi-ai\n  name: "@deepseek-ai/dsh-llm-pi-ai"\n  config:\n    providers:\n      opencode-go:\n        api: openai-completions\n        models:\n          - id: deepseek-v4.1-flash\n'
+  const block = buildBlock([preset])
+  const before = block.slice(0, block.indexOf(END)) + foreign + block.slice(block.indexOf(END))
+  const after = replaceBlock(before, buildBlock([preset]))
+  assert.ok(after.includes('- id: llm-pi-ai'), 'foreign row was deleted')
+  assert.ok(after.includes('opencode-go'), 'foreign config was deleted')
+  assert.ok(after.indexOf('- id: llm-pi-ai') < after.indexOf(BEGIN), 'foreign row must move above the block')
+  assert.ok(!extractBlock(after).includes('llm-pi-ai'), 'the block must only hold its own rows')
+  assert.equal(replaceBlock(after, buildBlock([preset])), after, 'a second save must not move anything')
+})
+
+test('a foreign insert group and a top-level comment inside the block survive', () => {
+  const block = buildBlock([preset])
+  const injected = '# 外来注释\n- insert:\n    - id: other-tool-row\n      name: some-other-module\n'
+  const before = block.slice(0, block.indexOf(END)) + injected + block.slice(block.indexOf(END))
+  const after = replaceBlock(before, buildBlock([preset]))
+  assert.ok(after.includes('# 外来注释'))
+  assert.ok(after.includes('- id: other-tool-row'))
+  assert.ok(after.indexOf('- id: other-tool-row') < after.indexOf(BEGIN))
+})
+
+test('adopted overrides and tombstones stay inside the block', () => {
+  const model = {
+    presets: [
+      { id: 'mine', name: '我的', plugins: [] },
+      { id: 'theirs', adopted: true, rowId: 'foreign-row-id', plugins: [] },
+    ],
+    tombstones: ['gone-row'],
+    locks: ['theirs'],
+  }
+  const block = buildBlock(model)
+  assert.equal(replaceBlock(block, buildBlock(model)), block)
+  assert.equal(block.split('- id: foreign-row-id').length - 1, 1)
+  assert.equal(block.split('- id: gone-row').length - 1, 1)
+})
+
+test('a foreign row appended to a CRLF block is preserved', () => {
+  const block = buildBlock([preset]).replace(/\n/g, '\r\n')
+  const foreign = '- id: llm-pi-ai\r\n  name: "@deepseek-ai/dsh-llm-pi-ai"\r\n'
+  const endAt = block.indexOf(END)
+  const before = block.slice(0, endAt) + foreign + block.slice(endAt)
+  const after = replaceBlock(before, buildBlock([preset]))
+  assert.ok(after.includes('- id: llm-pi-ai'))
+  assert.ok(after.indexOf('- id: llm-pi-ai') < after.indexOf(BEGIN))
+})
+
+test('removing the last managed preset keeps rows that were appended inside the block', () => {
+  const block = buildBlock([preset])
+  const foreign = '- id: llm-pi-ai\n  name: "@deepseek-ai/dsh-llm-pi-ai"\n'
+  const before = block.slice(0, block.indexOf(END)) + foreign + block.slice(block.indexOf(END))
+  const after = replaceBlock(before, '')
+  assert.equal(extractBlock(after), null)
+  assert.ok(after.includes('- id: llm-pi-ai'))
+  assert.deepEqual(parseYaml(after), [{ id: 'llm-pi-ai', name: '@deepseek-ai/dsh-llm-pi-ai' }])
+})
+
 test('a broken marker pair is not treated as a managed block', () => {
   const text = '# >>> dsh-preset-studio managed block — 预设工坊维护，请勿手改标记内部\n[]\n'
   const next = replaceBlock(text, buildBlock([preset]))
