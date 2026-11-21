@@ -147,6 +147,48 @@ test('a comment nested inside an owned row moves out instead of being dropped', 
   assert.ok(after.indexOf('# 用户注释') < after.indexOf(BEGIN))
 })
 
+test('a block written with the legacy studio marker is read and migrated on save', () => {
+  const legacy = '# >>> dsh-preset-studio managed block — 预设工坊维护，请勿手改标记内部\n- insert:\n    - id: preset-studio-my-mode\n      name: "@deepseek-ai/dsh-agent-preset"\n      config:\n        id: my-mode\n        plugins: []\n# <<< dsh-preset-studio managed block\n'
+  const located = locateBlock(legacy)
+  assert.equal(located.found, true)
+  assert.equal(located.legacy, true)
+  assert.equal(readBlock(extractBlock(legacy)).length, 1)
+  const next = replaceBlock(legacy, buildBlock([preset]))
+  assert.ok(next.includes('# >>> dsh-preset-builder managed block'))
+  assert.ok(next.includes('# <<< dsh-preset-builder managed block'))
+  assert.ok(!next.includes('dsh-preset-studio managed block'))
+  assert.equal(locateBlock(next).legacy, false)
+})
+
+test('a legacy block keeps rows another tool appended while it migrates', () => {
+  const legacy = '# >>> dsh-preset-studio managed block — 预设工坊维护，请勿手改标记内部\n- insert:\n    - id: preset-studio-my-mode\n      name: "@deepseek-ai/dsh-agent-preset"\n      config:\n        id: my-mode\n        plugins: []\n# <<< dsh-preset-studio managed block\n'
+  const foreign = '- id: llm-pi-ai\n  name: "@deepseek-ai/dsh-llm-pi-ai"\n'
+  const endAt = legacy.indexOf('# <<<')
+  const before = legacy.slice(0, endAt) + foreign + legacy.slice(endAt)
+  const after = replaceBlock(before, buildBlock([preset]))
+  assert.ok(after.includes('- id: llm-pi-ai'))
+  assert.ok(after.indexOf('- id: llm-pi-ai') < after.indexOf('# >>> dsh-preset-builder managed block'))
+  assert.ok(after.includes('# <<< dsh-preset-builder managed block'))
+  assert.ok(!after.includes('dsh-preset-studio managed block'))
+})
+
+test('an orphaned legacy block is repaired with the current markers', () => {
+  const orphan = '- insert:\n    - id: preset-studio-x\n      name: "@deepseek-ai/dsh-agent-preset"\n      config:\n        id: x\n        plugins: []\n# <<< dsh-preset-studio managed block\n'
+  const repaired = insertBeginMarker(orphan)
+  assert.ok(repaired.includes('# >>> dsh-preset-builder managed block'))
+  assert.ok(repaired.includes('# <<< dsh-preset-builder managed block'))
+  assert.ok(!repaired.includes('dsh-preset-studio managed block'))
+  assert.equal(locateBlock(repaired).found, true)
+  assert.equal(locateBlock(repaired).legacy, false)
+})
+
+test('mixed markers still locate the block', () => {
+  const mixed = '# >>> dsh-preset-builder managed block — 预设工坊维护，请勿手改标记内部\n- insert:\n    - id: preset-studio-x\n      name: "@deepseek-ai/dsh-agent-preset"\n      config:\n        id: x\n        plugins: []\n# <<< dsh-preset-studio managed block\n'
+  const located = locateBlock(mixed)
+  assert.equal(located.found, true)
+  assert.equal(located.legacy, true)
+})
+
 test('a broken marker pair is not treated as a managed block', () => {
   const text = '# >>> dsh-preset-studio managed block — 预设工坊维护，请勿手改标记内部\n[]\n'
   const next = replaceBlock(text, buildBlock([preset]))

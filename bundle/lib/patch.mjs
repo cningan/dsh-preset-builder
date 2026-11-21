@@ -15,8 +15,37 @@
 import { createHash } from 'node:crypto'
 import { isJsExpr, parseYaml, emitListItem } from './yaml.mjs'
 
-export const BEGIN = '# >>> dsh-preset-studio managed block — 预设工坊维护，请勿手改标记内部'
-export const END = '# <<< dsh-preset-studio managed block'
+export const BEGIN = '# >>> dsh-preset-builder managed block — 预设工坊维护，请勿手改标记内部'
+export const END = '# <<< dsh-preset-builder managed block'
+
+/**
+ * Markers written before 0.7.0. They are still read so an existing profile
+ * migrates on the next save instead of losing its block; the block this
+ * version writes always carries the new markers.
+ */
+export const LEGACY_BEGIN = '# >>> dsh-preset-studio managed block — 预设工坊维护，请勿手改标记内部'
+export const LEGACY_END = '# <<< dsh-preset-studio managed block'
+
+const BEGIN_MARKERS = [BEGIN, LEGACY_BEGIN]
+const END_MARKERS = [END, LEGACY_END]
+
+function markerIn(text, markers, from = 0) {
+  let found = null
+  for (const marker of markers) {
+    const at = text.indexOf(marker, from)
+    if (at < 0) continue
+    if (found === null || at < found.at) found = { at, marker }
+  }
+  return found
+}
+
+function isBeginMarker(line) {
+  return line === BEGIN || line === LEGACY_BEGIN
+}
+
+function isEndMarker(line) {
+  return line === END || line === LEGACY_END
+}
 
 export const AGENT_PRESET = '@deepseek-ai/dsh-agent-preset'
 export const ROW_PREFIX = 'preset-studio-'
@@ -26,23 +55,34 @@ export function blockRevision(blockText) {
   return createHash('sha1').update(blockText ?? '').digest('hex')
 }
 
-/** Locate the managed block by its marker lines. */
+/**
+ * Locate the managed block by its marker lines.
+ *
+ * BEGIN and END are matched independently against the current and the legacy
+ * marker, so a profile written by 0.6.x (or a half-migrated one) is still
+ * found; `legacy` says the next write will replace the markers.
+ */
 export function locateBlock(text) {
-  const beginAt = text.indexOf(BEGIN)
-  if (beginAt < 0) {
+  const begin = markerIn(text, BEGIN_MARKERS)
+  if (begin === null) {
     // An END marker without its BEGIN marker means a hand edit or a partial
     // write broke the block. The rows are now plain declarations the plugin no
     // longer manages; say so instead of behaving as if no block ever existed.
-    return text.includes(END)
+    return markerIn(text, END_MARKERS) !== null
       ? { found: false, start: -1, end: -1, broken: true }
       : { found: false, start: -1, end: -1 }
   }
-  const endAt = text.indexOf(END, beginAt)
-  if (endAt < 0) return { found: false, start: -1, end: -1, broken: true }
-  let end = endAt + END.length
-  if (text[end] === '\r') end += 1
-  if (text[end] === '\n') end += 1
-  return { found: true, start: beginAt, end }
+  const end = markerIn(text, END_MARKERS, begin.at + begin.marker.length)
+  if (end === null) return { found: false, start: -1, end: -1, broken: true }
+  let endIndex = end.at + end.marker.length
+  if (text[endIndex] === '\r') endIndex += 1
+  if (text[endIndex] === '\n') endIndex += 1
+  return {
+    found: true,
+    start: begin.at,
+    end: endIndex,
+    legacy: begin.marker === LEGACY_BEGIN || end.marker === LEGACY_END,
+  }
 }
 
 export function extractBlock(text) {
@@ -65,15 +105,16 @@ export function extractBlock(text) {
  * hand-written declaration, so a block containing them is left alone and the
  * manual path stays available.
  *
- * @returns `{ line, rows }` — 0-based line the BEGIN marker belongs above, and
- *   the row ids found — or null when ownership cannot be proven.
+ * @returns `{ line, rows, endLine }` — 0-based line the BEGIN marker belongs
+ *   above, the row ids found, and the END line to rewrite — or null when
+ *   ownership cannot be proven.
  */
 export function findOrphanBlock(text) {
   if (typeof text !== 'string' || text.length === 0) return null
-  if (text.includes(BEGIN)) return null
+  if (markerIn(text, BEGIN_MARKERS) !== null) return null
   const eol = text.includes('\r\n') ? '\r\n' : '\n'
   const lines = text.split(eol)
-  const endLines = lines.map((line, index) => (line.trim() === END ? index : -1)).filter((index) => index >= 0)
+  const endLines = lines.map((line, index) => (isEndMarker(line.trim()) ? index : -1)).filter((index) => index >= 0)
   // Exactly one END and no BEGIN: a single block lost its head. Anything else
   // is a shape this rule was not designed for.
   if (endLines.length !== 1) return null
@@ -101,15 +142,21 @@ export function findOrphanBlock(text) {
   // A `# locks:` line belongs to the block too; the marker goes above it.
   let line = start
   while (line > 0 && /^#\s*locks:/.test(lines[line - 1])) line -= 1
-  return { line, rows: group.insert.map((row) => row.id) }
+  return { line, rows: group.insert.map((row) => row.id), endLine: endAt }
 }
 
-/** Put the BEGIN marker back above a recognisable orphan block. */
+/**
+ * Put the BEGIN marker back above a recognisable orphan block.
+ *
+ * A legacy END line is rewritten too, so the repaired block carries the
+ * current markers and needs no second migration pass.
+ */
 export function insertBeginMarker(text) {
   const found = findOrphanBlock(text)
   if (found === null) return null
   const eol = text.includes('\r\n') ? '\r\n' : '\n'
   const lines = text.split(eol)
+  lines[found.endLine] = END
   lines.splice(found.line, 0, BEGIN)
   return lines.join(eol)
 }
@@ -166,7 +213,7 @@ export function foreignBlockEntries(regionText) {
   }
   for (const line of lines) {
     const trimmed = line.trim()
-    if (trimmed === BEGIN || trimmed === END) { flush(); continue }
+    if (isBeginMarker(trimmed) || isEndMarker(trimmed)) { flush(); continue }
     if (trimmed === '') { if (current !== null) current.push(line); continue }
     if (TOP_LEVEL_ROW.test(line)) { flush(); current = [line]; continue }
     if (COMMENT_LINE.test(line)) {

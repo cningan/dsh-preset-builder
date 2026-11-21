@@ -1,5 +1,12 @@
 # 变更记录
 
+## 0.7.0 — 标记改名 Builder，旧 Studio 标记自动迁移
+
+- **托管块标记从 `dsh-preset-studio` 改为 `dsh-preset-builder`**：起始行 `# >>> dsh-preset-builder managed block — 预设工坊维护，请勿手改标记内部`，结束行 `# <<< dsh-preset-builder managed block`。0.6.x 写下的旧标记仍能读取（`locateBlock()` 返回 `legacy: true`），下一次保存把整块重写为新标记，块内容与顺序不变；旧标记的孤儿块（缺起始行）修复时也直接落成新标记。
+- **块内外来行与旧标记现在可见**：`/state` 的 `block` 新增 `foreign`（块内非本插件行数）与 `legacy`。工坊顶栏提示「托管块内有 N 行不属于预设工坊，保存时移到块上方」以及「保存后标记更新为 Builder」，用户不必自己发现。
+- 行 id 前缀 `preset-studio-<id>`、HTTP 路由 `/plugins/preset-studio`、`localStorage` 键保持不变：改它们会让已保存的预设行与尚未刷新的页面失效，而它们不是用户可见的「备注」。
+- `test/unit.mjs` 40 → 44 项（旧标记读取与迁移、旧标记块内外来行、旧标记孤儿块修复、混合标记）。
+
 ## 0.6.6 — 保存不再吞掉设置页追加的行
 
 - **修复：保存预设会静默删除托管块内的非本插件行**（上游 issue #1）。DSH 设置页添加模型提供方时，官方 `configEditor` 用 `document.add()` 把 `- id: llm-pi-ai` 这类行追加到 YAML 序列末尾；而托管块的 `# <<< …` 结束标记在 YAML 里是尾部注释，永远排在文件最后，于是新行落在 BEGIN 与 END 之间。`replaceBlock()` 此前把整个标记区间当作本插件独占区域整体重写，下一次「保存预设」就把这些行直接丢掉——文件仍是合法 YAML、密钥还在 `~/.dsh/.credentials.yaml`，没有任何日志，用户只能重建提供方。

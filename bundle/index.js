@@ -20,6 +20,7 @@ import {
   cleanValue,
   extractBlock,
   findOrphanBlock,
+  foreignBlockEntries,
   insertBeginMarker,
   locateBlock,
   parseBlock,
@@ -449,6 +450,10 @@ async function buildState(ctx, config) {
     block: {
       found: located.found === true,
       broken: located.broken === true,
+      // Rows another tool appended inside the region; a save moves them out.
+      foreign: foreignBlockEntries(extractBlock(text) ?? '').length,
+      // Markers written by 0.6.x; the next save rewrites them as builder.
+      legacy: located.legacy === true,
       recoverable: orphan !== null,
       line: orphan === null ? null : orphan.line + 1,
     },
