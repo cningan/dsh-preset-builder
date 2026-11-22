@@ -1,176 +1,53 @@
 /**
- * Managed block inside the profile user patch layer.
+ * Managed module inside the profile user patch layer.
  *
- * The block is the only region this plugin may rewrite. Everything before and
- * after it — comments, other patches, user rows — is preserved byte for byte.
- *
- * A block holds three kinds of entries:
+ * The module is a run of top-level entries this plugin owns:
  *  - `- insert:` rows created by this plugin (`preset-studio-<id>`);
- *  - override rows that adopt a declaration another layer already made, keyed
- *    by that declaration's Loader row id;
- *  - tombstones (`- id: <row>\n  disabled: true`) that suppress a declaration
- *    the plugin no longer manages but must not resurrect.
- * The `# locks:` comment keeps the ids the user opted out of management.
+ *  - override rows that adopt a declaration another layer already made;
+ *  - tombstones (`- id: <row>\n  disabled: true`);
+ *  - the `# locks:` comment.
+ *
+ * Ownership comes from the entries themselves, not from a closing marker.
+ * DSH config editor appends rows with `document.add()`; a closing YAML comment
+ * sits before those appended rows, so an append would land inside the module.
+ * The module therefore has no closing marker at all. The opening comment is
+ * documentation only: a lost or edited comment never hides the entries.
  */
 import { createHash } from 'node:crypto'
 import { isJsExpr, parseYaml, emitListItem } from './yaml.mjs'
 
 export const BEGIN = '# >>> dsh-preset-builder managed block — 预设工坊维护，请勿手改标记内部'
-export const END = '# <<< dsh-preset-builder managed block'
-
-/**
- * Markers written before 0.7.0. They are still read so an existing profile
- * migrates on the next save instead of losing its block; the block this
- * version writes always carries the new markers.
- */
 export const LEGACY_BEGIN = '# >>> dsh-preset-studio managed block — 预设工坊维护，请勿手改标记内部'
+/** Closing markers written before 0.8.0; dropped on the next save. */
+export const END = '# <<< dsh-preset-builder managed block'
 export const LEGACY_END = '# <<< dsh-preset-studio managed block'
-
-const BEGIN_MARKERS = [BEGIN, LEGACY_BEGIN]
-const END_MARKERS = [END, LEGACY_END]
-
-function markerIn(text, markers, from = 0) {
-  let found = null
-  for (const marker of markers) {
-    const at = text.indexOf(marker, from)
-    if (at < 0) continue
-    if (found === null || at < found.at) found = { at, marker }
-  }
-  return found
-}
-
-function isBeginMarker(line) {
-  return line === BEGIN || line === LEGACY_BEGIN
-}
-
-function isEndMarker(line) {
-  return line === END || line === LEGACY_END
-}
 
 export const AGENT_PRESET = '@deepseek-ai/dsh-agent-preset'
 export const ROW_PREFIX = 'preset-studio-'
 const LOCK_LINE = /^#\s*locks:\s*(.*)$/m
+const TOP_LEVEL_ROW = /^-(?:[ \t]|$)/
+const LOCK_COMMENT = /^#\s*locks:/
+const MODULE_START = /^#\s*>>>\s+\S.*managed block/
+const BEGIN_MARKERS = [BEGIN, LEGACY_BEGIN]
+const END_MARKERS = [END, LEGACY_END]
+
+function isBeginMarker(line) {
+  return BEGIN_MARKERS.includes(line)
+}
+
+function isEndMarker(line) {
+  return END_MARKERS.includes(line)
+}
 
 export function blockRevision(blockText) {
   return createHash('sha1').update(blockText ?? '').digest('hex')
 }
 
 /**
- * Locate the managed block by its marker lines.
- *
- * BEGIN and END are matched independently against the current and the legacy
- * marker, so a profile written by 0.6.x (or a half-migrated one) is still
- * found; `legacy` says the next write will replace the markers.
- */
-export function locateBlock(text) {
-  const begin = markerIn(text, BEGIN_MARKERS)
-  if (begin === null) {
-    // An END marker without its BEGIN marker means a hand edit or a partial
-    // write broke the block. The rows are now plain declarations the plugin no
-    // longer manages; say so instead of behaving as if no block ever existed.
-    return markerIn(text, END_MARKERS) !== null
-      ? { found: false, start: -1, end: -1, broken: true }
-      : { found: false, start: -1, end: -1 }
-  }
-  const end = markerIn(text, END_MARKERS, begin.at + begin.marker.length)
-  if (end === null) return { found: false, start: -1, end: -1, broken: true }
-  let endIndex = end.at + end.marker.length
-  if (text[endIndex] === '\r') endIndex += 1
-  if (text[endIndex] === '\n') endIndex += 1
-  return {
-    found: true,
-    start: begin.at,
-    end: endIndex,
-    legacy: begin.marker === LEGACY_BEGIN || end.marker === LEGACY_END,
-  }
-}
-
-export function extractBlock(text) {
-  const located = locateBlock(text)
-  if (!located.found) return null
-  return text.slice(located.start, located.end)
-}
-
-/**
- * Find a managed block whose BEGIN marker is gone.
- *
- * Ownership is provable from content, not from the marker: a top-level
- * `- insert:` group whose every row is `preset-studio-<id>` and names this
- * plugin's preset module can only have been written here. That is what makes
- * a damaged block repairable instead of degrading into "someone else's
- * declarations" that the user has to hand-fix.
- *
- * Only that shape is recovered on purpose. Override rows (written by adopt,
- * they reuse another layer's row id) and tombstones look exactly like a
- * hand-written declaration, so a block containing them is left alone and the
- * manual path stays available.
- *
- * @returns `{ line, rows, endLine }` — 0-based line the BEGIN marker belongs
- *   above, the row ids found, and the END line to rewrite — or null when
- *   ownership cannot be proven.
- */
-export function findOrphanBlock(text) {
-  if (typeof text !== 'string' || text.length === 0) return null
-  if (markerIn(text, BEGIN_MARKERS) !== null) return null
-  const eol = text.includes('\r\n') ? '\r\n' : '\n'
-  const lines = text.split(eol)
-  const endLines = lines.map((line, index) => (isEndMarker(line.trim()) ? index : -1)).filter((index) => index >= 0)
-  // Exactly one END and no BEGIN: a single block lost its head. Anything else
-  // is a shape this rule was not designed for.
-  if (endLines.length !== 1) return null
-  const endAt = endLines[0]
-  let last = endAt - 1
-  while (last >= 0 && lines[last].trim() === '') last -= 1
-  if (last < 0) return null
-  let start = last
-  while (start > 0 && !/^- \S/.test(lines[start])) start -= 1
-  if (!/^- insert:\s*$/.test(lines[start])) return null
-  let parsed
-  try {
-    parsed = parseYaml(lines.slice(start, last + 1).join(eol))
-  } catch {
-    return null
-  }
-  if (!Array.isArray(parsed) || parsed.length !== 1) return null
-  const group = parsed[0]
-  if (group === null || typeof group !== 'object' || !Array.isArray(group.insert) || group.insert.length === 0) return null
-  for (const row of group.insert) {
-    if (row === null || typeof row !== 'object') return null
-    if (row.name !== AGENT_PRESET) return null
-    if (typeof row.id !== 'string' || !row.id.startsWith(ROW_PREFIX)) return null
-  }
-  // A `# locks:` line belongs to the block too; the marker goes above it.
-  let line = start
-  while (line > 0 && /^#\s*locks:/.test(lines[line - 1])) line -= 1
-  return { line, rows: group.insert.map((row) => row.id), endLine: endAt }
-}
-
-/**
- * Put the BEGIN marker back above a recognisable orphan block.
- *
- * A legacy END line is rewritten too, so the repaired block carries the
- * current markers and needs no second migration pass.
- */
-export function insertBeginMarker(text) {
-  const found = findOrphanBlock(text)
-  if (found === null) return null
-  const eol = text.includes('\r\n') ? '\r\n' : '\n'
-  const lines = text.split(eol)
-  lines[found.endLine] = END
-  lines.splice(found.line, 0, BEGIN)
-  return lines.join(eol)
-}
-
-const TOP_LEVEL_ROW = /^-(?:[ \t]|$)/
-const COMMENT_LINE = /^[ \t]*#/
-const LOCK_COMMENT = /^#\s*locks:/
-
-/**
  * Whether a top-level patch entry can only have been written by this plugin.
  *
- * Ownership is decided from content, not from position: the block region is
- * also where other tools append rows, so anything that is not provably ours
- * must move out of the block instead of being overwritten.
+ * Anything that is not provably ours is foreign content: it must stay in the
+ * file, but it does not belong to the module.
  */
 function isOwnedEntry(entry) {
   if (entry === null || typeof entry !== 'object' || Array.isArray(entry)) return false
@@ -189,64 +66,182 @@ function isOwnedEntry(entry) {
   return entry.disabled === true && entry.name === undefined && entry.config === undefined
 }
 
+/** Drop closing markers written by older versions; they are not content. */
+function stripLegacyEnd(text) {
+  if (typeof text !== 'string' || text.length === 0) return text
+  const eol = text.includes('\r\n') ? '\r\n' : '\n'
+  const lines = text.split(eol)
+  const kept = lines.filter((line) => !isEndMarker(line.trim()))
+  if (kept.length === lines.length) return text
+  return kept.join(eol)
+}
+
 /**
- * Top-level entries inside the managed block that this plugin did not write.
+ * Scan the module: owned entries, foreign rows that sit inside it, and the
+ * tail after the last owned entry.
  *
- * The block is not the only writer of its own region: DSH's config editor
- * appends rows with document.add(), and the END marker is a trailing YAML
- * comment, so those rows land between BEGIN and END. Rewriting the block must
- * carry them out to safety instead of dropping them.
- *
- * @returns {string[]} entry text in file order, without trailing blank lines.
+ * @returns `{ found, start, end, foreign, legacy, missingComment }`;
+ *   `start`/`end` are character offsets of the region a save rewrites.
  */
-export function foreignBlockEntries(regionText) {
-  if (typeof regionText !== 'string' || regionText.length === 0) return []
-  const eol = regionText.includes('\r\n') ? '\r\n' : '\n'
-  const lines = regionText.split(eol)
-  const groups = []
+export function scanModule(text) {
+  const empty = { found: false, start: -1, end: -1, foreign: [], legacy: false, missingComment: false }
+  if (typeof text !== 'string' || text.length === 0) return empty
+  const eol = text.includes('\r\n') ? '\r\n' : '\n'
+  const lines = text.split(eol)
+  const offsets = []
+  let offset = 0
+  for (const line of lines) {
+    offsets.push(offset)
+    offset += line.length + eol.length
+  }
+  const items = []
   let current = null
   const flush = () => {
     if (current === null) return
-    while (current.length > 0 && current[current.length - 1].trim() === '') current.pop()
-    if (current.length > 0) groups.push(current)
+    while (current.lines.length > 1 && current.lines[current.lines.length - 1].trim() === '') current.lines.pop()
+    current.lineEnd = current.lineStart + current.lines.length - 1
+    items.push(current)
     current = null
   }
-  for (const line of lines) {
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i]
     const trimmed = line.trim()
-    if (isBeginMarker(trimmed) || isEndMarker(trimmed)) { flush(); continue }
-    if (trimmed === '') { if (current !== null) current.push(line); continue }
-    if (TOP_LEVEL_ROW.test(line)) { flush(); current = [line]; continue }
-    if (COMMENT_LINE.test(line)) {
-      if (LOCK_COMMENT.test(line)) { flush(); continue }
+    if (trimmed === '') { if (current !== null) current.lines.push(line); continue }
+    if (TOP_LEVEL_ROW.test(line)) {
       flush()
-      groups.push([line])
+      current = { kind: 'entry', lineStart: i, lines: [line] }
       continue
     }
-    if (current !== null) current.push(line)
-    else groups.push([line])
-  }
-  flush()
-  const foreign = []
-  for (const group of groups) {
-    if (TOP_LEVEL_ROW.test(group[0])) {
-      let parsed
-      try { parsed = parseYaml(group.join(eol)) } catch { parsed = null }
-      if (Array.isArray(parsed) && parsed.length === 1 && isOwnedEntry(parsed[0])) continue
+    if (/^[ \t]*#/.test(line)) {
+      if (current !== null && /^[ \t]+#/.test(line)) { current.lines.push(line); continue }
+      flush()
+      current = { kind: 'comment', lineStart: i, lines: [line] }
+      continue
     }
-    foreign.push(group.join(eol))
+    if (current !== null) current.lines.push(line)
+    else current = { kind: 'other', lineStart: i, lines: [line] }
   }
-  return foreign
+  flush(lines.length - 1)
+  let legacy = false
+  let beginLine = -1
+  const classified = []
+  for (const item of items) {
+    if (item.kind === 'comment') {
+      const trimmed = item.lines[0].trim()
+      if (isBeginMarker(trimmed)) {
+        legacy = legacy || trimmed === LEGACY_BEGIN
+        beginLine = item.lineStart
+        classified.push({ ...item, owned: true, discard: false })
+        continue
+      }
+      if (isEndMarker(trimmed)) {
+        classified.push({ ...item, owned: false, discard: true })
+        continue
+      }
+      if (LOCK_COMMENT.test(item.lines[0])) {
+        classified.push({ ...item, owned: true, discard: false })
+        continue
+      }
+      if (MODULE_START.test(trimmed)) {
+        classified.push({ ...item, owned: false, discard: false, stop: true })
+        break
+      }
+      classified.push({ ...item, owned: false, discard: false })
+      continue
+    }
+    if (item.kind === 'entry') {
+      let parsed
+      try { parsed = parseYaml(item.lines.join(eol)) } catch { parsed = null }
+      const owned = Array.isArray(parsed) && parsed.length === 1 && isOwnedEntry(parsed[0])
+      classified.push({ ...item, owned, discard: false })
+      continue
+    }
+    classified.push({ ...item, owned: false, discard: false })
+  }
+  const ownedItems = classified.filter((item) => item.owned && !item.discard)
+  const ownedEntries = ownedItems.filter((item) => item.kind === 'entry')
+  // A comment alone is not a module: the entries are the contract.
+  if (ownedEntries.length === 0) return empty
+  const firstOwned = ownedItems[0].lineStart
+  const lastOwned = ownedEntries[ownedEntries.length - 1].lineEnd
+  const startLine = beginLine >= 0 && beginLine < firstOwned ? beginLine : firstOwned
+  const start = offsets[startLine]
+  const end = offsets[lastOwned] + lines[lastOwned].length + eol.length
+  const foreign = []
+  for (const item of classified) {
+    if (item.owned || item.discard) continue
+    if (item.lineStart < startLine || item.lineStart > lastOwned) continue
+    foreign.push(item.lines.join(eol))
+  }
+  return { found: true, start, end, foreign, legacy, missingComment: beginLine < 0 }
 }
 
-/** Replace (or create) the managed block without touching the rest. */
-export function replaceBlock(text, blockText) {
+/**
+ * Locate the module. `start`/`end` are the region a save rewrites; foreign
+ * rows inside it move above the module on the next write.
+ */
+export function locateBlock(text) {
+  const scanned = scanModule(text)
+  return {
+    found: scanned.found,
+    start: scanned.start,
+    end: scanned.end,
+    legacy: scanned.legacy,
+    missingComment: scanned.missingComment,
+    // The content-owned module has no marker pair that can break; the field
+    // stays for callers written against the marker model.
+    broken: false,
+  }
+}
+
+export function extractBlock(text) {
   const located = locateBlock(text)
-  if (located.found) {
-    const head = text.slice(0, located.start)
-    const foreign = foreignBlockEntries(text.slice(located.start, located.end))
-    const moved = foreign.length === 0 ? '' : foreign.join('\n') + '\n'
+  if (!located.found) return null
+  return text.slice(located.start, located.end)
+}
+
+/**
+ * The module exists but its opening comment is gone. The comment is only
+ * documentation, so this is a repair suggestion, not an error.
+ */
+export function findOrphanBlock(text) {
+  const scanned = scanModule(text)
+  if (!scanned.found || !scanned.missingComment) return null
+  const eol = text.includes('\r\n') ? '\r\n' : '\n'
+  const startLine = text.slice(0, scanned.start).split(eol).length - 1
+  const rows = []
+  let parsed
+  try { parsed = parseYaml(text.slice(scanned.start, scanned.end)) } catch { parsed = null }
+  if (Array.isArray(parsed)) {
+    for (const entry of parsed) {
+      if (entry && Array.isArray(entry.insert)) {
+        for (const row of entry.insert) {
+          if (row && typeof row.id === 'string') rows.push(row.id)
+        }
+      }
+    }
+  }
+  return { line: startLine, rows }
+}
+
+/** Put the opening comment back above a module that lost it. */
+export function insertBeginMarker(text) {
+  const found = findOrphanBlock(text)
+  if (found === null) return null
+  const eol = text.includes('\r\n') ? '\r\n' : '\n'
+  const lines = text.split(eol)
+  lines.splice(found.line, 0, BEGIN)
+  return stripLegacyEnd(lines.join(eol))
+}
+
+/** Replace (or create) the module without touching the rest. */
+export function replaceBlock(text, blockText) {
+  const scanned = scanModule(text)
+  if (scanned.found) {
+    const head = text.slice(0, scanned.start)
+    const moved = scanned.foreign.length === 0 ? '' : scanned.foreign.join('\n') + '\n'
     const prefix = head.length > 0 && !head.endsWith('\n') ? head + '\n' : head
-    return ensureArrayRoot(prefix + moved + blockText + text.slice(located.end))
+    return ensureArrayRoot(prefix + moved + blockText + stripLegacyEnd(text.slice(scanned.end)))
   }
   const emptyRoot = /^[ \t]*\[[ \t]*\][ \t]*$/m
   const match = emptyRoot.exec(text)
@@ -376,7 +371,6 @@ export function buildBlock(model) {
   for (const rowId of tombstones) {
     lines.push(...emitListItem({ id: rowId, disabled: true }, 0))
   }
-  lines.push(END)
   return `${lines.join('\n')}\n`
 }
 

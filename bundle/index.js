@@ -20,11 +20,11 @@ import {
   cleanValue,
   extractBlock,
   findOrphanBlock,
-  foreignBlockEntries,
   insertBeginMarker,
   locateBlock,
   parseBlock,
   replaceBlock,
+  scanModule,
   validatePresets,
 } from './lib/patch.mjs'
 import { readBuiltInPreset, readRegistryDocument } from './lib/presets.mjs'
@@ -367,7 +367,8 @@ async function buildState(ctx, config) {
   const path = ctx.get('profileContext')?.patchPath
   const text = typeof path === 'string' && path.length > 0 ? await readPatch(path) : '[]\n'
   const located = locateBlock(text)
-  const orphan = located.broken === true ? findOrphanBlock(text) : null
+  const scanned = scanModule(text)
+  const orphan = located.missingComment === true ? findOrphanBlock(text) : null
   const model = parseBlock(extractBlock(text))
   const registry = await listRegistryPresets(ctx)
   const declarations = presetDeclarations(ctx)
@@ -449,11 +450,12 @@ async function buildState(ctx, config) {
     // put back from the UI instead of asking the user to edit YAML.
     block: {
       found: located.found === true,
-      broken: located.broken === true,
-      // Rows another tool appended inside the region; a save moves them out.
-      foreign: foreignBlockEntries(extractBlock(text) ?? '').length,
-      // Markers written by 0.6.x; the next save rewrites them as builder.
+      // Rows another tool appended inside the module; a save moves them out.
+      foreign: scanned.foreign.length,
+      // Opening comment written by 0.6.x; the next save rewrites it.
       legacy: located.legacy === true,
+      // The module is content-owned, so a missing comment is a suggestion.
+      missingComment: located.missingComment === true,
       recoverable: orphan !== null,
       line: orphan === null ? null : orphan.line + 1,
     },
@@ -574,15 +576,8 @@ function conflictOf(body, blockText) {
 
 /** Write a new block, reconcile the profile, and roll back on failure. */
 async function applyAndReconcile(ctx, path, previous, nextBlock) {
-  // Writing while the block is broken appends a second complete block, so the
-  // same row ids would be declared twice. Refuse and point at the repair.
-  if (locateBlock(previous).broken === true) {
-    return {
-      ok: false,
-      brokenBlock: true,
-      error: 'the managed block is missing its opening marker line; repair the block first',
-    }
-  }
+  // The module is content-owned, so a missing opening comment never blocks a
+  // save: the rows still belong to this plugin and are rewritten in place.
   return applyTextAndReconcile(ctx, path, previous, replaceBlock(previous, nextBlock))
 }
 

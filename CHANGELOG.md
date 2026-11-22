@@ -1,5 +1,12 @@
 # 变更记录
 
+## 0.8.0 — 托管模块改为内容定位，去掉末尾注释
+
+- **根治：别的工具追加到文件末尾的配置行不再进入托管模块**。旧设计用首尾注释圈地；YAML 里文件末尾的注释是尾部注释，官方配置编辑器 `document.add()` 追加的行会插在它之前，也就是模块内部，下一次保存被整段重写吞掉。现在**不写末尾注释**：模块的最后一条是真实 YAML 条目，追加行落在它之后。
+- **定位改为内容判定**：`scanModule()` 扫描顶层条目，只有本插件可能写出的完整形状（`preset-studio-<id>` + agent-preset 的 insert 组、接管覆盖行、无 name/config 的 disabled 墓碑、`# locks:`）算模块内容；首行注释只做说明，丢失不影响管理（`block.missingComment` 提示，可补回，不再拒写）。模块中间混入的外来行保存时上移到模块前。
+- 旧 `# <<< …` 末尾注释在下次保存时删除；旧 studio 首行注释替换为 builder。行 id 前缀、HTTP 路由、`localStorage` 键不变。
+- 验证：单测 41 项；真实 desktop profile dry-run（迁移后无末尾注释、追加行在模块外）；隔离实例 E2E 18 项（旧标记迁移、追加行落模块外、保存后保留、缺注释仍管理、补回注释）。
+
 ## 0.7.0 — 标记改名 Builder，旧 Studio 标记自动迁移
 
 - **托管块标记从 `dsh-preset-studio` 改为 `dsh-preset-builder`**：起始行 `# >>> dsh-preset-builder managed block — 预设工坊维护，请勿手改标记内部`，结束行 `# <<< dsh-preset-builder managed block`。0.6.x 写下的旧标记仍能读取（`locateBlock()` 返回 `legacy: true`），下一次保存把整块重写为新标记，块内容与顺序不变；旧标记的孤儿块（缺起始行）修复时也直接落成新标记。

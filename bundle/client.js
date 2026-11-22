@@ -42,10 +42,10 @@ window.__ModuleLoader__.load({
       foreignHint: '这个预设由其它插件声明。接管后，它的组合在这里可编辑，声明也会写入本 profile。',
       officialHint: '官方预设只读；可以复制一份再改。',
       emptyPresets: '还没有自定义预设。',
-      blockBroken: 'profile 补丁里的托管块缺少起始标记行（# >>> dsh-preset-builder managed block …）。工坊已不再管理其中的预设，保存也会被拒绝。',
-      blockBrokenAuto: '这些行确实是工坊写的，可以一键补回。',
-      blockBrokenFix: '修复标记',
-      blockBrokenDone: '标记已补回，预设重新归工坊管理。',
+      blockMissingComment: '托管块缺少说明注释（# >>> dsh-preset-builder managed block …）。这不影响读写；补回后便于识别这个模块。',
+      blockMissingCommentAuto: '这些行确实是工坊写的，可以补回注释。',
+      blockMissingCommentFix: '补回注释',
+      blockMissingCommentDone: '说明注释已补回。',
       blockForeign: '托管块内有 {n} 行不属于预设工坊（通常是设置页追加的配置）。保存任意预设时，这些行会被移到标记块上方并保留。',
       blockLegacy: '托管块仍使用旧标记（dsh-preset-studio）。保存任意预设后会更新为 dsh-preset-builder，块内容不变。',
       emptyComposition: '选择左侧的预设，或新建一个。',
@@ -271,10 +271,10 @@ window.__ModuleLoader__.load({
       foreignHint: 'Another layer declares this preset. Adopt it to edit its composition; the declaration is then owned by this profile.',
       officialHint: 'Official presets are read-only; copy one to edit.',
       emptyPresets: 'No custom preset yet.',
-      blockBroken: 'The managed block in the profile patch lost its opening marker line (# >>> dsh-preset-builder managed block …). The Workshop no longer manages those presets and refuses to save.',
-      blockBrokenAuto: 'These rows are provably the Workshop\'s, so the marker can be restored here.',
-      blockBrokenFix: 'Repair marker',
-      blockBrokenDone: 'Marker restored; the Workshop manages those presets again.',
+      blockMissingComment: 'The managed module lost its opening comment (# >>> dsh-preset-builder managed block …). This does not affect reads or writes; restoring it only makes the module easier to recognise.',
+      blockMissingCommentAuto: 'These rows are provably the Workshop\'s, so the comment can be restored here.',
+      blockMissingCommentFix: 'Restore comment',
+      blockMissingCommentDone: 'Opening comment restored.',
       blockForeign: 'The managed block holds {n} row(s) the Workshop does not own (usually config appended by the settings page). Saving any preset moves them above the block and keeps them.',
       blockLegacy: 'The managed block still uses the legacy dsh-preset-studio marker. Saving any preset rewrites it as dsh-preset-builder; the block content is unchanged.',
       emptyComposition: 'Pick a preset on the left or create one.',
@@ -3226,13 +3226,13 @@ window.__ModuleLoader__.load({
               type: 'button', style: styles.iconButton, title: t('refresh'), 'aria-label': t('refresh'),
               onClick: () => void load(),
             }, h(Icon, { name: 'refresh', size: 14 })))),
-        state?.block?.broken === true
-          ? h('div', { className: 'ps-banner-warn', role: 'alert', style: { ...styles.inactiveWarnBox, margin: '0 12px 8px', alignItems: 'center' } },
+        state?.block?.missingComment === true
+          ? h('div', { className: 'ps-banner-warn', role: 'status', style: { ...styles.inactiveWarnBox, margin: '0 12px 8px', alignItems: 'center' } },
               h('span', { style: { flex: '1 1 auto' } },
-                t('blockBroken'),
-                state?.block?.recoverable === true ? ' ' + t('blockBrokenAuto') : ''),
+                t('blockMissingComment'),
+                state?.block?.recoverable === true ? ' ' + t('blockMissingCommentAuto') : ''),
               state?.block?.recoverable === true
-                ? h('button', { type: 'button', style: { ...styles.button, flex: '0 0 auto' }, onClick: () => void api.repairBlock() }, t('blockBrokenFix'))
+                ? h('button', { type: 'button', style: { ...styles.button, flex: '0 0 auto' }, onClick: () => void api.repairBlock() }, t('blockMissingCommentFix'))
                 : null)
           : state?.block?.foreign > 0
             ? h('div', { className: 'ps-banner-warn', role: 'status', style: { ...styles.inactiveWarnBox, margin: '0 12px 8px', alignItems: 'center' } },

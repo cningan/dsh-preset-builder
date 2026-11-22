@@ -72,29 +72,42 @@ test('replacement is idempotent and leaves unrelated rows byte-identical', () =>
   assert.ok(second.includes('- id: something\n  disabled: false'))
 })
 
-test('rows another tool appended inside the block move above it instead of being deleted', () => {
+test('a row appended after the module stays outside it and is never swallowed', () => {
   const foreign = '- id: llm-pi-ai\n  name: "@deepseek-ai/dsh-llm-pi-ai"\n  config:\n    providers:\n      opencode-go:\n        api: openai-completions\n        models:\n          - id: deepseek-v4.1-flash\n'
   const block = buildBlock([preset])
-  const before = block.slice(0, block.indexOf(END)) + foreign + block.slice(block.indexOf(END))
-  const after = replaceBlock(before, buildBlock([preset]))
+  const after = replaceBlock(block + foreign, buildBlock([preset]))
   assert.ok(after.includes('- id: llm-pi-ai'), 'foreign row was deleted')
   assert.ok(after.includes('opencode-go'), 'foreign config was deleted')
-  assert.ok(after.indexOf('- id: llm-pi-ai') < after.indexOf(BEGIN), 'foreign row must move above the block')
-  assert.ok(!extractBlock(after).includes('llm-pi-ai'), 'the block must only hold its own rows')
+  assert.ok(after.indexOf('- id: llm-pi-ai') > after.indexOf('preset-studio-my-mode'), 'foreign row stays after the module')
+  assert.ok(!extractBlock(after).includes('llm-pi-ai'), 'the module must only hold its own rows')
   assert.equal(replaceBlock(after, buildBlock([preset])), after, 'a second save must not move anything')
 })
 
-test('a foreign insert group and a top-level comment inside the block survive', () => {
-  const block = buildBlock([preset])
+test('a row mixed into the middle of the module moves above it', () => {
+  const model = { presets: [{ id: 'mine', name: '我的', plugins: [] }], tombstones: ['gone-row'], locks: [] }
+  const block = buildBlock(model)
+  const foreign = '- id: llm-pi-ai\n  name: "@deepseek-ai/dsh-llm-pi-ai"\n'
+  const at = block.indexOf('- id: gone-row')
+  const before = block.slice(0, at) + foreign + block.slice(at)
+  const after = replaceBlock(before, buildBlock(model))
+  assert.ok(after.includes('- id: llm-pi-ai'))
+  assert.ok(after.indexOf('- id: llm-pi-ai') < after.indexOf(BEGIN))
+  assert.ok(!extractBlock(after).includes('llm-pi-ai'))
+})
+
+test('a foreign insert group and a top-level comment mixed into the module survive above it', () => {
+  const model = { presets: [{ id: 'mine', name: '我的', plugins: [] }], tombstones: ['gone-row'], locks: [] }
+  const block = buildBlock(model)
   const injected = '# 外来注释\n- insert:\n    - id: other-tool-row\n      name: some-other-module\n'
-  const before = block.slice(0, block.indexOf(END)) + injected + block.slice(block.indexOf(END))
-  const after = replaceBlock(before, buildBlock([preset]))
+  const at = block.indexOf('- id: gone-row')
+  const before = block.slice(0, at) + injected + block.slice(at)
+  const after = replaceBlock(before, buildBlock(model))
   assert.ok(after.includes('# 外来注释'))
   assert.ok(after.includes('- id: other-tool-row'))
   assert.ok(after.indexOf('- id: other-tool-row') < after.indexOf(BEGIN))
 })
 
-test('adopted overrides and tombstones stay inside the block', () => {
+test('adopted overrides and tombstones stay inside the module', () => {
   const model = {
     presets: [
       { id: 'mine', name: '我的', plugins: [] },
@@ -107,47 +120,38 @@ test('adopted overrides and tombstones stay inside the block', () => {
   assert.equal(replaceBlock(block, buildBlock(model)), block)
   assert.equal(block.split('- id: foreign-row-id').length - 1, 1)
   assert.equal(block.split('- id: gone-row').length - 1, 1)
+  assert.ok(!block.includes('# <<<'))
 })
 
-test('a foreign row appended to a CRLF block is preserved', () => {
+test('a foreign row appended to a CRLF module is preserved', () => {
   const block = buildBlock([preset]).replace(/\n/g, '\r\n')
   const foreign = '- id: llm-pi-ai\r\n  name: "@deepseek-ai/dsh-llm-pi-ai"\r\n'
-  const endAt = block.indexOf(END)
-  const before = block.slice(0, endAt) + foreign + block.slice(endAt)
-  const after = replaceBlock(before, buildBlock([preset]))
+  const after = replaceBlock(block + foreign, buildBlock([preset]))
   assert.ok(after.includes('- id: llm-pi-ai'))
-  assert.ok(after.indexOf('- id: llm-pi-ai') < after.indexOf(BEGIN))
+  assert.ok(after.indexOf('- id: llm-pi-ai') > after.indexOf('preset-studio-my-mode'))
 })
 
-test('removing the last managed preset keeps rows that were appended inside the block', () => {
+test('removing the last managed preset keeps rows that follow the module', () => {
   const block = buildBlock([preset])
   const foreign = '- id: llm-pi-ai\n  name: "@deepseek-ai/dsh-llm-pi-ai"\n'
-  const before = block.slice(0, block.indexOf(END)) + foreign + block.slice(block.indexOf(END))
-  const after = replaceBlock(before, '')
+  const after = replaceBlock(block + foreign, '')
   assert.equal(extractBlock(after), null)
   assert.ok(after.includes('- id: llm-pi-ai'))
   assert.deepEqual(parseYaml(after), [{ id: 'llm-pi-ai', name: '@deepseek-ai/dsh-llm-pi-ai' }])
 })
 
 test('an agent-preset row without a config id is preserved as foreign', () => {
-  const block = buildBlock([preset])
+  const model = { presets: [{ id: 'mine', name: '我的', plugins: [] }], tombstones: ['gone-row'], locks: [] }
+  const block = buildBlock(model)
   const injected = '- id: preset-studio-orphan\n  name: "@deepseek-ai/dsh-agent-preset"\n'
-  const before = block.slice(0, block.indexOf(END)) + injected + block.slice(block.indexOf(END))
-  const after = replaceBlock(before, buildBlock([preset]))
+  const at = block.indexOf('- id: gone-row')
+  const before = block.slice(0, at) + injected + block.slice(at)
+  const after = replaceBlock(before, buildBlock(model))
   assert.ok(after.includes('- id: preset-studio-orphan'))
   assert.ok(after.indexOf('- id: preset-studio-orphan') < after.indexOf(BEGIN))
 })
 
-test('a comment nested inside an owned row moves out instead of being dropped', () => {
-  const block = buildBlock([preset])
-  const row = '    - id: preset-studio-my-mode\n'
-  const injected = block.replace(row, row + '      # 用户注释\n')
-  const after = replaceBlock(injected, buildBlock([preset]))
-  assert.ok(after.includes('      # 用户注释'))
-  assert.ok(after.indexOf('# 用户注释') < after.indexOf(BEGIN))
-})
-
-test('a block written with the legacy studio marker is read and migrated on save', () => {
+test('a module written with the legacy studio comment is read and migrated on save', () => {
   const legacy = '# >>> dsh-preset-studio managed block — 预设工坊维护，请勿手改标记内部\n- insert:\n    - id: preset-studio-my-mode\n      name: "@deepseek-ai/dsh-agent-preset"\n      config:\n        id: my-mode\n        plugins: []\n# <<< dsh-preset-studio managed block\n'
   const located = locateBlock(legacy)
   assert.equal(located.found, true)
@@ -155,46 +159,54 @@ test('a block written with the legacy studio marker is read and migrated on save
   assert.equal(readBlock(extractBlock(legacy)).length, 1)
   const next = replaceBlock(legacy, buildBlock([preset]))
   assert.ok(next.includes('# >>> dsh-preset-builder managed block'))
-  assert.ok(next.includes('# <<< dsh-preset-builder managed block'))
   assert.ok(!next.includes('dsh-preset-studio managed block'))
+  assert.ok(!next.includes('# <<<'), 'closing markers are not written any more')
   assert.equal(locateBlock(next).legacy, false)
 })
 
-test('a legacy block keeps rows another tool appended while it migrates', () => {
+test('a legacy module with a mixed-in row keeps it while migrating', () => {
   const legacy = '# >>> dsh-preset-studio managed block — 预设工坊维护，请勿手改标记内部\n- insert:\n    - id: preset-studio-my-mode\n      name: "@deepseek-ai/dsh-agent-preset"\n      config:\n        id: my-mode\n        plugins: []\n# <<< dsh-preset-studio managed block\n'
   const foreign = '- id: llm-pi-ai\n  name: "@deepseek-ai/dsh-llm-pi-ai"\n'
   const endAt = legacy.indexOf('# <<<')
   const before = legacy.slice(0, endAt) + foreign + legacy.slice(endAt)
   const after = replaceBlock(before, buildBlock([preset]))
   assert.ok(after.includes('- id: llm-pi-ai'))
-  assert.ok(after.indexOf('- id: llm-pi-ai') < after.indexOf('# >>> dsh-preset-builder managed block'))
-  assert.ok(after.includes('# <<< dsh-preset-builder managed block'))
+  assert.ok(!after.includes('# <<<'))
   assert.ok(!after.includes('dsh-preset-studio managed block'))
 })
 
-test('an orphaned legacy block is repaired with the current markers', () => {
+test('a module that lost its opening comment is still managed and can get it back', () => {
   const orphan = '- insert:\n    - id: preset-studio-x\n      name: "@deepseek-ai/dsh-agent-preset"\n      config:\n        id: x\n        plugins: []\n# <<< dsh-preset-studio managed block\n'
+  assert.equal(locateBlock(orphan).found, true)
+  assert.equal(locateBlock(orphan).missingComment, true)
+  assert.equal(readBlock(extractBlock(orphan)).length, 1)
   const repaired = insertBeginMarker(orphan)
   assert.ok(repaired.includes('# >>> dsh-preset-builder managed block'))
-  assert.ok(repaired.includes('# <<< dsh-preset-builder managed block'))
-  assert.ok(!repaired.includes('dsh-preset-studio managed block'))
-  assert.equal(locateBlock(repaired).found, true)
-  assert.equal(locateBlock(repaired).legacy, false)
+  assert.ok(!repaired.includes('# <<<'))
+  assert.equal(locateBlock(repaired).missingComment, false)
 })
 
-test('mixed markers still locate the block', () => {
-  const mixed = '# >>> dsh-preset-builder managed block — 预设工坊维护，请勿手改标记内部\n- insert:\n    - id: preset-studio-x\n      name: "@deepseek-ai/dsh-agent-preset"\n      config:\n        id: x\n        plugins: []\n# <<< dsh-preset-studio managed block\n'
-  const located = locateBlock(mixed)
-  assert.equal(located.found, true)
-  assert.equal(located.legacy, true)
+test('recovery refuses rows it cannot prove are its own', () => {
+  const group = (id, name) => '- insert:\n    - id: ' + id + '\n      name: "' + name + '"\n'
+  assert.equal(findOrphanBlock(group('someone-elses-row', '@deepseek-ai/dsh-agent-preset')), null)
+  assert.equal(findOrphanBlock(group('preset-studio-x', 'some-other-module')), null)
+  assert.equal(findOrphanBlock('- insert:\n    - id: preset-studio-x\n      name: "@deepseek-ai/dsh-agent-preset"\n'), null)
 })
 
-test('a broken marker pair is not treated as a managed block', () => {
+test('the lock line stays inside the module the comment is restored to', () => {
+  const orphan = '# locks: a\n- insert:\n    - id: preset-studio-x\n      name: "@deepseek-ai/dsh-agent-preset"\n      config:\n        id: x\n        plugins: []\n'
+  const repaired = insertBeginMarker(orphan)
+  assert.ok(repaired.indexOf('# >>> dsh-preset-builder managed block') < repaired.indexOf('# locks: a'))
+  assert.equal(parseBlock(extractBlock(repaired)).locks.length, 1)
+})
+
+test('a comment-only file is not a module', () => {
   const text = '# >>> dsh-preset-studio managed block — 预设工坊维护，请勿手改标记内部\n[]\n'
   const next = replaceBlock(text, buildBlock([preset]))
   assert.equal(extractBlock(text), null)
   assert.ok(next.includes('preset-studio-my-mode'))
 })
+
 
 test('platform expressions are read conservatively', () => {
   assert.equal(describeDisabledExpression("process.platform === 'win32'").label, '仅 Windows')
@@ -630,84 +642,5 @@ test('one preset id gets one row, and a stale draft keeps it', () => {
     ['x'])
 })
 
-test('a managed block that lost its opening marker is reported, not ignored', () => {
-  const block = buildBlock([preset])
-  assert.equal(locateBlock(block).broken, undefined)
-  assert.equal(locateBlock(block).found, true)
-  // A hand edit that drops the BEGIN line leaves a block the plugin can no
-  // longer find; the rows below read as foreign declarations of the same ids.
-  const half = block.slice(block.indexOf(END))
-  assert.equal(locateBlock(half).found, false)
-  assert.equal(locateBlock(half).broken, true)
-  assert.equal(extractBlock(half), null)
-  assert.ok(half.startsWith(END))
-  assert.ok(block.startsWith(BEGIN))
-  // A patch that never had a block is not broken.
-  assert.equal(locateBlock('- insert: []\n').broken, undefined)
-})
-
-test('an orphaned managed block is recovered from its own rows', () => {
-  const orphan = [
-    '- insert:',
-    '    - id: preset-studio-x',
-    '      name: "@deepseek-ai/dsh-agent-preset"',
-    '      config:',
-    '        id: x',
-    END,
-    '',
-  ].join('\n')
-  const found = findOrphanBlock(orphan)
-  assert.notEqual(found, null)
-  assert.deepEqual(found.rows, ['preset-studio-x'])
-  const repaired = insertBeginMarker(orphan)
-  assert.equal(repaired.startsWith(BEGIN + '\n'), true)
-  assert.equal(locateBlock(repaired).found, true)
-  assert.deepEqual(parseBlock(extractBlock(repaired)).presets.map((entry) => entry.id), ['x'])
-  // Nothing to recover once the marker is back.
-  assert.equal(findOrphanBlock(repaired), null)
-})
-
-test('recovery refuses rows it cannot prove are its own', () => {
-  const group = (id, name) => [
-    '- insert:',
-    '    - id: ' + id,
-    '      name: "' + name + '"',
-    '      config:',
-    '        id: x',
-    END,
-    '',
-  ].join('\n')
-  // A row id outside the plugin's own namespace belongs to someone else.
-  assert.equal(findOrphanBlock(group('someone-elses-row', '@deepseek-ai/dsh-agent-preset')), null)
-  // Same for a row that is not an Agent preset declaration.
-  assert.equal(findOrphanBlock(group('preset-studio-x', 'some-other-module')), null)
-  // An override row (adopt reuses the original row id) is indistinguishable
-  // from a hand-written declaration, so the block is left alone.
-  const override = ['- id: preset-x', '  name: "@deepseek-ai/dsh-agent-preset"', '  config:', '    id: x', END, ''].join('\n')
-  assert.equal(findOrphanBlock(override), null)
-  // No END marker at all: not the shape this rule handles.
-  assert.equal(findOrphanBlock('- insert:\n    - id: preset-studio-x\n      name: "@deepseek-ai/dsh-agent-preset"\n'), null)
-  // Intact block: nothing to do.
-  assert.equal(findOrphanBlock(buildBlock([preset])), null)
-})
-
-test('the lock line stays inside the block the marker is restored to', () => {
-  const orphan = [
-    '# locks: x',
-    '- insert:',
-    '    - id: preset-studio-x',
-    '      name: "@deepseek-ai/dsh-agent-preset"',
-    '      config:',
-    '        id: x',
-    END,
-    '',
-  ].join('\n')
-  const repaired = insertBeginMarker(orphan)
-  assert.equal(repaired.split('\n')[0], BEGIN)
-  assert.equal(repaired.split('\n')[1], '# locks: x')
-  const model = parseBlock(extractBlock(repaired))
-  assert.deepEqual(model.locks, ['x'])
-  assert.deepEqual(model.presets.map((entry) => entry.id), ['x'])
-})
 
 console.log(`\n${passed} checks passed`)
